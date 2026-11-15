@@ -9,9 +9,6 @@ This project is designed for hobbyists who want full control over their home bat
 [![Node-RED](https://img.shields.io/badge/Node--RED-Flow-FF4A00?logo=node-red&logoColor=)](https://nodered.org/) 
 ![Stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus)
 
-# Home Battery Control Plus
-
-**HBC+ v1.0** (Home Battery Control Plus) is a standalone home battery controller for Home Assistant and Node-RED. It lets **two home batteries share one phase** without overloading that phase's main fuse, and comes with safety, performance and stability improvements.
 
 Repository: **[github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/CodeRubbere/HASS-HBC-Plus)**
 
