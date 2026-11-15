@@ -300,7 +300,9 @@ views:
                 state: Full control
           - type: heading
             icon: mdi:cash-remove
-            heading: 'No energy prices: Dynamic runs its baseline strategy. Check the tariff source'
+            heading: >-
+              No energy prices: Dynamic runs its baseline strategy. Check the
+              tariff source
             heading_style: subtitle
             tap_action:
               action: navigate
@@ -308,7 +310,7 @@ views:
             visibility:
               - condition: state
                 entity: binary_sensor.hbc_price_data_missing
-                state: "on"
+                state: 'on'
           - type: heading
             icon: mdi:alert
             heading: 'Dynamic strategy: Full Stop. Please configure dynamic strategy'
@@ -659,7 +661,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/4
+              navigation_path: /dashboard-hbc/5
             heading: Problem solver
           - type: markdown
             content: -----
@@ -2352,7 +2354,8 @@ views:
               overloaded">The batteries on {% for i in [1, 2, 3] if
               states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
               abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
-              W. Check that only one battery per phase runs (Enforce).</ha-alert>
+              W. Check that only one battery per phase runs
+              (Enforce).</ha-alert>
           - type: markdown
             text_only: true
             visibility:
@@ -2470,10 +2473,11 @@ views:
 
               | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
               '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
-              b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~
-              '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5
-              else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in
-              act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
 
               {%- else %}
 
@@ -2573,10 +2577,11 @@ views:
 
               | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
               '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
-              b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~
-              '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5
-              else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in
-              act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
 
               {%- else %}
 
@@ -2676,10 +2681,11 @@ views:
 
               | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
               '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
-              b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~
-              '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5
-              else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in
-              act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
 
               {%- else %}
 
