@@ -407,31 +407,6 @@
         "wires": []
     },
     {
-        "id": "23180f472749fa9c",
-        "type": "inject",
-        "z": "c925cef84d5e8a37",
-        "name": "TEST: simulate oscillation",
-        "props": [
-            {
-                "p": "osc",
-                "v": "{\"entity\":\"manual test\",\"flips\":0,\"window_s\":0}",
-                "vt": "json"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "x": 330,
-        "y": 80,
-        "wires": [
-            [
-                "b0892e536610fdb9"
-            ]
-        ]
-    },
-    {
         "id": "ee2ecca36e8ebca7",
         "type": "inject",
         "z": "c925cef84d5e8a37",

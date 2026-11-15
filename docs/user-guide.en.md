@@ -202,6 +202,7 @@ The planner value follows the fuse room. On *Enforce*, *Batteries (totals)* subt
 - **A heartbeat that means *working*.** The heartbeat only follows a good control cycle (R6). When it goes stale, Home Assistant stops every battery it hands back to its firmware, and the Master Switch flow waits for a fresh heartbeat before it turns RS485 on again (R5).
 - **No NaN towards the batteries.** One unavailable battery value no longer spreads to the other batteries, and *Set Batteries* checks every setpoint before it is written (R7).
 - **Errors are visible.** Warnings and errors always reach the Node-RED log and `sensor.hbc_health`, also with *Insight mode* off; HA notifies you when errors keep coming (R8).
+- **Changes are announced.** Every change of a phase guard safety setting gives a notification naming who made it (S2). How to keep the Node-RED editor, MQTT and the dashboard closed to others: see *Securing your setup*.
 
 ## Strategies and settings
 
@@ -352,7 +353,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 ## Improvements in HBC+ v1.0
 
-Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, eight make the system more robust, four make the control loop faster or write less to Modbus, and five are features. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
+Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, eight make the system more robust, four make the control loop faster or write less to Modbus, five are features, and three tighten security. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
 
 | # | Change | Where | Type |
 | --- | --- | --- | --- |
@@ -372,6 +373,9 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, e
 | R6 | Heartbeat only after a good control cycle | Start – *HBC+ heartbeat*, *Set Batteries* | Robustness |
 | R7 | One unavailable battery value no longer stops every battery | Start – *Batteries (totals)*, *Set Batteries*; Self-consumption – *Load distribution* | Robustness |
 | R8 | Warnings and errors always logged, `sensor.hbc_health` with alert | Start, arbiter, Oscillation Guard, Phase monitor + `hbc_heartbeat.yaml` | Robustness |
+| S1 | Heartbeat judged by the time HA received it | `hbc_heartbeat.yaml` | Security |
+| S2 | Notification when a phase guard safety setting changes | `hbc_phase_guard.yaml` | Security |
+| S3 | Test buttons removed from the live flows | Dynamic, Timed, Oscillation Guard | Security |
 | P1 | *Read HA states (fast)*: one node instead of ~43 reads | Start | Performance |
 | P2 | *PID step*: 13 nodes in one, cache for PID settings | Self-consumption | Performance |
 | P3 | *Pick period*: fast path for Timed with settings cache | Timed | Performance |
@@ -471,6 +475,23 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, e
 - *Problem:* the HBC+ logger did nothing while *Insight mode* was off (it switches itself off after 5 minutes), also for errors. Node-RED does not log errors that a Catch node catches, and every HBC+ tab has one. Failing Modbus writes and strategy errors were therefore invisible.
 - *Fix:* the logger always counts warnings and errors and writes them to the Node-RED log, the same message at most once a minute (with the number of repeats); *info* lines still need *Insight mode*. The Catch nodes of the Strategy arbiter, Battery Oscillation Guard and Phase monitor tabs hand their errors to the logger too. *HBC+ health* in the Start flow publishes `hbc/health` (retained JSON) to `sensor.hbc_health`: `ok`, `warning` (a warning or 1–2 errors in 10 minutes) or `error` (3 or more errors in 10 minutes), with the counts and the last error as attributes. The automation *HBC+: alert when the control loop keeps logging errors* in `hbc_heartbeat.yaml` creates a persistent notification and calls `notify.notify` when the status stays `error` for 5 minutes, and dismisses it when the status is `ok` again.
 
+### Security
+
+**S1 — The heartbeat trusted the time inside the message.**
+
+- *Problem:* `binary_sensor.hbc_heartbeat_stale` compared the time in the `hbc/heartbeat` message with HA's clock. One retained message with a time in the future, or a Node-RED clock running ahead, kept the fallback off for good; a Node-RED clock running behind made it fire for nothing.
+- *Fix:* the sensor now uses the moment Home Assistant last *received* the heartbeat (`last_reported`). Stale means: nothing received for more than 5 minutes, or the sensor is unknown. Who may publish on `hbc/#` is up to your MQTT broker; see *Securing your setup*.
+
+**S2 — Safety settings could change unnoticed.**
+
+- *Problem:* guard mode, sharing, grid fuse, battery circuit, margin and the phase map are ordinary helpers. Any HA user, also a non-admin, and any automation can change them, for example set the guard to *Off*.
+- *Fix:* the automation *HBC+: notify when a phase guard safety setting changes* in `hbc_phase_guard.yaml` creates a persistent notification and calls `notify.notify` after every change, with the old and new value, who made it (the person linked to the HA user, or *an automation or script*) and the current settings. A burst of changes, such as the defaults script, gives one notification.
+
+**S3 — Test buttons in the live flows.**
+
+- *Problem:* a few inject nodes for testing were left in the live tabs: *TEST: simulate oscillation* (holds *Full stop* and sends a notification), *Test* in Dynamic (switches *Insight mode* on and clears the price cache), *Test* and *Fetch* in Dynamic (read a hard-coded Zonneplan sensor and fire `update_energy_prices`) and *Test* in Timed. One click in the editor changed live behaviour.
+- *Fix:* removed, with the nodes that only they fed (17 nodes and the two Dynamic groups *Test area* and *All data*). *Restore now (end pause)* in the Oscillation Guard stays: it is a real operator button.
+
 ### Performance
 
 On a busy Node-RED every extra node hop goes through the message queue again, and the Start flow regularly exceeded its 1 s link-call timeout. Every change below keeps the original logic and output, and falls back to the original nodes when the fast path cannot run.
@@ -552,7 +573,7 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 | `hbc_deadline_charge.yaml` | Charge Deadline helpers and sensors: target, deadline, plan and cheap windows |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: the Strategy arbiter state, kept across restarts |
 | `hbc_heartbeat.yaml` | Phase-aware HA fallback when HBC+ stops: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale`, the automation that hands the batteries back to their firmware, and `sensor.hbc_health` with its error alert |
-| `hbc_phase_guard.yaml` | Phase guard: settings, phase map M1–M6, per-phase power and fuse headroom, overload alarm, MQTT status sensors and the defaults script |
+| `hbc_phase_guard.yaml` | Phase guard: settings, phase map M1–M6, per-phase power and fuse headroom, overload alarm, MQTT status sensors, the defaults script and the notification when a safety setting changes |
 
 **dashboards/**
 
@@ -630,7 +651,7 @@ On the Phases view, under *Which phase is each battery on?*, set the phase of ev
 3. **PID preset.** On the Self-consumption view, choose *Safe* (see *Self-consumption and PID tuning*).
 4. **Strategy.** Choose a first strategy; *Self-consumption* or *Charge PV* is a safe start.
 5. **Master mode.** Set *Master Battery Mode* to **Full control**. Only now does HBC+ steer the batteries. To hand them back to their own firmware, choose *Marstek control*.
-6. **Notifications.** Set your own notify action (e.g. `notify.mobile_app_<phone>`) in the four places that send one; the default is `notify.notify`.
+6. **Notifications.** Set your own notify action (e.g. `notify.mobile_app_<phone>`) in the five places that send one; the default is `notify.notify`.
 
 | Where | Sends a notification when |
 | --- | --- |
@@ -638,6 +659,37 @@ On the Phases view, under *Which phase is each battery on?*, set the phase of ev
 | `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped or no longer works, and the batteries went back to their firmware |
 | `packages/hbc_heartbeat.yaml`, automation *alert when the control loop keeps logging errors* | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes in a row |
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
+| `packages/hbc_phase_guard.yaml`, automation *notify when a phase guard safety setting changes* | Someone or something changed guard mode, sharing, a fuse limit, the margin or the phase map |
+
+### Securing your setup
+
+HBC+ controls batteries that can draw or deliver several kilowatts per phase, so treat everything that can steer it as a safety matter.
+
+**Node-RED editor.** Whoever can open the Node-RED editor controls Home Assistant and the batteries: they can change or redeploy any flow, and the HA access token sits in the *HA System* server node. The Node-RED add-on is protected by the Home Assistant login; do not open its direct port without a login. With Node-RED in Docker or standalone: switch on `adminAuth` in `settings.js`, set a `credentialSecret` (it encrypts the stored token), and do not expose port 1880 outside your home network (use a VPN or a reverse proxy with HTTPS and a login).
+
+**MQTT.** The HA fallback trusts the heartbeat on `hbc/heartbeat`. Since S1 it is judged by the time Home Assistant *received* it, so one fake message no longer switches the fallback off for good, but a device that keeps publishing on `hbc/heartbeat` still could. Allow only Home Assistant's own MQTT user to write `hbc/#`: HBC+ publishes through HA (`mqtt.publish`), so nothing else needs to. With the Mosquitto add-on, set *customize* to `active: true, folder: mosquitto` in its configuration and add two files to `/share/mosquitto/` (see the [add-on documentation](https://github.com/home-assistant/addons/blob/master/mosquitto/DOCS.md)). Example, adapt the user names to yours:
+
+```text
+# /share/mosquitto/acl.conf
+acl_file /share/mosquitto/accesscontrollist
+```
+
+```text
+# /share/mosquitto/accesscontrollist
+# Home Assistant's own MQTT user: HBC+ publishes hbc/* through HA (mqtt.publish)
+user homeassistant
+topic readwrite #
+
+# every other MQTT user gets only what it needs, and can only READ hbc/
+user zigbee2mqtt
+topic readwrite zigbee2mqtt/#
+topic readwrite homeassistant/#
+topic read hbc/#
+```
+
+An ACL file applies to **every** MQTT user: give each user that logs in (Zigbee2MQTT, Tasmota devices, other add-ons) its own lines, or it loses access. Restart the add-on and check that your devices still report.
+
+**Home Assistant users.** Home Assistant has no permissions per entity: every user, also a non-admin, can change the phase guard mode, the fuse limits and the phase map. Turn on *Admin only* for the HBC+ dashboard (*Settings* → *Dashboards* → the HBC+ dashboard). That hides it from non-admins but does not protect the helpers. What does make every change visible is the automation *HBC+: notify when a phase guard safety setting changes* (S2), which names who made the change.
 
 ### Updating HBC+
 

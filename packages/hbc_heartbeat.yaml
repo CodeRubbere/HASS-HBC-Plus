@@ -51,10 +51,17 @@ template:
         unique_id: hbc_heartbeat_stale
         device_class: problem
         icon: mdi:heart-broken
-        # re-evaluated every minute through now(); stale = no heartbeat for more than 5 minutes
+        # re-evaluated every minute through now(); stale = HA RECEIVED no heartbeat for more than 5 minutes.
+        # HBC+ 2026-11-15: judged by HA's own clock (last_reported = when HA last got the message), not by
+        # the time inside the message. A message with a time in the future (spoofed, or a Node-RED clock that
+        # runs ahead) used to keep this off forever; a clock that runs behind made it stale for nothing.
+        # After an HA restart the retained heartbeat counts as just received; if no new one follows within
+        # 5 minutes, this turns on (and the start trigger of the fallback re-checks after 5 minutes).
+        # Also restrict who may publish on hbc/# in your MQTT broker: see the user guide, "Securing your setup".
         state: >
-          {% set t = states('sensor.hbc_last_run') | as_datetime(none) %}
-          {{ t is none or (now() - t).total_seconds() > 300 }}
+          {% set e = states.sensor.hbc_last_run %}
+          {{ e is none or e.state in ['unknown', 'unavailable', '']
+             or (now() - e.last_reported).total_seconds() > 300 }}
 
 automation:
   - id: hbc_heartbeat_fallback

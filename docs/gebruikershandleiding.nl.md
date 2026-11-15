@@ -202,6 +202,7 @@ De plannerwaarde volgt de zekeringruimte. Op *Enforce* trekt *Batteries (totals)
 - **Een heartbeat die *werkt* betekent.** De heartbeat volgt alleen op een goede regelcyclus (R6). Raakt hij verouderd, dan zet Home Assistant elke batterij die het aan de firmware teruggeeft eerst stil, en wacht de Master Switch-flow op een verse heartbeat voordat hij RS485 weer aanzet (R5).
 - **Geen NaN richting de batterijen.** Eén onbeschikbare batterijwaarde verspreidt zich niet meer naar de andere batterijen, en *Set Batteries* controleert elk setpoint voordat het geschreven wordt (R7).
 - **Fouten zijn zichtbaar.** Waarschuwingen en fouten komen altijd in het Node-RED-log en in `sensor.hbc_health`, ook met *Insight mode* uit; HA meldt het als fouten blijven komen (R8).
+- **Wijzigingen worden gemeld.** Elke wijziging van een veiligheidsinstelling van de fasebewaking geeft een melding die noemt wie hem deed (S2). Hoe je de Node-RED-editor, MQTT en het dashboard afschermt: zie *Je installatie beveiligen*.
 
 ## Strategieën en instellingen
 
@@ -352,7 +353,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 
 ## Verbeteringen in HBC+ v1.0
 
-Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, acht maken het systeem robuuster, vier maken de regellus sneller of schrijven minder naar Modbus, en vijf zijn features. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
+Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, acht maken het systeem robuuster, vier maken de regellus sneller of schrijven minder naar Modbus, vijf zijn features en drie verbeteren de beveiliging. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
 
 | # | Wijziging | Waar | Type |
 | --- | --- | --- | --- |
@@ -372,6 +373,9 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 | R6 | Heartbeat alleen na een goede regelcyclus | Start – *HBC+ heartbeat*, *Set Batteries* | Robuustheid |
 | R7 | Eén onbeschikbare batterijwaarde legt niet meer alle batterijen stil | Start – *Batteries (totals)*, *Set Batteries*; Self-consumption – *Load distribution* | Robuustheid |
 | R8 | Waarschuwingen en fouten altijd gelogd, `sensor.hbc_health` met melding | Start, arbiter, Oscillation Guard, Phase monitor + `hbc_heartbeat.yaml` | Robuustheid |
+| S1 | Heartbeat beoordeeld op het moment dat HA hem ontving | `hbc_heartbeat.yaml` | Beveiliging |
+| S2 | Melding als een veiligheidsinstelling van de fasebewaking verandert | `hbc_phase_guard.yaml` | Beveiliging |
+| S3 | Testknoppen uit de live flows verwijderd | Dynamic, Timed, Oscillation Guard | Beveiliging |
 | P1 | *Read HA states (fast)*: één node in plaats van ~43 reads | Start | Performance |
 | P2 | *PID step*: 13 nodes in één, cache voor PID-instellingen | Self-consumption | Performance |
 | P3 | *Pick period*: snel pad voor Timed met instellingencache | Timed | Performance |
@@ -471,6 +475,23 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 - *Probleem:* de HBC+-logger deed niets zolang *Insight mode* uit stond (die gaat na 5 minuten vanzelf uit), ook niet bij fouten. Node-RED logt geen fouten die een Catch-node opvangt, en elk HBC+-tabblad heeft er een. Mislukte Modbus-writes en fouten in strategieën waren dus onzichtbaar.
 - *Oplossing:* de logger telt waarschuwingen en fouten altijd en schrijft ze naar het Node-RED-log, hetzelfde bericht hooguit eens per minuut (met het aantal herhalingen); *info*-regels hebben nog steeds *Insight mode* nodig. De Catch-nodes van de tabbladen Strategy arbiter, Battery Oscillation Guard en Phase monitor geven hun fouten ook aan de logger. *HBC+ health* in de Start-flow publiceert `hbc/health` (retained JSON) naar `sensor.hbc_health`: `ok`, `warning` (een waarschuwing of 1–2 fouten in 10 minuten) of `error` (3 of meer fouten in 10 minuten), met de aantallen en de laatste fout als attributen. De automatisering *HBC+: alert when the control loop keeps logging errors* in `hbc_heartbeat.yaml` maakt een persistente melding en roept `notify.notify` aan als de status 5 minuten op `error` blijft, en ruimt die op zodra de status weer `ok` is.
 
+### Beveiliging
+
+**S1 — De heartbeat vertrouwde de tijd in het bericht.**
+
+- *Probleem:* `binary_sensor.hbc_heartbeat_stale` vergeleek de tijd in het `hbc/heartbeat`-bericht met de klok van HA. Eén retained bericht met een tijd in de toekomst, of een Node-RED-klok die voorloopt, hield de fallback voorgoed uit; een Node-RED-klok die achterloopt liet hem zonder reden afgaan.
+- *Oplossing:* de sensor gebruikt nu het moment waarop Home Assistant de heartbeat het laatst *ontving* (`last_reported`). Verouderd betekent: meer dan 5 minuten niets ontvangen, of de sensor is onbekend. Wie op `hbc/#` mag publiceren, regel je in je MQTT-broker; zie *Je installatie beveiligen*.
+
+**S2 — Veiligheidsinstellingen konden ongemerkt veranderen.**
+
+- *Probleem:* guard-modus, sharing, netzekering, batterijgroep, marge en de fasekaart zijn gewone helpers. Elke HA-gebruiker, ook een niet-beheerder, en elke automatisering kan ze wijzigen, bijvoorbeeld de guard op *Off* zetten.
+- *Oplossing:* de automatisering *HBC+: notify when a phase guard safety setting changes* in `hbc_phase_guard.yaml` maakt na elke wijziging een persistente melding en roept `notify.notify` aan, met de oude en nieuwe waarde, wie de wijziging deed (de persoon die aan de HA-gebruiker gekoppeld is, of *an automation or script*) en de huidige instellingen. Een reeks wijzigingen, zoals het script met standaardwaarden, geeft één melding.
+
+**S3 — Testknoppen in de live flows.**
+
+- *Probleem:* er stonden nog een paar inject-nodes om te testen in de live tabbladen: *TEST: simulate oscillation* (houdt *Full stop* vast en stuurt een melding), *Test* in Dynamic (zet *Insight mode* aan en wist de prijscache), *Test* en *Fetch* in Dynamic (lezen een vaste Zonneplan-sensor en vuren `update_energy_prices`) en *Test* in Timed. Eén klik in de editor veranderde het live gedrag.
+- *Oplossing:* verwijderd, met de nodes die alleen door hen gevoed werden (17 nodes en de twee Dynamic-groepen *Test area* en *All data*). *Restore now (end pause)* in de Oscillation Guard blijft: dat is een echte bedieningsknop.
+
 ### Performance
 
 Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtrij, en de Start-flow overschreed regelmatig zijn link-call-timeout van 1 s. Elke wijziging hieronder behoudt de oorspronkelijke logica en uitvoer, en valt terug op de oorspronkelijke nodes als het snelle pad niet kan draaien.
@@ -552,7 +573,7 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 | `hbc_deadline_charge.yaml` | Helpers en sensoren van Charge Deadline: doel, deadline, planning en goedkope vensters |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: de status van de Strategy arbiter, bewaard over herstarts heen |
 | `hbc_heartbeat.yaml` | Fasebewuste HA-fallback als HBC+ stopt: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale`, de automatisering die de batterijen teruggeeft aan hun firmware, en `sensor.hbc_health` met de foutmelding |
-| `hbc_phase_guard.yaml` | Fasebewaking: instellingen, fasekaart M1–M6, vermogen en zekeringruimte per fase, overbelastingsalarm, MQTT-statussensoren en het script met standaardwaarden |
+| `hbc_phase_guard.yaml` | Fasebewaking: instellingen, fasekaart M1–M6, vermogen en zekeringruimte per fase, overbelastingsalarm, MQTT-statussensoren, het script met standaardwaarden en de melding als een veiligheidsinstelling verandert |
 
 **dashboards/**
 
@@ -630,7 +651,7 @@ Zet op de Phases-view, onder *Which phase is each battery on?*, elke batterij op
 3. **PID-preset.** Kies in de Self-consumption-view *Safe* (zie *Self-consumption en PID-afstelling*).
 4. **Strategie.** Kies een eerste strategie; *Self-consumption* of *Charge PV* is een veilige start.
 5. **Mastermodus.** Zet *Master Battery Mode* op **Full control**. Pas nu stuurt HBC+ de batterijen. Wil je ze teruggeven aan hun eigen firmware, kies dan *Marstek control*.
-6. **Meldingen.** Zet je eigen notify-actie (bijv. `notify.mobile_app_<telefoon>`) op de vier plekken die een melding sturen; standaard is `notify.notify`.
+6. **Meldingen.** Zet je eigen notify-actie (bijv. `notify.mobile_app_<telefoon>`) op de vijf plekken die een melding sturen; standaard is `notify.notify`.
 
 | Waar | Stuurt een melding als |
 | --- | --- |
@@ -638,6 +659,37 @@ Zet op de Phases-view, onder *Which phase is each battery on?*, elke batterij op
 | `packages/hbc_heartbeat.yaml`, automatisering *hand batteries back to firmware when the HBC heartbeat is stale* | De regellus stopte of niet meer werkte, en de batterijen teruggingen naar hun firmware |
 | `packages/hbc_heartbeat.yaml`, automatisering *alert when the control loop keeps logging errors* | HBC+ 5 minuten lang 3 of meer fouten in 10 minuten logde |
 | `packages/hbc_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
+| `packages/hbc_phase_guard.yaml`, automatisering *notify when a phase guard safety setting changes* | Iemand of iets de guard-modus, sharing, een zekeringlimiet, de marge of de fasekaart wijzigde |
+
+### Je installatie beveiligen
+
+HBC+ stuurt batterijen die per fase kilowatts kunnen trekken of leveren. Behandel alles wat HBC+ kan aansturen dus als een veiligheidszaak.
+
+**Node-RED-editor.** Wie de Node-RED-editor kan openen, bestuurt Home Assistant en de batterijen: hij kan elke flow wijzigen of opnieuw deployen, en het HA-toegangstoken zit in de servernode *HA System*. De Node-RED-add-on is beschermd door de Home Assistant-login; zet zijn directe poort niet open zonder login. Met Node-RED in Docker of los geïnstalleerd: zet `adminAuth` aan in `settings.js`, stel een `credentialSecret` in (die versleutelt het opgeslagen token), en stel poort 1880 niet open buiten je thuisnetwerk (gebruik een VPN of een reverse proxy met HTTPS en een login).
+
+**MQTT.** De HA-fallback vertrouwt de heartbeat op `hbc/heartbeat`. Sinds S1 telt het moment waarop Home Assistant hem *ontving*, dus één nepbericht zet de fallback niet meer voorgoed uit, maar een apparaat dat blijft publiceren op `hbc/heartbeat` kan dat nog wel. Laat alleen de eigen MQTT-gebruiker van Home Assistant naar `hbc/#` schrijven: HBC+ publiceert via HA (`mqtt.publish`), dus niets anders hoeft dat. Met de Mosquitto-add-on: zet *customize* in de configuratie op `active: true, folder: mosquitto` en zet twee bestanden in `/share/mosquitto/` (zie de [add-on-documentatie](https://github.com/home-assistant/addons/blob/master/mosquitto/DOCS.md)). Voorbeeld, pas de gebruikersnamen aan:
+
+```text
+# /share/mosquitto/acl.conf
+acl_file /share/mosquitto/accesscontrollist
+```
+
+```text
+# /share/mosquitto/accesscontrollist
+# Home Assistant's own MQTT user: HBC+ publishes hbc/* through HA (mqtt.publish)
+user homeassistant
+topic readwrite #
+
+# every other MQTT user gets only what it needs, and can only READ hbc/
+user zigbee2mqtt
+topic readwrite zigbee2mqtt/#
+topic readwrite homeassistant/#
+topic read hbc/#
+```
+
+Een ACL-bestand geldt voor **elke** MQTT-gebruiker: geef elke gebruiker die inlogt (Zigbee2MQTT, Tasmota-apparaten, andere add-ons) eigen regels, anders verliest die zijn toegang. Herstart de add-on en controleer of je apparaten nog rapporteren.
+
+**Home Assistant-gebruikers.** Home Assistant kent geen rechten per entiteit: elke gebruiker, ook een niet-beheerder, kan de guard-modus, de zekeringlimieten en de fasekaart wijzigen. Zet *Alleen beheerder* aan voor het HBC+-dashboard (*Instellingen* → *Dashboards* → het HBC+-dashboard). Dat verbergt het voor niet-beheerders, maar beschermt de helpers niet. Wat elke wijziging wel zichtbaar maakt, is de automatisering *HBC+: notify when a phase guard safety setting changes* (S2), die noemt wie de wijziging deed.
 
 ### HBC+ bijwerken
 
