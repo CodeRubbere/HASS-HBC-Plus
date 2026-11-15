@@ -24,7 +24,7 @@ What the phase guard adds:
 - **A phase map.** Every battery (M1–M6) is assigned to L1, L2, L3 or *Own circuit*.
 - **One active battery per phase** (default). The partner on that phase waits at 1 W idle and then stops, the same way HBC+ parks batteries it does not need.
 - **Two limits per phase.** The active battery only gets the room left under both the main (grid) fuse, after the house load on that phase, and the battery circuit the batteries of that phase share (default 16 A ≈ 3680 W each), recomputed every tick from the P1 meter.
-- **Correct planner ceiling.** The max power HBC+ reports to Charge Deadline and HELIOS is the sum per phase, not the sum of all batteries, so those planners book enough charge hours.
+- **Correct planner ceiling.** The max power HBC+ reports to Charge Deadline is the sum per phase, not the sum of all batteries, so it books enough charge hours.
 - **A Phases dashboard** and an independent overload alarm in Home Assistant that works even when Node-RED is down.
 - **An optional *Shared headroom* mode** in which both batteries on a phase may run at once, as long as together they stay under the fuse.
 
@@ -124,7 +124,7 @@ Typical gain: 2500 + 1000 W charging on a phase with no house load. The fallback
 | Self-consumption | *Load distribution* soft-stops standby batteries and caps each phase at its fuse room; anti-windup uses the capped capacity |
 | Charge, Sell | *Max power solution* runs only the active battery per phase, at min(its max, fuse room); the partner idles at 1 W |
 | Master Switch | On hand-back to firmware only the lowest M-number on a shared phase gets RS485 *disable*; the partner stays RS485 *enable* + forcible *stop* |
-| Charge Deadline, Helios | Logic unchanged; they plan with the per-phase max power from *Batteries (totals)* |
+| Charge Deadline | Logic unchanged; it plans with the per-phase max power from *Batteries (totals)* |
 | Partials, Timed, Dynamic (price fetch: see below), Full stop, PID presets, Oscillation Guard, Strategy arbiter | No change; whatever they run goes through Self-consumption or Max power, which apply the rules |
 | Phase monitor | **New**, read-only: publishes `hbc/phase/*` for the dashboard every 5 s (republished on change, at most every 30 s otherwise) |
 
@@ -140,16 +140,49 @@ To use it from another flow, add a **link call** node, pick *Dynamic Fetch from 
 | `dynamic_use_cache` | in, optional | `true` = return the Dynamic tab's cached prices if still valid (same rule as *Cache check*: after 13:00 they must cover tomorrow), else fetch |
 | `dynamic` | out | `{data_source, data_all: {list, list_marked, average, min, max, start, …}, no_data?}` |
 | `dynamic_from_cache` | out | `true` when the cache answered |
+| `dynamic.stale` | out | `true` when the source failed and the last valid prices of that source came back |
+| `target` | in, optional | Only for a link call with a dynamic target: `"Dynamic Fetch from Data Source"` |
 
 - Source *None*, or a source Node-RED cannot read, returns at once with `dynamic.no_data = true` and an empty list, so the caller never waits for the timeout.
 - A successful fetch from any caller also refreshes the Dynamic tab's cache.
 - The rest of the caller's message comes back unchanged (`msg.template` is used and removed).
-- A fetch that fails inside the section makes the link call time out after 30 s; the error goes to *Strategy errors* in the Dynamic tab.
 - A fetch that delivers no prices returns the last valid list of the same source with `dynamic.stale = true` while it still covers the current interval, otherwise `dynamic.no_data = true` (see R3).
+- An error inside the section (for example the template render while HA is disconnected, or a macro error) is caught by *Catch fetch errors* and handled as a fetch without prices, so the caller gets its reply at once instead of a timeout. The *Fetch error* node logs the error as a warning and shows it in its status.
+
+#### Using it from your own flow
+
+The repo has a ready example: `node-red/examples/price-fetch-example.json`. Import it (*Import → select a file to import → Import*), deploy, and click the button of *Every 15 min*; the debug sidebar shows the current price.
+
+To build it yourself:
+
+1. **Trigger.** An inject node, for example every 15 minutes.
+2. **Request.** A function or change node. Start with a fresh `msg.dynamic` (`msg.dynamic = {}`): the section reads an existing `msg.dynamic` as the request and replaces it with the reply. Add `msg.dynamic.data_source` only for another source than the Dynamic tab's, and `msg.dynamic_use_cache = true` to reuse the Dynamic tab's prices instead of fetching again.
+3. **Link call** with a timeout of 30 s, in one of two ways:
+   - *Static:* pick *Dynamic Fetch from Data Source* in the node's list. After a re-import of the Dynamic tab with new node ids, pick it again.
+   - *Dynamic:* set the link type to *Dynamic target* and put `msg.target = "Dynamic Fetch from Data Source"` in the request. This keeps working after a re-import. Do not use it on a message HBC+ also uses for control (inside a strategy tab), because there `msg.target` names the strategy.
+4. **Read the reply** in the next node. Check `msg.dynamic.no_data` first: then the list is empty. With `msg.dynamic.stale` the list is the last valid one of that source, kept while the source fails.
+
+Fields of `msg.dynamic.data_all`:
+
+| Field | Meaning |
+| --- | --- |
+| `list` | One price per interval in ct/kWh, from `start` onward |
+| `start` | Start time of the first interval |
+| `hours` | Number of hours the list covers |
+| `datapoints` | Number of intervals in `list` |
+| `average`, `weighted_average`, `min`, `max` | In ct/kWh, rounded down to whole cents |
+
+An interval lasts `hours × 60 / datapoints` minutes (15 for quarter-hour prices). The price now is:
+
+```js
+const a = msg.dynamic.data_all;
+const slotMs = (a.hours / a.datapoints) * 3600000;
+const priceNow = a.list[Math.floor((Date.now() - new Date(a.start).getTime()) / slotMs)]; // ct/kWh
+```
 
 ### Effect on planners
 
-Because *Batteries (totals)* writes the effective max into the existing helpers, Charge Deadline, HELIOS and the PID anti-windup need no code change.
+Because *Batteries (totals)* writes the effective max into the existing helpers, Charge Deadline and the PID anti-windup need no code change.
 
 | Value | 3 batteries (today) | 6 batteries, no phase rule | 6 batteries, Enforce |
 | --- | --- | --- | --- |
@@ -194,8 +227,8 @@ Pick the strategy in `input_select.house_battery_strategy`. The *Strategy arbite
 | Charge Deadline | Charges to a target before a deadline, in the cheapest quarter-hours |
 | Timed | A different strategy per time period (A to E) |
 | Dynamic | A different strategy for cheap, expensive and normal price periods |
-| Helios | Carries out the decision of the HELIOS optimizer (pyscript, optional) |
 | Full stop | Every battery on stop, 0 W; the relay opens, so no standby draw |
+| Helios | Reserved for a future HELIOS integration (not part of HBC+ v1.0). Until that flow is installed, a placeholder tab runs *Full stop* and logs a warning |
 
 **EV stop trigger.** Put the entity id of an "EV is charging" sensor or boolean in `input_text.house_battery_strategy_ev_sensor_entity_id`. While it is `on`, HBC+ runs the strategy in `input_select.house_battery_strategy_ev_stop_trigger_strategy` (*Full stop* or *Standby / peak shave*), so the batteries do not discharge into the car.
 
@@ -284,7 +317,7 @@ Prices are refreshed at midnight, at 13:15 and 15:00, after a change of source, 
 
 ### Why a phase guard is needed
 
-Without the phase guard, the controller has no notion of phases. That only worked because M1, M2 and M3 each sat on their own phase. *Max power solution* (Charge, Sell and HELIOS Charge/Sell) puts every battery at its max, and *Load distribution* (Self-consumption) fills the batteries in priority order, each up to its own max. With two Marsteks on L1 that puts 2 × 2500 = 5000 W on that phase, well above a 16 A fuse (3680 W).
+Without the phase guard, the controller has no notion of phases. That only worked because M1, M2 and M3 each sat on their own phase. *Max power solution* (Charge and Sell) puts every battery at its max, and *Load distribution* (Self-consumption) fills the batteries in priority order, each up to its own max. With two Marsteks on L1 that puts 2 × 2500 = 5000 W on that phase, well above a 16 A fuse (3680 W).
 
 On top of that, the planner ceiling would be the sum of all batteries (6 × 2500 = 15000 W) instead of what can really flow per phase (3 × 2500 = 7500 W), so Charge Deadline would book only half the cheap quarters it needs. And the heartbeat fallback would put every battery in firmware anti-feed during an outage, after which two batteries on one phase could each push 2500 W.
 
@@ -397,10 +430,11 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 **R3 — A failed price fetch went unnoticed and kept the last strategy.**
 
 - *Problem:* when the tariff source delivered no prices, *Cache data source* threw away the cached list, *Determine dynamic strategy* returned without a new decision, and Dynamic kept running whatever it last chose, also *Charge* from the grid. Nothing told you.
-- *Fix:* three layers.
+- *Fix:* four layers.
   - *Last valid prices kept:* when a fetch fails and the cached list is from the same source and still covers the current interval, *Cache data source* passes that list on (`dynamic.stale = true`) and keeps it; the next run tries the source again.
   - *Fallback:* with no valid prices at all, Dynamic runs its baseline strategy (*Default to*) instead of the last one.
   - *Alert:* `sensor.hbc_energy_prices_data` has a `status` attribute (`ok`, `stale`, `no_data`). `binary_sensor.hbc_price_data_missing` turns on with `no_data`; the dashboard shows a warning, and after 30 minutes the automation *HBC+: alert when the tariff source delivers no prices* creates a persistent notification and calls `notify.notify`. The notification is dismissed when prices are back.
+  - *Errors caught:* an error inside *API call to Data Source* goes through *Catch fetch errors* and *Fetch error* to *Cache data source*, so it is handled like a fetch without prices and a link call always gets a reply.
 
 **R4 — The price sensor could be guessed wrong.**
 
@@ -458,7 +492,7 @@ HBC+ v1.0 is a complete, standalone installation: every package, flow and the da
 | Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
 | Dashboard | `custom:apexcharts-card` (HACS) | Price and history charts |
 | Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS) and a price integration | Needed for Dynamic and Charge Deadline |
-| Optional | HELIOS pyscript optimizer; Grid Clock integration | HELIOS strategy; Grid Clock as Dynamic price source |
+| Optional | Grid Clock integration | Grid Clock as Dynamic price source |
 
 Sign conventions must match: `sensor.marstek_mN_battery_power` is positive while **charging**, `sensor.p1_meter_power_phase_N` is positive on **import**. If your meter uses the opposite sign, fix it with a template sensor before installing, or the fuse room is computed wrongly.
 
@@ -508,7 +542,7 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 | `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.0 | Charges to a target before a deadline, in the cheapest quarter-hours |
 | `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.0 | Picks a strategy per price period (cheap, expensive, normal); contains the shared price fetch |
 | `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.0 | Sets all batteries to stop |
-| `02 strategy-helios (HBC+).json` | HBC+ Strategy Helios v1.0 | Carries out the HELIOS optimizer's decision |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.0 | Runs *Full stop* when *Helios* is selected; delete it before importing a real HELIOS flow |
 | `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.0 | Charge PV, Zero import and Standby / peak shave |
 | `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.0 | PID controller that keeps grid power at the target; spreads the power over the batteries |
 | `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.0 | Discharges to the grid down to a target |
@@ -517,6 +551,7 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 | `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.0 | Read-only: publishes the phase status over MQTT for the dashboard |
 | `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.0 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
 | `README.md` | — | Overview of the Node-RED files and installation |
+| `examples/price-fetch-example.json` | HBC+ Example: price fetch | Example of the shared price fetch; not part of the all-flows file |
 
 **docs/**
 
@@ -542,7 +577,7 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 
 1. Open the Home Assistant server config node (*HA System*, id `176d29a.6f648d6`) and confirm the server address and access token are right for your setup after import.
 2. Menu → *Import* → select `hbc-plus-all-flows.json` → choose **Replace** for existing nodes. Tabs with the same node ids (from an earlier installation) are replaced, not duplicated.
-3. Check the server node has **Expose to global context** on. *Read HA states (fast)*, the HBC+ planner and guard, and *Prepare request* in Dynamic all need it. The HBC+ files all carry the correct copy; an older Helios export carried a copy with this option off.
+3. Check the server node has **Expose to global context** on. *Read HA states (fast)*, the HBC+ planner and guard, and *Prepare request* in Dynamic all need it. The HBC+ files all carry the correct copy.
 4. *Deploy* → *Modified flows*, at a quiet moment. HBC+ rewrites battery mode and power once after a deploy; that is normal.
 5. Set your own notify action in the *Notify phone* node of *HBC+ Battery Oscillation Guard v1.0*; the default is `notify.notify`. Step 6 lists all three places that send notifications.
 
@@ -704,7 +739,7 @@ The gauge shows grid power against the grid fuse: import (positive) in light red
 | Overload alarm fires briefly when a big load starts | Load step before the next tick | Normal for a few seconds; raise the margin if it lasts 10 s |
 | New settings start at their minimum after install | Defaults never applied | Run *HBC+ phase guard: apply defaults* |
 | Charge Deadline books too few hours | Guard not on Enforce with 6 batteries, so it counts 15000 W | Set Enforce |
-| Link call to *Dynamic Fetch from Data Source* times out | Fetch failed inside the section, or the timeout is shorter than the fetch | Check *Strategy errors* in the Dynamic tab; set the timeout to at least 30 s |
+| Link call to *Dynamic Fetch from Data Source* times out | The timeout is shorter than the fetch, or the link call no longer points to the section (for example after a re-import) | Set the timeout to at least 30 s; open the link call and pick *Dynamic Fetch from Data Source* again |
 | Dashboard: *No energy prices*, or `binary_sensor.hbc_price_data_missing` on | The tariff source delivers no prices (integration down, sensor renamed, wrong sensor auto-detected) | Check the price integration; set `input_text.house_battery_strategy_dynamic_price_sensor` to the right sensor; the status of *Data source settings* in the Dynamic tab shows which sensor is used |
 | Dynamic status yellow: *(last prices)* | The last fetch failed; the previous prices of the same source are still in use | Nothing to do if it clears on the next run; otherwise as above |
 | Batteries suddenly run on their own firmware; notification *HBC stopped - batteries on firmware* | The control loop stopped for 5 minutes (Node-RED down, deploy error, lost HA connection), so the heartbeat fallback handed the batteries back | Start or fix Node-RED; once the loop runs again, the Master Switch flow takes over again in *Full control* |

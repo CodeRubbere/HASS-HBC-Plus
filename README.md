@@ -26,11 +26,11 @@ Battery packages contributed by the community:
 ## What HBC+ adds
 
 - **Phase guard** — a phase map for up to 6 batteries (M1–M6), one active battery per phase by default, and per-phase headroom under both the grid fuse and the battery circuit, computed from the P1 meter every tick. Optional *Shared headroom* mode.
-- **Correct planner ceiling** — Charge Deadline and HELIOS plan with the max power per phase, not the sum of all batteries.
+- **Correct planner ceiling** — Charge Deadline plans with the max power per phase, not the sum of all batteries.
 - **Charge Deadline strategy** — charges to a target (full, SoC or energy reserve) before a deadline, in the cheapest quarter-hours, with optional PV reserve and a follow-up strategy once the deadline has passed.
 - **GridClock as data source** — Dynamic and Charge Deadline can read prices from the [Grid Clock](https://gridclock.eu) integration (`sensor.grid_clock_<zone>_prices`). Prices refresh automatically when the default zone changes.
 - **Phases dashboard** and an overload alarm in Home Assistant that works even when Node-RED is down.
-- **Shared price fetch** — any flow can fetch the Dynamic price list with one link call.
+- **Shared price fetch** — the *API call to Data Source* group in *HBC+ Strategy Dynamic* is a link-call subroutine: any flow can fetch the current price list with one **link call** to *Dynamic Fetch from Data Source* (timeout ≥ 30 s), optionally for another source (`msg.dynamic.data_source`) or from the cache (`msg.dynamic_use_cache`). The caller always gets a reply in `msg.dynamic`: fresh prices, the last valid prices (`stale`) when the source fails, or `no_data`. Errors inside the group are caught, so a caller never waits for a timeout.
 - **Safety, performance and stability** improvements (fail-open code, fewer Modbus writes, one fast read node, bug fixes).
 
 With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without phase rules. Only *Enforce* applies them.
@@ -44,6 +44,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | `node-red/hbc-plus-all-flows.json` | All 15 HBC+ Node-RED tabs in one import file |
 | `node-red/*.json` | The same tabs as separate files |
 | `node-red/README.md` | Per-tab overview of what HBC+ changes |
+| `node-red/examples/` | Example tab for the shared price fetch |
 | `docs/` | User guide in English and Dutch |
 
 ## Quick start

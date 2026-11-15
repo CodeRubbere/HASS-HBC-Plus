@@ -16,9 +16,9 @@ Or import the files one by one.
 | `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.0 | **changed** - new *HBC+ phase planner* and *HBC+ phase guard* nodes; *Batteries (totals)* per phase (Enforce only) |
 | `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.0 | **changed** - *Max power solution* respects phase roles and fuse room (Enforce only) |
 | `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.0 | logic unchanged (uses Self-consumption + totals); documentation updated for HBC+ v1.0 |
-| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.0 | **changed** - *API call to Data Source* is a link-call section: *Cache check* calls it with a link call and gets the prices back; any other flow can call it too (link call to *Dynamic Fetch from Data Source*, timeout >= 30 s; optional `msg.dynamic.data_source`, `msg.dynamic_use_cache`; reply in `msg.dynamic`); a failed fetch keeps the last valid prices of the same source, falls back to the baseline strategy when none are left, and raises `binary_sensor.hbc_price_data_missing`; `input_text.house_battery_strategy_dynamic_price_sensor` pins the price sensor |
+| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.0 | **changed** - *API call to Data Source* is a link-call section: *Cache check* calls it with a link call and gets the prices back; any other flow can call it too (link call to *Dynamic Fetch from Data Source*, timeout >= 30 s; optional `msg.dynamic.data_source`, `msg.dynamic_use_cache`; reply in `msg.dynamic`); a failed fetch keeps the last valid prices of the same source, falls back to the baseline strategy when none are left, and raises `binary_sensor.hbc_price_data_missing`; an error inside the section is caught (*Catch fetch errors*) and handled the same way, so a caller always gets a reply; `input_text.house_battery_strategy_dynamic_price_sensor` pins the price sensor |
 | `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.0 | unchanged |
-| `02 strategy-helios (HBC+).json` | HBC+ Strategy Helios v1.0 | unchanged, except its copy of the HA server config node (see below) |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.0 | **new** - keeps the *Helios* strategy option safe until a HELIOS integration exists: runs *Full stop* and warns at most every 10 min; delete it before importing a real HELIOS flow (link in named *Helios*) |
 | `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.0 | unchanged |
 | `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.0 | **changed** - *Load distribution*: standby soft stop, fuse room per phase (Enforce only) |
 | `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.0 | **changed** - *Max power solution*, as Charge (Enforce only) |
@@ -27,6 +27,7 @@ Or import the files one by one.
 | `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.0 | unchanged |
 | `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.0 | **new** - read-only, publishes `hbc/phase/*` for the dashboard |
 | `hbc-plus-all-flows.json` | all of the above | one import file |
+| `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
 
 Flows of your own can request a strategy through the *Strategy arbiter* (link call to *Strategy request*, `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`); see the arbiter tab's Info.
 
@@ -42,9 +43,7 @@ what the flow does, how it runs, and what HBC+ v1.0 changes or does not change i
 
 ## HA server config node
 All files carry the same copy of the *HA System* server node (`176d29a.6f648d6`), with
-**Expose to global context** on. The fast read and the HBC+ planner/guard need that. The original Helios
-export carried an older copy with it switched off (named *Home Assistant*); importing that one with Replace
-would have switched it off. The HBC+ Helios file carries the correct copy.
+**Expose to global context** on. The fast read and the HBC+ planner/guard need that.
 
 ## Install
 1. **Back up first:** Node-RED menu > Export > All flows > Download.

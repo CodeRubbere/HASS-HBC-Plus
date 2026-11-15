@@ -1,0 +1,204 @@
+[
+    {
+        "id": "hbcp0helios0tab01",
+        "type": "tab",
+        "label": "HBC+ Strategy Helios (placeholder) v1.0",
+        "disabled": false,
+        "info": "Placeholder for a future HELIOS integration: runs Full stop. See the How this flow works comment.",
+        "env": []
+    },
+    {
+        "id": "hbcp0helios0g001",
+        "type": "group",
+        "z": "hbcp0helios0tab01",
+        "name": "Helios placeholder",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp0helios0in01",
+            "hbcp0helios0trc1",
+            "hbcp0helios0fn01",
+            "hbcp0helios0lc01",
+            "hbcp0helios0ret1"
+        ],
+        "x": 34,
+        "y": 79,
+        "w": 912,
+        "h": 82
+    },
+    {
+        "id": "hbcp0helios0in01",
+        "type": "link in",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g001",
+        "name": "Helios",
+        "links": [],
+        "x": 120,
+        "y": 120,
+        "wires": [
+            [
+                "hbcp0helios0trc1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "hbcp0helios0trc1",
+        "type": "change",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g001",
+        "name": "Trace",
+        "rules": [
+            {
+                "t": "set",
+                "p": "strategy.trace",
+                "pt": "msg",
+                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 260,
+        "y": 120,
+        "wires": [
+            [
+                "hbcp0helios0fn01"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0helios0fn01",
+        "type": "function",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g001",
+        "name": "Fall back to Full stop",
+        "func": "// Helios placeholder (HBC+ v1.0)\n// HBC+ keeps 'Helios' in the strategy list for a future HELIOS integration, but the HELIOS\n// flow itself is not part of HBC+ v1.0. Without this tab, selecting 'Helios' would make\n// Home Battery Start fail on a link call with no target, and the batteries would keep their\n// last setpoint. This placeholder runs Full stop instead and warns (at most every 10 min).\n// Delete this tab before you import a real HELIOS flow: two 'Helios' link-in nodes make\n// the dynamic link call ambiguous.\nconst log = global.get('logger');\nconst now = Date.now();\nif (now - (context.get('lastWarn') || 0) > 600000) {\n    context.set('lastWarn', now);\n    if (log) log(this, \"**Helios** selected, but the HELIOS flow is not installed - running Full stop\", \"warn\");\n}\nnode.status({ fill: 'yellow', shape: 'ring', text: `HELIOS not installed: Full stop (${new Date().toLocaleTimeString()})` });\nmsg.target = \"Full stop\";\nRED.util.setMessageProperty(msg, \"strategy.display\", \"Helios (not installed)\", true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 120,
+        "wires": [
+            [
+                "hbcp0helios0lc01"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0helios0lc01",
+        "type": "link call",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g001",
+        "name": "Run Full stop",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 670,
+        "y": 120,
+        "wires": [
+            [
+                "hbcp0helios0ret1"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0helios0ret1",
+        "type": "link out",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g001",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 850,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "hbcp0helios0g002",
+        "type": "group",
+        "z": "hbcp0helios0tab01",
+        "name": "Unhandled exceptions",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp0helios0cat1",
+            "hbcp0helios0unh1",
+            "hbcp0helios0ret2"
+        ],
+        "x": 34,
+        "y": 199,
+        "w": 192,
+        "h": 82
+    },
+    {
+        "id": "hbcp0helios0cat1",
+        "type": "catch",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g002",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 75,
+        "y": 240,
+        "wires": [
+            [
+                "hbcp0helios0unh1"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "hbcp0helios0unh1",
+        "type": "function",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g002",
+        "name": "Unhandled Exception",
+        "func": "// Log unhandled exception\nconst handle = global.get('unhandledException');\nif (handle) handle(this);\n\n// Check origin of msg execution\nif (msg._linkSource) {\n    return msg; // Origin: some other flow\n} else {\n    return null; // Origin: this flow. Stop to prevent 'Missing return' warning\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 125,
+        "y": 240,
+        "wires": [
+            [
+                "hbcp0helios0ret2"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "hbcp0helios0ret2",
+        "type": "link out",
+        "z": "hbcp0helios0tab01",
+        "g": "hbcp0helios0g002",
+        "name": "Return on error",
+        "mode": "return",
+        "links": [],
+        "x": 175,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "hbcp0helios0cmt1",
+        "type": "comment",
+        "z": "hbcp0helios0tab01",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# Strategy Helios (placeholder) - HBC+ v1.0\n\n**What it is.** HBC+ keeps *Helios* in `input_select.house_battery_strategy` so a HELIOS integration can be added later. The HELIOS flow itself is not part of HBC+ v1.0; this tab only makes the option safe to select.\n\n**How it runs.**\n1. **Helios** (link in) is called by *Home Battery Start* when the strategy is *Helios*.\n2. **Trace** adds this flow to `msg.strategy.trace`.\n3. **Fall back to Full stop** sets `msg.target = \"Full stop\"`, shows *Helios (not installed)* on the strategy display, and logs a warning at most every 10 minutes.\n4. **Run Full stop** (dynamic link call) runs *Full stop*: every battery on stop, 0 W.\n5. **Return** hands the message back to *Home Battery Start*.\n\nErrors are caught by the tab's catch node and returned to the caller, as in the other strategy tabs.\n\n**Installing a real HELIOS flow.** Delete this tab first. The real flow needs a link-in node named exactly *Helios* with a return at the end; two link-in nodes with that name make the dynamic link call from *Home Battery Start* fail.\n",
+        "x": 240,
+        "y": 320,
+        "wires": []
+    }
+]

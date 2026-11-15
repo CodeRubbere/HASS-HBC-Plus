@@ -24,7 +24,7 @@ Wat de fasebewaking toevoegt:
 - **Een fasekaart.** Elke batterij (M1–M6) hoort bij L1, L2, L3 of *Own circuit* (eigen groep).
 - **Eén actieve batterij per fase** (standaard). De partner op die fase wacht op 1 W idle en stopt daarna, zoals HBC+ doet met batterijen die het niet nodig heeft.
 - **Twee limieten per fase.** De actieve batterij krijgt alleen de ruimte die overblijft onder zowel de hoofdzekering (net), na de huislast op die fase, als de batterijgroep die de batterijen van die fase delen (standaard 16 A ≈ 3680 W elk), elke tick opnieuw berekend uit de P1-meter.
-- **Juist plafond voor planners.** Het maximale vermogen dat HBC+ aan Charge Deadline en HELIOS doorgeeft is de som per fase, niet de som van alle batterijen. Zo plannen die genoeg laaduren.
+- **Juist plafond voor planners.** Het maximale vermogen dat HBC+ aan Charge Deadline doorgeeft is de som per fase, niet de som van alle batterijen. Zo plant die genoeg laaduren.
 - **Een Phases-dashboard** en een onafhankelijk overbelastingsalarm in Home Assistant dat ook werkt als Node-RED stilstaat.
 - **Een optionele modus *Shared headroom*** waarin beide batterijen op een fase tegelijk mogen draaien, zolang ze samen onder de zekering blijven.
 
@@ -124,7 +124,7 @@ Typische winst: 2500 + 1000 W laden op een fase zonder huislast. De fallback als
 | Self-consumption | *Load distribution* soft-stopt standby-batterijen en begrenst elke fase op zijn zekeringruimte; anti-windup gebruikt de begrensde capaciteit |
 | Charge, Sell | *Max power solution* laat alleen de actieve batterij per fase draaien, op min(eigen max, zekeringruimte); de partner staat idle op 1 W |
 | Master Switch | Bij teruggave aan de firmware krijgt alleen het laagste M-nummer op een gedeelde fase RS485 *disable*; de partner blijft RS485 *enable* + forcible *stop* |
-| Charge Deadline, Helios | Logica ongewijzigd; ze plannen met het max vermogen per fase uit *Batteries (totals)* |
+| Charge Deadline | Logica ongewijzigd; plant met het max vermogen per fase uit *Batteries (totals)* |
 | Partials, Timed, Dynamic (prijsophaling: zie hieronder), Full stop, PID presets, Oscillation Guard, Strategy arbiter | Geen wijziging; wat ze uitvoeren gaat via Self-consumption of Max power, die de regels toepassen |
 | Phase monitor | **Nieuw**, alleen-lezen: publiceert `hbc/phase/*` voor het dashboard elke 5 s (opnieuw bij wijziging, anders hooguit elke 30 s) |
 
@@ -140,16 +140,49 @@ Gebruik hem vanuit een andere flow met een **link call**-node: kies *Dynamic Fet
 | `dynamic_use_cache` | in, optioneel | `true` = geef de gecachte prijzen van het Dynamic-tabblad terug als ze nog geldig zijn (zelfde regel als *Cache check*: na 13:00 moeten ze morgen dekken), anders ophalen |
 | `dynamic` | uit | `{data_source, data_all: {list, list_marked, average, min, max, start, …}, no_data?}` |
 | `dynamic_from_cache` | uit | `true` als de cache antwoordde |
+| `dynamic.stale` | uit | `true` als de bron faalde en de laatste geldige prijzen van die bron terugkwamen |
+| `target` | in, optioneel | Alleen voor een link call met een dynamisch doel: `"Dynamic Fetch from Data Source"` |
 
 - Bron *None*, of een bron die Node-RED niet kan lezen, komt direct terug met `dynamic.no_data = true` en een lege lijst, zodat de aanroeper nooit op de timeout wacht.
 - Een geslaagde ophaling vanuit elke aanroeper ververst ook de cache van het Dynamic-tabblad.
 - De rest van het bericht van de aanroeper komt ongewijzigd terug (`msg.template` wordt gebruikt en verwijderd).
-- Mislukt een ophaling binnen de sectie, dan loopt de link call na 30 s in een timeout; de fout gaat naar *Strategy errors* in het Dynamic-tabblad.
 - Levert een ophaling geen prijzen, dan komt de laatste geldige lijst van dezelfde bron terug met `dynamic.stale = true` zolang die het huidige interval nog dekt, anders `dynamic.no_data = true` (zie R3).
+- Een fout binnen de sectie (bijvoorbeeld de template-render terwijl HA niet verbonden is, of een macrofout) wordt opgevangen door *Catch fetch errors* en afgehandeld als een ophaling zonder prijzen, zodat de aanroeper direct antwoord krijgt in plaats van een timeout. De node *Fetch error* logt de fout als waarschuwing en toont hem in zijn status.
+
+#### Gebruik vanuit je eigen flow
+
+De repo heeft een kant-en-klaar voorbeeld: `node-red/examples/price-fetch-example.json`. Importeer het (*Import → select a file to import → Import*), deploy, en klik op de knop van *Every 15 min*; de debug-zijbalk toont de actuele prijs.
+
+Zelf bouwen:
+
+1. **Trigger.** Een inject-node, bijvoorbeeld elke 15 minuten.
+2. **Verzoek.** Een function- of change-node. Begin met een nieuwe `msg.dynamic` (`msg.dynamic = {}`): de sectie leest een bestaande `msg.dynamic` als verzoek en vervangt hem door het antwoord. Zet `msg.dynamic.data_source` alleen voor een andere bron dan die van het Dynamic-tabblad, en `msg.dynamic_use_cache = true` om de prijzen van het Dynamic-tabblad te hergebruiken in plaats van opnieuw op te halen.
+3. **Link call** met een timeout van 30 s, op een van twee manieren:
+   - *Statisch:* kies *Dynamic Fetch from Data Source* in de lijst van de node. Kies hem opnieuw na een herimport van het Dynamic-tabblad met nieuwe node-id's.
+   - *Dynamisch:* zet het linktype op *Dynamic target* en zet `msg.target = "Dynamic Fetch from Data Source"` in het verzoek. Dit blijft werken na een herimport. Gebruik het niet op een bericht dat HBC+ ook voor de aansturing gebruikt (binnen een strategietabblad), want daar noemt `msg.target` de strategie.
+4. **Lees het antwoord** in de volgende node. Controleer eerst `msg.dynamic.no_data`: dan is de lijst leeg. Met `msg.dynamic.stale` is de lijst de laatste geldige van die bron, bewaard zolang de bron faalt.
+
+Velden van `msg.dynamic.data_all`:
+
+| Veld | Betekenis |
+| --- | --- |
+| `list` | Eén prijs per interval in ct/kWh, vanaf `start` |
+| `start` | Begintijd van het eerste interval |
+| `hours` | Aantal uren dat de lijst dekt |
+| `datapoints` | Aantal intervallen in `list` |
+| `average`, `weighted_average`, `min`, `max` | In ct/kWh, naar beneden afgerond op hele centen |
+
+Een interval duurt `hours × 60 / datapoints` minuten (15 bij kwartierprijzen). De prijs van nu is:
+
+```js
+const a = msg.dynamic.data_all;
+const slotMs = (a.hours / a.datapoints) * 3600000;
+const priceNow = a.list[Math.floor((Date.now() - new Date(a.start).getTime()) / slotMs)]; // ct/kWh
+```
 
 ### Effect op planners
 
-Omdat *Batteries (totals)* het effectieve maximum in de bestaande helpers schrijft, hebben Charge Deadline, HELIOS en de PID-anti-windup geen codewijziging nodig.
+Omdat *Batteries (totals)* het effectieve maximum in de bestaande helpers schrijft, hebben Charge Deadline en de PID-anti-windup geen codewijziging nodig.
 
 | Waarde | 3 batterijen (nu) | 6 batterijen, geen faseregel | 6 batterijen, Enforce |
 | --- | --- | --- | --- |
@@ -194,8 +227,8 @@ Kies de strategie in `input_select.house_battery_strategy`. De *Strategy arbiter
 | Charge Deadline | Laadt tot een doel vóór een deadline, in de goedkoopste kwartieren |
 | Timed | Een andere strategie per tijdvak (A t/m E) |
 | Dynamic | Een andere strategie voor goedkope, dure en normale prijsperiodes |
-| Helios | Voert de beslissing van de HELIOS-optimizer uit (pyscript, optioneel) |
 | Full stop | Alle batterijen op stop, 0 W; het relais gaat open, dus geen sluimerverbruik |
+| Helios | Gereserveerd voor een toekomstige HELIOS-integratie (hoort niet bij HBC+ v1.0). Tot die flow geïnstalleerd is, draait een placeholder-tabblad *Full stop* en logt een waarschuwing |
 
 **EV-stoptrigger.** Zet het entity-id van een "EV laadt"-sensor of -boolean in `input_text.house_battery_strategy_ev_sensor_entity_id`. Zolang die `on` is, draait HBC+ de strategie uit `input_select.house_battery_strategy_ev_stop_trigger_strategy` (*Full stop* of *Standby / peak shave*), zodat de batterijen niet in de auto ontladen.
 
@@ -284,7 +317,7 @@ De prijzen worden ververst om middernacht, om 13:15 en 15:00, na een bronwissel,
 
 ### Waarom fasebewaking nodig is
 
-Zonder fasebewaking kent de regeling geen fasen. Dat ging alleen goed zolang M1, M2 en M3 elk op een eigen fase zaten. *Max power solution* (Charge, Sell en HELIOS Charge/Sell) zet elke batterij op zijn maximum, en *Load distribution* (Self-consumption) vult de batterijen in prioriteitsvolgorde, elk tot zijn eigen maximum. Met twee Marsteks op L1 komt er dan 2 × 2500 = 5000 W op die fase, ruim boven een zekering van 16 A (3680 W).
+Zonder fasebewaking kent de regeling geen fasen. Dat ging alleen goed zolang M1, M2 en M3 elk op een eigen fase zaten. *Max power solution* (Charge en Sell) zet elke batterij op zijn maximum, en *Load distribution* (Self-consumption) vult de batterijen in prioriteitsvolgorde, elk tot zijn eigen maximum. Met twee Marsteks op L1 komt er dan 2 × 2500 = 5000 W op die fase, ruim boven een zekering van 16 A (3680 W).
 
 Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15000 W) in plaats van wat er per fase echt kan (3 × 2500 = 7500 W). Charge Deadline zou dan maar de helft van de benodigde goedkope kwartieren boeken. En de heartbeat-fallback zou bij een storing elke batterij in firmware-anti-feed zetten, waarna twee batterijen op één fase elk 2500 W kunnen leveren.
 
@@ -397,10 +430,11 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 **R3 — Een mislukte prijsophaling bleef onopgemerkt en hield de laatste strategie aan.**
 
 - *Probleem:* leverde de tariefbron geen prijzen, dan gooide *Cache data source* de gecachte lijst weg, kwam *Determine dynamic strategy* zonder nieuwe beslissing terug, en bleef Dynamic draaien wat het het laatst koos, ook *Charge* van het net. Niets meldde dat.
-- *Oplossing:* drie lagen.
+- *Oplossing:* vier lagen.
   - *Laatste geldige prijzen blijven:* mislukt een ophaling terwijl de gecachte lijst van dezelfde bron is en het huidige interval nog dekt, dan geeft *Cache data source* die lijst door (`dynamic.stale = true`) en bewaart hem; de volgende run probeert de bron opnieuw.
   - *Terugval:* zijn er helemaal geen geldige prijzen, dan draait Dynamic zijn basisstrategie (*Default to*) in plaats van de laatste.
   - *Melding:* `sensor.hbc_energy_prices_data` heeft een attribuut `status` (`ok`, `stale`, `no_data`). `binary_sensor.hbc_price_data_missing` gaat aan bij `no_data`; het dashboard toont een waarschuwing, en na 30 minuten maakt de automatisering *HBC+: alert when the tariff source delivers no prices* een persistente melding en roept `notify.notify` aan. De melding verdwijnt zodra er weer prijzen zijn.
+  - *Fouten opgevangen:* een fout binnen *API call to Data Source* gaat via *Catch fetch errors* en *Fetch error* naar *Cache data source*, zodat hij wordt afgehandeld als een ophaling zonder prijzen en een link call altijd antwoord krijgt.
 
 **R4 — De prijssensor kon verkeerd geraden worden.**
 
@@ -458,7 +492,7 @@ HBC+ v1.0 is een complete, zelfstandige installatie: alle packages, flows en het
 | Netmeter | Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import | De zekeringruimte wordt per fase uit P1 berekend |
 | Dashboard | `custom:apexcharts-card` (HACS) | Prijs- en historiegrafieken |
 | Prijzen | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (HACS) en een prijsintegratie | Nodig voor Dynamic en Charge Deadline |
-| Optioneel | HELIOS-pyscript-optimizer; Grid Clock-integratie | HELIOS-strategie; Grid Clock als Dynamic-prijsbron |
+| Optioneel | Grid Clock-integratie | Grid Clock als Dynamic-prijsbron |
 
 De tekenconventies moeten kloppen: `sensor.marstek_mN_battery_power` is positief tijdens **laden**, `sensor.p1_meter_power_phase_N` is positief bij **import**. Gebruikt je meter het omgekeerde teken, corrigeer dat dan met een template-sensor vóór de installatie, anders wordt de zekeringruimte verkeerd berekend.
 
@@ -508,7 +542,7 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 | `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.0 | Laadt tot een doel vóór een deadline, in de goedkoopste kwartieren |
 | `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.0 | Kiest een strategie per prijsperiode (goedkoop, duur, normaal); bevat de gedeelde prijsophaling |
 | `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.0 | Zet alle batterijen op stop |
-| `02 strategy-helios (HBC+).json` | HBC+ Strategy Helios v1.0 | Voert de beslissing van de HELIOS-optimizer uit |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.0 | Draait *Full stop* als *Helios* gekozen is; verwijder het vóór je een echte HELIOS-flow importeert |
 | `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.0 | Charge PV, Zero import en Standby / peak shave |
 | `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.0 | PID-regelaar die het netvermogen op het doel houdt; verdeelt het vermogen over de batterijen |
 | `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.0 | Ontlaadt naar het net tot een doel |
@@ -517,6 +551,7 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 | `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.0 | Alleen-lezen: publiceert de fasestatus via MQTT voor het dashboard |
 | `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.0 | Enige schrijver van de strategiekeuze; kiest tussen je eigen keuze, eigen flows en de Oscillation Guard |
 | `README.md` | — | Overzicht van de Node-RED-bestanden en installatie |
+| `examples/price-fetch-example.json` | HBC+ Example: price fetch | Voorbeeld van de gedeelde prijsophaling; zit niet in het all-flows-bestand |
 
 **docs/**
 
@@ -542,7 +577,7 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 
 1. Open na de import de Home Assistant-serverconfig-node (*HA System*, id `176d29a.6f648d6`) en controleer of het serveradres en het toegangstoken kloppen voor jouw opstelling.
 2. Menu → *Import* → kies `hbc-plus-all-flows.json` → kies **Replace** voor bestaande nodes. Tabbladen met dezelfde node-id's (van een eerdere installatie) worden vervangen, niet gedupliceerd.
-3. Controleer of de servernode **Expose to global context** aan heeft. *Read HA states (fast)*, de HBC+-planner en -guard en *Prepare request* in Dynamic hebben het nodig. Alle HBC+-bestanden bevatten de juiste kopie; een oudere Helios-export had een kopie met deze optie uit.
+3. Controleer of de servernode **Expose to global context** aan heeft. *Read HA states (fast)*, de HBC+-planner en -guard en *Prepare request* in Dynamic hebben het nodig. Alle HBC+-bestanden bevatten de juiste kopie.
 4. *Deploy* → *Modified flows*, op een rustig moment. HBC+ schrijft na een deploy één keer modus en vermogen opnieuw naar de batterijen; dat is normaal.
 5. Zet je eigen notify-actie in de node *Notify phone* van *HBC+ Battery Oscillation Guard v1.0*; standaard is `notify.notify`. Stap 6 noemt alle drie de plekken die meldingen sturen.
 
@@ -704,7 +739,7 @@ De meter toont het netvermogen tegen de netzekering: afname (positief) in lichtr
 | Overbelastingsalarm gaat kort af bij het inschakelen van een grote last | Laststap vóór de volgende tick | Normaal voor enkele seconden; verhoog de marge als het 10 s duurt |
 | Nieuwe instellingen staan na installatie op hun minimum | Standaardwaarden nooit toegepast | Voer *HBC+ phase guard: apply defaults* uit |
 | Charge Deadline boekt te weinig uren | Guard niet op Enforce met 6 batterijen, dus het telt 15000 W | Zet Enforce |
-| Link call naar *Dynamic Fetch from Data Source* loopt in een timeout | Ophaling mislukt in de sectie, of timeout korter dan de ophaling | Bekijk *Strategy errors* in het Dynamic-tabblad; zet de timeout op minstens 30 s |
+| Link call naar *Dynamic Fetch from Data Source* loopt in een timeout | Timeout korter dan de ophaling, of de link call wijst niet meer naar de sectie (bijvoorbeeld na een herimport) | Zet de timeout op minstens 30 s; open de link call en kies opnieuw *Dynamic Fetch from Data Source* |
 | Dashboard: *No energy prices*, of `binary_sensor.hbc_price_data_missing` aan | De tariefbron levert geen prijzen (integratie offline, sensor hernoemd, verkeerde sensor geraden) | Controleer de prijsintegratie; zet `input_text.house_battery_strategy_dynamic_price_sensor` op de juiste sensor; de status van *Data source settings* in het Dynamic-tabblad toont welke sensor gebruikt wordt |
 | Dynamic-status geel: *(last prices)* | De laatste ophaling mislukte; de vorige prijzen van dezelfde bron zijn nog in gebruik | Niets doen als het bij de volgende run verdwijnt; anders als hierboven |
 | Batterijen draaien ineens op hun eigen firmware; melding *HBC stopped - batteries on firmware* | De regellus stond 5 minuten stil (Node-RED offline, deployfout, HA-verbinding kwijt), dus gaf de heartbeat-fallback de batterijen terug | Start of herstel Node-RED; zodra de lus weer draait, neemt de Master Switch-flow het in *Full control* weer over |

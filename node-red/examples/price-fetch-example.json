@@ -1,0 +1,112 @@
+[
+    {
+        "id": "hbcp0example0tab",
+        "type": "tab",
+        "label": "HBC+ Example: price fetch",
+        "disabled": false,
+        "info": "Example of the shared price fetch. See the How this flow works comment.",
+        "env": []
+    },
+    {
+        "id": "hbcp0example0inj",
+        "type": "inject",
+        "z": "hbcp0example0tab",
+        "name": "Every 15 min",
+        "props": [],
+        "repeat": "900",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 130,
+        "y": 100,
+        "wires": [
+            [
+                "hbcp0example0req"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0example0req",
+        "type": "function",
+        "z": "hbcp0example0tab",
+        "name": "Request prices",
+        "func": "// Request prices from the shared price fetch (HBC+ v1.0).\n// Start with a fresh msg.dynamic: the section reads an existing msg.dynamic as the\n// request and replaces it with the reply.\nmsg.dynamic = {};\n// Optional: another price source than the Dynamic tab's selection, e.g.\n// msg.dynamic.data_source = \"Grid Clock\";\n// Optional: reuse the Dynamic tab's cached prices when still valid (no new fetch).\nmsg.dynamic_use_cache = true;\n// Target for the dynamic link call below (by name, survives a re-import of the Dynamic tab).\nmsg.target = \"Dynamic Fetch from Data Source\";\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 100,
+        "wires": [
+            [
+                "hbcp0example0lc1"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0example0lc1",
+        "type": "link call",
+        "z": "hbcp0example0tab",
+        "name": "Fetch prices",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 500,
+        "y": 100,
+        "wires": [
+            [
+                "hbcp0example0use"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0example0use",
+        "type": "function",
+        "z": "hbcp0example0tab",
+        "name": "Price now",
+        "func": "// Read the reply of the shared price fetch (HBC+ v1.0).\nconst d = msg.dynamic || {};\nconst a = d.data_all || {};\nif (d.no_data || !Array.isArray(a.list) || a.list.length === 0) {\n    node.status({ fill: 'red', shape: 'ring', text: `no prices (${d.data_source || '?'})` });\n    msg.payload = { price_now_ct: null, source: d.data_source, no_data: true };\n    return msg;\n}\nconst slotMs = (a.hours / a.datapoints) * 3600000;          // interval length (15 min for quarter-hour prices)\nconst i = Math.floor((Date.now() - new Date(a.start).getTime()) / slotMs);\nconst priceNow = (i >= 0 && i < a.list.length) ? a.list[i] : null;   // ct/kWh\nmsg.payload = {\n    price_now_ct: priceNow === null ? null : Math.round(priceNow * 100) / 100,\n    average_ct: a.average, min_ct: a.min, max_ct: a.max,\n    interval_minutes: slotMs / 60000,\n    intervals: a.list.length,\n    source: d.data_source,\n    from_cache: msg.dynamic_from_cache === true,\n    stale: d.stale === true\n};\nnode.status({ fill: d.stale ? 'yellow' : 'green', shape: 'dot',\n    text: `${msg.payload.price_now_ct} ct/kWh now (${d.data_source}${d.stale ? ', last prices' : ''})` });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 100,
+        "wires": [
+            [
+                "hbcp0example0dbg"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0example0dbg",
+        "type": "debug",
+        "z": "hbcp0example0tab",
+        "name": "Prices",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 830,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "hbcp0example0cmt",
+        "type": "comment",
+        "z": "hbcp0example0tab",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# Example: use the shared price fetch - HBC+ v1.0\n\nThis tab is an example, not part of the control loop. It shows how any flow can get the current price list from the *API call to Data Source* section of *HBC+ Strategy Dynamic*.\n\n1. **Every 15 min** (inject) starts a request; click its button to try it.\n2. **Request prices** sets a fresh `msg.dynamic`, optionally `msg.dynamic.data_source` and `msg.dynamic_use_cache`, and `msg.target = \"Dynamic Fetch from Data Source\"`.\n3. **Fetch prices** is a link call with a *dynamic* target and a 30 s timeout. The reply always comes back: prices, the last valid prices (`msg.dynamic.stale`), or `msg.dynamic.no_data`.\n4. **Price now** finds the current interval in `msg.dynamic.data_all.list` (ct/kWh) and puts a summary in `msg.payload`.\n5. **Prices** (debug) shows it in the debug sidebar.\n\nNeeds *HBC+ Strategy Dynamic* v1.0 deployed. See *Shared price fetch* in the user guide.\n",
+        "x": 260,
+        "y": 160,
+        "wires": []
+    }
+]

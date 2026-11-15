@@ -699,7 +699,7 @@ input_select:
       - Sell # Discharge batteries
       - Zero import # Use battery to prevent grid import, surplus PV exports to grid
       - Standby / peak shave # Standby, peak shave only. Requires power limits to be set!
-      - Helios
+      - Helios # Reserved for the HELIOS integration (not included in HBC+ v1.0)
     icon: mdi:home-battery
 
   # EV stop trigger strategy
