@@ -12,6 +12,11 @@ Besides the phase guard, HBC+ v1.0 brings improvements in three areas:
 - **Performance** — one fast read node instead of ~43 separate reads, the PID step and the Timed period choice merged with settings caches, and fewer Modbus writes per tick.
 - **Stability** — bug fixes (among others: total helpers reset to 0 after a restart, a price cache that kept old prices after a source change, the debug board), totals that never send NaN to HA, and one consistent HA server node in every flow file.
 
+It also adds two features:
+
+- **Charge Deadline strategy** — charges to a target (full, SoC or energy reserve) before a deadline, in the cheapest quarter-hours, with optional PV reserve and a follow-up strategy once the deadline has passed. See [Charge Deadline](#charge-deadline).
+- **GridClock as data source** — Dynamic and Charge Deadline can read prices from the [Grid Clock](https://gridclock.eu) integration (`sensor.grid_clock_<zone>_prices`). Prices refresh automatically when the default zone changes. See [Dynamic](#dynamic).
+
 All changes are described in full in the section [Improvements in HBC+ v1.0](#improvements-in-hbc-v10) below.
 
 What the phase guard adds:

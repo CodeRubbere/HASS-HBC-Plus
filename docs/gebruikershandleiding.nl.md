@@ -12,6 +12,11 @@ Naast de fasebewaking brengt HBC+ v1.0 verbeteringen op drie vlakken:
 - **Performance** — één snelle leesnode in plaats van ~43 losse reads, PID-stap en Timed-periodekeuze samengevoegd met instellingencaches, en minder Modbus-writes per tick.
 - **Stabiliteit** — bugfixes (o.a. totaal-helpers die na een herstart op 0 sprongen, een prijscache die na een bronwissel oude prijzen gebruikte, het debug board), totalen die nooit NaN naar HA sturen, en één consistente HA-servernode in alle flowbestanden.
 
+Daarnaast voegt het twee functies toe:
+
+- **Charge Deadline-strategie** — laadt vóór een deadline tot een doel (vol, SoC of energiereserve), in de goedkoopste kwartieren, met optionele PV-reserve en een vervolgstrategie zodra de deadline voorbij is. Zie [Charge Deadline](#charge-deadline).
+- **GridClock als databron** — Dynamic en Charge Deadline kunnen prijzen lezen uit de [Grid Clock](https://gridclock.eu)-integratie (`sensor.grid_clock_<zone>_prices`). De prijzen verversen automatisch zodra de standaardzone wijzigt. Zie [Dynamic](#dynamic).
+
 Alle wijzigingen staan uitgewerkt in de sectie [Verbeteringen in HBC+ v1.0](#verbeteringen-in-hbc-v10) hieronder.
 
 Wat de fasebewaking toevoegt:

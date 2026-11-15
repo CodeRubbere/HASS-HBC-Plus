@@ -1,5 +1,5 @@
 
-# Home Battery Control Plus via Home Assistant & Node-RED
+# Home Battery Control Plus (HBC+)
 
 Home Battery Control Plus is an open-source solution for the community to control home batteries and electric vehicles using Home Assistant and Node-RED. Control your batteries exactly how you want, all in one place without vendor lock-ins.
 
@@ -27,6 +27,8 @@ Battery packages contributed by the community:
 
 - **Phase guard** — a phase map for up to 6 batteries (M1–M6), one active battery per phase by default, and per-phase headroom under both the grid fuse and the battery circuit, computed from the P1 meter every tick. Optional *Shared headroom* mode.
 - **Correct planner ceiling** — Charge Deadline and HELIOS plan with the max power per phase, not the sum of all batteries.
+- **Charge Deadline strategy** — charges to a target (full, SoC or energy reserve) before a deadline, in the cheapest quarter-hours, with optional PV reserve and a follow-up strategy once the deadline has passed.
+- **GridClock as data source** — Dynamic and Charge Deadline can read prices from the [Grid Clock](https://gridclock.eu) integration (`sensor.grid_clock_<zone>_prices`). Prices refresh automatically when the default zone changes.
 - **Phases dashboard** and an overload alarm in Home Assistant that works even when Node-RED is down.
 - **Shared price fetch** — any flow can fetch the Dynamic price list with one link call.
 - **Safety, performance and stability** improvements (fail-open code, fewer Modbus writes, one fast read node, bug fixes).
