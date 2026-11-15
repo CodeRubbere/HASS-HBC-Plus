@@ -8,9 +8,9 @@ HBC+ (Home Battery Control Plus) v1.0 controls up to six home batteries from Hom
 
 Besides the phase guard, HBC+ v1.0 brings improvements in three areas:
 
-- **Safety and security** — per-phase main-fuse protection, fail-open code that falls back to control without phase rules on an error, an HA alarm that works without Node-RED, and a heartbeat that hands the batteries back to their firmware when the control loop stops.
+- **Safety and security** — per-phase main-fuse protection, fail-open code that falls back to control without phase rules on an error, an HA alarm that works without Node-RED, and a heartbeat that hands the batteries back to their firmware when the control loop stops or no longer works, and warnings and errors that always reach the Node-RED log and `sensor.hbc_health`.
 - **Performance** — one fast read node instead of ~43 separate reads, the PID step and the Timed period choice merged with settings caches, and fewer Modbus writes per tick.
-- **Stability** — bug fixes (among others: total helpers reset to 0 after a restart, a price cache that kept old prices after a source change, the debug board), totals that never send NaN to HA, and one consistent HA server node in every flow file.
+- **Stability** — bug fixes (among others: total helpers reset to 0 after a restart, a price cache that kept old prices after a source change, the debug board), battery values that never turn into NaN (one unavailable battery no longer stops the others), and one consistent HA server node in every flow file.
 
 It also adds two features:
 
@@ -72,13 +72,15 @@ flowchart LR
 On every update of `sensor.p1_meter_power` (rate limited), *HBC+ Home Battery Start* runs one tick:
 
 1. **Read HA states (fast)** reads all batteries (M1…M*n*, `input_number.house_battery_count`) and settings in one node from the Home Assistant states in global context. If those are missing it falls back to the original chain of current-state nodes.
-2. **Batteries (totals)** computes total battery power, max charge/discharge power and usable energy, and writes them to the `input_number.house_battery_total_*` helpers. A briefly unavailable value is held for up to 5 min.
+2. **Batteries (totals)** computes total battery power, max charge/discharge power and usable energy, and writes them to the `input_number.house_battery_total_*` helpers. A briefly unavailable value is held for up to 5 min; the strategies get the held value too. A battery that has no usable SoC or power limit for longer is not driven (R7).
 3. **Update battery order** rotates battery priority.
 4. **HBC+ phase planner** (new) works out per phase who may run and how much room there is.
 5. **Strategy selection** calls the strategy tab named in `input_select.house_battery_strategy`. It returns `msg.solutions`: one `{id, mode, power}` per battery.
 6. **HBC+ phase guard** (new) checks the solutions one last time.
-7. **Write limiter → Set Batteries** writes power, then mode, per battery, only when a value changed (awaited writes, 60 s keep-alive on mode).
-8. **HBC+ heartbeat** publishes the time to MQTT `hbc/heartbeat`, at most once a minute. If it stops, Home Assistant hands the batteries back to their firmware (see F4).
+7. **Write limiter → Set Batteries** writes power, then mode, per battery, only when a value changed (awaited writes, 60 s keep-alive on mode). Each solution is checked first: the mode must be stop, charge or discharge and the power a number within 0 … max, otherwise *stop*; a battery whose RS485 is off gets no writes (R6, R7).
+8. **HBC+ heartbeat** publishes the time to MQTT `hbc/heartbeat`, at most once a minute and only after a good cycle: the strategy returned without an error, and at least one battery was written without an error. If it stops, Home Assistant hands the batteries back to their firmware (see F4, R5 and R6).
+
+Next to the loop, *HBC+ health* publishes the warnings and errors of the last 10 minutes to `hbc/health` → `sensor.hbc_health` (R8).
 
 ### Guard modes
 
@@ -197,6 +199,9 @@ The planner value follows the fuse room. On *Enforce*, *Batteries (totals)* subt
 - **Fail-open.** Planner, guard and totals run in try/catch. On an error they warn and pass the message on unchanged, i.e. control without phase rules.
 - **No cross-tab dependency** in the control loop: planner and guard live inside *Home Battery Start*. Disabling the Phase monitor tab changes nothing.
 - **Independent alarms.** `binary_sensor.hbc_phase_limit_exceeded` turns on when grid power on any phase exceeds the grid fuse for 10 s; `binary_sensor.hbc_phase_circuit_limit_exceeded` when the batteries on any phase draw more than the battery circuit for 10 s. Both are pure Home Assistant and work when Node-RED is down.
+- **A heartbeat that means *working*.** The heartbeat only follows a good control cycle (R6). When it goes stale, Home Assistant stops every battery it hands back to its firmware, and the Master Switch flow waits for a fresh heartbeat before it turns RS485 on again (R5).
+- **No NaN towards the batteries.** One unavailable battery value no longer spreads to the other batteries, and *Set Batteries* checks every setpoint before it is written (R7).
+- **Errors are visible.** Warnings and errors always reach the Node-RED log and `sensor.hbc_health`, also with *Insight mode* off; HA notifies you when errors keep coming (R8).
 
 ## Strategies and settings
 
@@ -325,7 +330,8 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 | Situation | Behaviour |
 | --- | --- |
-| HBC+ stopped (heartbeat stale) | Per shared phase only the battery with the lowest M-number goes to firmware anti-feed. Its partner stays RS485 *enable* + forcible *stop*, so it does nothing, even when Node-RED or HA is down. |
+| HBC+ stopped (heartbeat stale) | Per shared phase only the battery with the lowest M-number goes to firmware anti-feed. Its partner stays RS485 *enable* + forcible *stop*, so it does nothing, even when Node-RED or HA is down. Every battery handed back first gets forcible *stop*, and the Master Switch flow turns RS485 on again only once the heartbeat is fresh. |
+| SoC or power limit of a battery unavailable for more than 5 minutes | That battery is not driven (limits 0 W, `data_ok = false`); the other batteries keep working (R7). |
 | Active battery RS485 off, offline or at its SoC limit | The partner takes over at once (no dwell), after break-before-make. |
 | Active battery unreachable while it was running | The partner stays blocked, because the old battery may still be running its last command. The phase idles and an alert is raised. |
 | Big load switches on while the phase charges at full power | The fuse is briefly above 16 A until the next tick plus the Marstek's response (a few seconds). Fuses tolerate this; the margin covers measurement error, not big steps. If it lasts 10 s the alarm fires. |
@@ -346,7 +352,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 ## Improvements in HBC+ v1.0
 
-Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, four make the system more robust, four make the control loop faster or write less to Modbus, and five are features. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
+Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, eight make the system more robust, four make the control loop faster or write less to Modbus, and five are features. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
 
 | # | Change | Where | Type |
 | --- | --- | --- | --- |
@@ -362,6 +368,10 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 | R2 | One consistent HA server node in every file | All flows | Robustness |
 | R3 | Price fetch failure: last valid prices kept, baseline fallback, alert | Dynamic + `hbc_control.yaml` + dashboard | Robustness |
 | R4 | Price sensor can be pinned | Dynamic – *Data source settings* + helper | Robustness |
+| R5 | Heartbeat fallback no longer undone by the Master Switch | Master Switch + `hbc_heartbeat.yaml` | Robustness |
+| R6 | Heartbeat only after a good control cycle | Start – *HBC+ heartbeat*, *Set Batteries* | Robustness |
+| R7 | One unavailable battery value no longer stops every battery | Start – *Batteries (totals)*, *Set Batteries*; Self-consumption – *Load distribution* | Robustness |
+| R8 | Warnings and errors always logged, `sensor.hbc_health` with alert | Start, arbiter, Oscillation Guard, Phase monitor + `hbc_heartbeat.yaml` | Robustness |
 | P1 | *Read HA states (fast)*: one node instead of ~43 reads | Start | Performance |
 | P2 | *PID step*: 13 nodes in one, cache for PID settings | Self-consumption | Performance |
 | P3 | *Pick period*: fast path for Timed with settings cache | Timed | Performance |
@@ -420,7 +430,7 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 **R1 — One unavailable battery value broke the totals.**
 
 - *Problem:* *Batteries (totals)* summed `Number(battery.x)` for every battery. When one entity was `unavailable` or `unknown` (reconnect, Modbus hiccup, HA restart), the total became NaN. That reached HA as `null` and raised `HomeAssistantError: expected float at 'value'` every cycle; strategies comparing against these totals got NaN too, and comparisons with NaN are always false.
-- *Fix:* a guard per battery and per value. A valid number is used and remembered; a missing value uses the last good one for up to 5 minutes; after that the battery counts as 0, because an offline battery delivers nothing. `msg.batteries` itself is unchanged. The node status is green when all is OK, yellow while a value is held and red once a battery counts as 0. With valid data this gives exactly the same totals as before (14 test cases).
+- *Fix:* a guard per battery and per value. A valid number is used and remembered; a missing value uses the last good one for up to 5 minutes; after that the battery counts as 0, because an offline battery delivers nothing. `msg.batteries` itself was left unchanged; since R7 the strategies get the held values too. The node status is green when all is OK, yellow while a value is held and red once a battery counts as 0. With valid data this gives exactly the same totals as before (14 test cases).
 
 **R2 — The HA server node differed per file.**
 
@@ -440,6 +450,26 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 
 - *Problem:* for EasyEnergy/EnergyZero, ENTSO-E, GE-Spot, Tibber and Nordpool (custom), Amber, Octopus, PVPC and Omie, *Data source settings* names no sensor, so the Cheapest Energy Hours macro auto-detects it. With two price integrations installed it can pick the wrong one.
 - *Fix:* the optional helper `input_text.house_battery_strategy_dynamic_price_sensor` (set it in *Settings* → *Devices & services* → *Helpers*) pins the sensor, e.g. `sensor.nordpool_kwh_nl_eur_3_10_021`. It also overrides the built-in sensor for Nordpool and Tibber (core) and Frank Energie. Sources that pass their own list (Zonneplan, Grid Clock) ignore it. The status of *Data source settings* shows which sensor is used, *auto-detected*, or *not found* when the entity does not exist.
+
+**R5 — The heartbeat fallback was undone within 5 minutes.**
+
+- *Problem:* the fallback in `hbc_heartbeat.yaml` switched RS485 off but left the forcible charge/discharge command in the battery. The Master Switch flow re-applies *Full control* every 5 minutes and switched RS485 back on without looking at the heartbeat. The battery then resumed HBC's last command (for example discharging at 2500 W) with no control loop running. The fallback did not fire again, because `binary_sensor.hbc_heartbeat_stale` stayed on. A likely trigger: the P1 meter drops off Wi-Fi while Node-RED keeps running.
+- *Fix:* two parts. The fallback first sets forcible *stop* on every battery it hands back, then anti-feed, then RS485 off; if RS485 is ever switched on again without HBC running, the battery stays stopped. And the periodic check of the Master Switch flow skips *Full control* while the heartbeat is stale (*Skip while HBC heartbeat is stale*); *HBC heartbeat back* re-applies the master mode as soon as the heartbeat is fresh again. A change of the master mode itself is always applied.
+
+**R6 — The heartbeat only proved that P1 updates arrived.**
+
+- *Problem:* the heartbeat was fed from every P1 tick, before the strategies and the writes. When a strategy failed on every tick, the link call timed out or every Modbus write failed, the heartbeat stayed fresh and the batteries kept their last command.
+- *Fix:* the heartbeat is now fed at the end of a cycle, through the link *HBC+ cycle result*: from *Write latency* when a write cycle finished with at least one battery written without an error, and from *solutions present* when the strategy returned without setpoints (a deadband halt) and without an error. One unreachable battery alone does not stop the heartbeat, because the HA fallback cannot reach it either; its errors show up in `sensor.hbc_health` (R8). *Set Batteries* writes nothing to a battery whose RS485 is off (its firmware is in control); that cycle still counts as good, so after a fallback the heartbeat can come back and the Master Switch can hand the batteries back to HBC.
+
+**R7 — One unavailable battery value could stop every battery.**
+
+- *Problem:* R1 protected the totals, but not the per-battery values the strategies use. In *Load distribution*, one battery with an unavailable max power made the power still to assign NaN, and with it the setpoint of every battery after it. HA rejected all those writes on every tick, so the whole fleet kept its previous command, and the PID lost its integral term.
+- *Fix:* three layers. *Batteries (totals)* now also writes the held value into `msg.batteries` (up to 5 minutes, as in R1), and a battery that still has no usable SoC or power limit after that gets limits of 0 W and `data_ok = false`: it is not driven, the phase planner does not pick it and *Load distribution* soft-stops it. *Load distribution* counts a limit or PID output that is not a number as 0 W. *Set Batteries*, which every write passes, checks each solution: the mode must be *stop*, *charge* or *discharge* and the power a number, otherwise the battery gets *stop*; the power is clamped to 0 … the battery's max. With valid data the result is the same as before (2000 random cases compared).
+
+**R8 — Errors left no trace.**
+
+- *Problem:* the HBC+ logger did nothing while *Insight mode* was off (it switches itself off after 5 minutes), also for errors. Node-RED does not log errors that a Catch node catches, and every HBC+ tab has one. Failing Modbus writes and strategy errors were therefore invisible.
+- *Fix:* the logger always counts warnings and errors and writes them to the Node-RED log, the same message at most once a minute (with the number of repeats); *info* lines still need *Insight mode*. The Catch nodes of the Strategy arbiter, Battery Oscillation Guard and Phase monitor tabs hand their errors to the logger too. *HBC+ health* in the Start flow publishes `hbc/health` (retained JSON) to `sensor.hbc_health`: `ok`, `warning` (a warning or 1–2 errors in 10 minutes) or `error` (3 or more errors in 10 minutes), with the counts and the last error as attributes. The automation *HBC+: alert when the control loop keeps logging errors* in `hbc_heartbeat.yaml` creates a persistent notification and calls `notify.notify` when the status stays `error` for 5 minutes, and dismisses it when the status is `ok` again.
 
 ### Performance
 
@@ -461,7 +491,7 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 **F3 — Charge Deadline strategy.** Charges to a target SoC or target energy before a deadline, preferring the cheapest windows from the Dynamic price list and topping up from the grid when PV falls short. It consists of the tab *HBC+ Strategy Charge Deadline*, the package `hbc_deadline_charge.yaml` and a dashboard section (goal, estimate, planned windows, follow-up strategy). *Charge Deadline* can also be chosen as main strategy, in the Timed list, as Dynamic *cheapest* and as the follow-up after *charge/sell goal reached*.
 
-**F4 — Heartbeat with fallback in HA.** *HBC+ heartbeat (max every 60 s)* in the Start flow publishes to MQTT `hbc/heartbeat` (retained), which feeds `sensor.hbc_last_run`. When that sensor is older than 5 minutes while the master mode is *Full control*, an HA automation hands every Marstek back to its firmware (RS485 off, anti-feed) and sends a notification. When the loop runs again, the master switch turns RS485 back on. Without this, batteries keep their last setpoint when Node-RED stops. The fallback is phase-aware: on *Enforce*, only the battery with the lowest M-number on a shared phase goes back to firmware; its partner is first set to RS485 *enable* + forcible *stop*, so two batteries in firmware anti-feed can never overload one phase. Batteries alone on their phase or on *Own circuit*, and all batteries on *Off* / *Monitor*, are handed back as before. The automation also checks again 5 minutes after an HA restart, writes to the logbook and notifies through `notify.notify` (set your own notify action in `packages/hbc_heartbeat.yaml`).
+**F4 — Heartbeat with fallback in HA.** *HBC+ heartbeat (max every 60 s)* in the Start flow publishes to MQTT `hbc/heartbeat` (retained), which feeds `sensor.hbc_last_run`. When that sensor is older than 5 minutes while the master mode is *Full control*, an HA automation hands every Marstek back to its firmware (forcible stop, anti-feed, RS485 off) and sends a notification. When the heartbeat is fresh again, the master switch turns RS485 back on. Since R5 and R6 the heartbeat only follows a good control cycle, and the master switch no longer turns RS485 on while the heartbeat is stale. Without this, batteries keep their last setpoint when Node-RED stops. The fallback is phase-aware: on *Enforce*, only the battery with the lowest M-number on a shared phase goes back to firmware; its partner is first set to RS485 *enable* + forcible *stop*, so two batteries in firmware anti-feed can never overload one phase. Batteries alone on their phase or on *Own circuit*, and all batteries on *Off* / *Monitor*, are handed back as before. The automation also checks again 5 minutes after an HA restart, writes to the logbook and notifies through `notify.notify` (set your own notify action in `packages/hbc_heartbeat.yaml`).
 
 **F5 — Recorder exclusions.** `sensor.deadline_charged_at`, `sensor.deadline_window`, `sensor.deadline_cheap_blocks`, `sensor.deadline_goal_progress`, `sensor.hbc_energy_prices_data` and `input_number.house_battery_deadline_*_power` are not recorded: they re-render every minute or duplicate other statistics. `sensor.hbc_energy_prices_data` saves the most, because every 15-minute update would otherwise store the whole price list again.
 
@@ -487,7 +517,7 @@ HBC+ v1.0 is a complete, standalone installation: every package, flow and the da
 | Home Assistant | Packages enabled (`homeassistant: packages: !include_dir_named packages`) | All HBC+ helpers come as packages |
 | Node-RED | Add-on or standalone, with `node-red-contrib-home-assistant-websocket` 0.80 or newer | Runs the control loop |
 | Node-RED palette | `node-red-contrib-time-range-switch`, `node-red-node-smooth` | Used by HBC+ tabs |
-| MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`) and the HBC+ heartbeat (`hbc/heartbeat`) |
+| MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`) |
 | Batteries | Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP) | HBC+ reads SoC, power, limits and RS485 mode per battery |
 | Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
 | Dashboard | `custom:apexcharts-card` (HACS) | Price and history charts |
@@ -521,7 +551,7 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 | `hbc_config.yaml` | Your installation-specific config: P1 alias (disabled) and the automation that refreshes prices when the Grid Clock zone changes |
 | `hbc_deadline_charge.yaml` | Charge Deadline helpers and sensors: target, deadline, plan and cheap windows |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: the Strategy arbiter state, kept across restarts |
-| `hbc_heartbeat.yaml` | Phase-aware HA fallback when HBC+ stops: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale` and the automation that hands the batteries back to their firmware |
+| `hbc_heartbeat.yaml` | Phase-aware HA fallback when HBC+ stops: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale`, the automation that hands the batteries back to their firmware, and `sensor.hbc_health` with its error alert |
 | `hbc_phase_guard.yaml` | Phase guard: settings, phase map M1–M6, per-phase power and fuse headroom, overload alarm, MQTT status sensors and the defaults script |
 
 **dashboards/**
@@ -600,12 +630,13 @@ On the Phases view, under *Which phase is each battery on?*, set the phase of ev
 3. **PID preset.** On the Self-consumption view, choose *Safe* (see *Self-consumption and PID tuning*).
 4. **Strategy.** Choose a first strategy; *Self-consumption* or *Charge PV* is a safe start.
 5. **Master mode.** Set *Master Battery Mode* to **Full control**. Only now does HBC+ steer the batteries. To hand them back to their own firmware, choose *Marstek control*.
-6. **Notifications.** Set your own notify action (e.g. `notify.mobile_app_<phone>`) in the three places that send one; the default is `notify.notify`.
+6. **Notifications.** Set your own notify action (e.g. `notify.mobile_app_<phone>`) in the four places that send one; the default is `notify.notify`.
 
 | Where | Sends a notification when |
 | --- | --- |
 | Node-RED, *HBC+ Battery Oscillation Guard v1.0*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
-| `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped and the batteries went back to their firmware |
+| `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped or no longer works, and the batteries went back to their firmware |
+| `packages/hbc_heartbeat.yaml`, automation *alert when the control loop keeps logging errors* | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes in a row |
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
 
 ### Updating HBC+
@@ -660,7 +691,8 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | Entity | Package | What it is |
 | --- | --- | --- |
 | `sensor.hbc_last_run` | `hbc_heartbeat.yaml` | Time of the last HBC+ heartbeat (MQTT `hbc/heartbeat`) |
-| `binary_sensor.hbc_heartbeat_stale` | `hbc_heartbeat.yaml` | On when there was no heartbeat for more than 5 minutes; in *Full control* this hands the batteries back to their firmware |
+| `binary_sensor.hbc_heartbeat_stale` | `hbc_heartbeat.yaml` | On when there was no heartbeat (no good control cycle) for more than 5 minutes; in *Full control* this hands the batteries back to their firmware |
+| `sensor.hbc_health` | `hbc_heartbeat.yaml` | Health of the control loop from MQTT `hbc/health`: `ok`, `warning` or `error` (3+ errors in 10 minutes); attributes `errors_10m`, `warnings_10m`, totals, `last_error`, `last_warning` |
 | `sensor.hbc_energy_prices_data` | `hbc_control.yaml` | The current price list for the dashboard; attribute `status` is `ok`, `stale` or `no_data` |
 | `binary_sensor.hbc_price_data_missing` | `hbc_control.yaml` | On when a tariff source is chosen but no valid prices are available |
 | `input_text.house_battery_strategy_dynamic_price_sensor` | `hbc_control.yaml` | Optional: pins the price sensor for Dynamic (see R4) |
@@ -742,11 +774,13 @@ The gauge shows grid power against the grid fuse: import (positive) in light red
 | Link call to *Dynamic Fetch from Data Source* times out | The timeout is shorter than the fetch, or the link call no longer points to the section (for example after a re-import) | Set the timeout to at least 30 s; open the link call and pick *Dynamic Fetch from Data Source* again |
 | Dashboard: *No energy prices*, or `binary_sensor.hbc_price_data_missing` on | The tariff source delivers no prices (integration down, sensor renamed, wrong sensor auto-detected) | Check the price integration; set `input_text.house_battery_strategy_dynamic_price_sensor` to the right sensor; the status of *Data source settings* in the Dynamic tab shows which sensor is used |
 | Dynamic status yellow: *(last prices)* | The last fetch failed; the previous prices of the same source are still in use | Nothing to do if it clears on the next run; otherwise as above |
-| Batteries suddenly run on their own firmware; notification *HBC stopped - batteries on firmware* | The control loop stopped for 5 minutes (Node-RED down, deploy error, lost HA connection), so the heartbeat fallback handed the batteries back | Start or fix Node-RED; once the loop runs again, the Master Switch flow takes over again in *Full control* |
+| Batteries suddenly run on their own firmware; notification *HBC stopped - batteries on firmware* | For 5 minutes there was no good control cycle (Node-RED down, deploy error, lost HA connection, P1 meter offline, a strategy failing on every tick, or every battery write failing), so the heartbeat fallback stopped the batteries and handed them back | Find the cause in the Node-RED log and `sensor.hbc_health` and fix it; as soon as the heartbeat is fresh again, the Master Switch flow takes over again in *Full control* |
+| Notification *HBC+: errors in the control loop*, or `sensor.hbc_health` on `error` | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes | The attribute `last_error` and the Node-RED log name the flow and node; a repeated *Modbus write failed* points at the battery connection |
+| *Batteries (totals)* red: `not driven: M2` | SoC or a power limit of that battery has been unavailable for more than 5 minutes | Restore the battery's Modbus connection; HBC+ drives it again as soon as the values are back |
 | Onboarding shows *Setup Node-RED* | The Start flow has not run yet | Import and deploy the flows (Step 3); check the *HA System* server node |
 | The strategy you choose does not stick, or changes by itself | A hold in the Strategy arbiter (Oscillation Guard or a flow of your own) | Look at `input_text.hbc_strategy_arbiter` and the HA logbook; a manual choice becomes the new base, the hold ends when its requester releases it |
 
-To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*.
+To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*. Warnings and errors do not need *Insight mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
 
 Every tab has a **📖 How this flow works – HBC+ v1.0** comment: open it and read the Info sidebar. The last guard result is in Node-RED global context as `hbcplus_guard_last`; corrections also go to the HBC+ debug board.
 

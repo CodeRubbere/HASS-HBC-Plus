@@ -11,21 +11,21 @@ Or import the files one by one.
 
 | File | Tab | HBC+ change |
 | --- | --- | --- |
-| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.0 | **changed** - hand-back to firmware: partner on a shared phase stays RS485 + stop (Enforce only) |
+| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.0 | **changed** - hand-back to firmware: partner on a shared phase stays RS485 + stop (Enforce only); the periodic check skips *Full control* while `binary_sensor.hbc_heartbeat_stale` is on (*Skip while HBC heartbeat is stale*), *HBC heartbeat back* re-applies it once the heartbeat is fresh |
 | `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.0 | unchanged |
-| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.0 | **changed** - new *HBC+ phase planner* and *HBC+ phase guard* nodes; *Batteries (totals)* per phase (Enforce only) |
+| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.0 | **changed** - new *HBC+ phase planner* and *HBC+ phase guard* nodes; *Batteries (totals)* per phase (Enforce only); heartbeat only after a good cycle (link *HBC+ cycle result*); *Batteries (totals)* also hands held values to the strategies and marks a battery without data as not driven; *Set Batteries* validates every solution and skips batteries with RS485 off; *Custom logger* always logs warnings and errors; *HBC+ health* publishes `hbc/health` |
 | `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.0 | **changed** - *Max power solution* respects phase roles and fuse room (Enforce only) |
 | `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.0 | logic unchanged (uses Self-consumption + totals); documentation updated for HBC+ v1.0 |
 | `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.0 | **changed** - *API call to Data Source* is a link-call section: *Cache check* calls it with a link call and gets the prices back; any other flow can call it too (link call to *Dynamic Fetch from Data Source*, timeout >= 30 s; optional `msg.dynamic.data_source`, `msg.dynamic_use_cache`; reply in `msg.dynamic`); a failed fetch keeps the last valid prices of the same source, falls back to the baseline strategy when none are left, and raises `binary_sensor.hbc_price_data_missing`; an error inside the section is caught (*Catch fetch errors*) and handled the same way, so a caller always gets a reply; `input_text.house_battery_strategy_dynamic_price_sensor` pins the price sensor |
 | `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.0 | unchanged |
 | `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.0 | **new** - keeps the *Helios* strategy option safe until a HELIOS integration exists: runs *Full stop* and warns at most every 10 min; delete it before importing a real HELIOS flow (link in named *Helios*) |
 | `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.0 | unchanged |
-| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.0 | **changed** - *Load distribution*: standby soft stop, fuse room per phase (Enforce only) |
+| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.0 | **changed** - *Load distribution*: standby soft stop, fuse room per phase (Enforce only); a limit or PID output that is not a number counts as 0 W |
 | `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.0 | **changed** - *Max power solution*, as Charge (Enforce only) |
 | `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.0 | unchanged |
-| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.0 | unchanged |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.0 | unchanged |
-| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.0 | **new** - read-only, publishes `hbc/phase/*` for the dashboard |
+| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.0 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*) |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.0 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*) |
+| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.0 | **new** - read-only, publishes `hbc/phase/*` for the dashboard; caught errors go to the HBC+ logger |
 | `hbc-plus-all-flows.json` | all of the above | one import file |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
 
@@ -40,6 +40,9 @@ what the flow does, how it runs, and what HBC+ v1.0 changes or does not change i
   identical output in Off and Monitor. Only `input_select.house_battery_phase_guard_mode = Enforce` changes anything.
 - **Fail-open.** New code runs in try/catch; on an error it warns and passes the message on unchanged.
 - **No dependency on another tab** in the control loop: planner and guard live inside *Home Battery Start*.
+- **Heartbeat = working loop.** *HBC+ heartbeat* only publishes after a good cycle (the strategy returned without an error, at least one battery written without an error).
+- **No NaN to the batteries.** Held values reach the strategies; *Set Batteries* checks mode and power of every solution before it is written.
+- **Errors are visible.** Warnings and errors reach the Node-RED log (the same message at most once a minute) and `hbc/health` -> `sensor.hbc_health`, also with Insight mode off.
 
 ## HA server config node
 All files carry the same copy of the *HA System* server node (`176d29a.6f648d6`), with
@@ -59,3 +62,5 @@ All files carry the same copy of the *HA System* server node (`176d29a.6f648d6`)
 ## Outside Node-RED
 - `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops) is phase-aware: on Enforce only the lowest
   M-number per shared phase goes back to firmware anti-feed; its partner stays RS485 enable + forcible stop.
+  Every battery handed back gets forcible stop first. The package also holds `sensor.hbc_health` and the alert
+  *HBC+: alert when the control loop keeps logging errors*.

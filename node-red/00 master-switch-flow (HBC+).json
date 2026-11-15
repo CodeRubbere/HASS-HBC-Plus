@@ -22,7 +22,9 @@
             "b99d22dc356fe973",
             "e42a2f65a42ee154",
             "72679d464754e2f6",
-            "04c4601efcb5fba8"
+            "04c4601efcb5fba8",
+            "hbcp0ms0gate0001",
+            "hbcp0ms0hbback01"
         ],
         "x": 34,
         "y": 77,
@@ -366,6 +368,66 @@
         ]
     },
     {
+        "id": "hbcp0ms0hbback01",
+        "type": "server-state-changed",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "HBC heartbeat back",
+        "server": "176d29a.6f648d6",
+        "version": 6,
+        "outputs": 2,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "binary_sensor.hbc_heartbeat_stale"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "off",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 170,
+        "y": 400,
+        "wires": [
+            [
+                "04c4601efcb5fba8"
+            ],
+            []
+        ]
+    },
+    {
         "id": "72679d464754e2f6",
         "type": "inject",
         "z": "2f2abfd43828aebf",
@@ -442,6 +504,27 @@
         "y": 180,
         "wires": [
             [
+                "hbcp0ms0gate0001"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0ms0gate0001",
+        "type": "function",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Skip while HBC heartbeat is stale",
+        "func": "// HBC+ (2026-11-15): wait for HBC before handing the batteries back to it.\n// This periodic check re-applies the master mode every 5 minutes; on 'Full control' that sets\n// RS485 to 'enable'. When the HBC heartbeat is stale, packages/hbc_heartbeat.yaml has handed the\n// batteries to their firmware (forcible stop, RS485 off). Re-enabling RS485 here undid that within\n// 5 minutes, and a battery went back to the last forcible command in its registers with no\n// control loop running. So while binary_sensor.hbc_heartbeat_stale is 'on', this check skips\n// 'Full control'. 'HBC heartbeat back' runs it again as soon as the heartbeat is fresh.\n// A change of the master mode itself (the other trigger of this flow) is always applied.\n// No heartbeat sensor (package not installed) or no HA states in global context -> as before.\nconst mode = msg.marstek_master_battery_mode;\nlet stale;\ntry {\n    const ha = global.get('homeassistant');\n    const servers = (ha && typeof ha === 'object') ? Object.values(ha).filter(s => s && s.states && typeof s.states === 'object') : [];\n    const srv = servers.find(s => s.isConnected !== false) || servers[0];\n    const e = srv ? srv.states['binary_sensor.hbc_heartbeat_stale'] : undefined;\n    stale = e ? e.state : undefined;\n} catch (err) {\n    stale = undefined;\n}\nconst t = new Date().toLocaleTimeString();\nif (mode === 'Full control' && stale === 'on') {\n    node.status({ fill: 'yellow', shape: 'ring', text: `skipped: HBC heartbeat stale (${t})` });\n    return null;\n}\nnode.status({ fill: 'green', shape: 'dot', text: `${mode} re-applied (${t})` });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 180,
+        "wires": [
+            [
                 "2680301c255d5bb3"
             ]
         ]
@@ -451,7 +534,7 @@
         "type": "comment",
         "z": "2f2abfd43828aebf",
         "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Home Battery Master Switch v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDecides **who controls the Marsteks**, from `input_select.marstek_master_battery_mode`. Runs when that helper changes and periodically (*Check work modes periodically*), and loops over M1 ... M*n* (`input_number.house_battery_count`).\n\n| Master mode | RS485 control | Work mode | Who controls |\n|---|---|---|---|\n| Full control | enable | unchanged | HBC+ (forcible charge / discharge) |\n| Marstek control | disable | unchanged (choose it in the Marstek app) | Marstek firmware |\n| Manual control | disable | manual | Marstek firmware, manual mode |\n\n*Set RS485 and Work Modes* builds the `select.select_option` actions per battery; *Set RS485* and *Set work mode* perform them.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\nWhen control goes back to the firmware (RS485 *disable*), two batteries on one phase could each run at full power under their own firmware and overload the phase fuse. On **Enforce**, only the battery with the lowest M-number on a shared phase is handed back. Its partner gets RS485 *enable* plus forcible *stop*, so it stays idle even when Node-RED is down; the node status turns yellow for that battery. Batteries alone on their phase, and all batteries on Off / Monitor, are handled exactly as before.\n\nThe Home Assistant fallback for a stale HBC+ heartbeat (`packages/hbc_heartbeat.yaml`) applies the same rule: on Enforce only the lowest M-number per shared phase goes back to firmware, its partner stays RS485 *enable* + forcible *stop*.\n\nFail-open: if the phase check fails, the battery is handled as before and a warning is logged.\n",
+        "info": "# HBC+ Home Battery Master Switch v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDecides **who controls the Marsteks**, from `input_select.marstek_master_battery_mode`. Runs when that helper changes and periodically (*Check work modes periodically*), and loops over M1 ... M*n* (`input_number.house_battery_count`).\n\n| Master mode | RS485 control | Work mode | Who controls |\n|---|---|---|---|\n| Full control | enable | unchanged | HBC+ (forcible charge / discharge) |\n| Marstek control | disable | unchanged (choose it in the Marstek app) | Marstek firmware |\n| Manual control | disable | manual | Marstek firmware, manual mode |\n\n*Set RS485 and Work Modes* builds the `select.select_option` actions per battery; *Set RS485* and *Set work mode* perform them.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\nWhen control goes back to the firmware (RS485 *disable*), two batteries on one phase could each run at full power under their own firmware and overload the phase fuse. On **Enforce**, only the battery with the lowest M-number on a shared phase is handed back. Its partner gets RS485 *enable* plus forcible *stop*, so it stays idle even when Node-RED is down; the node status turns yellow for that battery. Batteries alone on their phase, and all batteries on Off / Monitor, are handled exactly as before.\n\nThe Home Assistant fallback for a stale HBC+ heartbeat (`packages/hbc_heartbeat.yaml`) applies the same rule: on Enforce only the lowest M-number per shared phase goes back to firmware, its partner stays RS485 *enable* + forcible *stop*.\n\nWhile `binary_sensor.hbc_heartbeat_stale` is on, the periodic check skips *Full control* (*Skip while HBC heartbeat is stale*): switching RS485 back on would undo that fallback, and a battery would resume the last forcible command in its registers with no control loop running. *HBC heartbeat back* re-applies the master mode as soon as the heartbeat is fresh again. A change of the master mode itself is always applied.\n\nFail-open: if the phase check fails, the battery is handled as before and a warning is logged.\n",
         "x": 250,
         "y": 40,
         "wires": []

@@ -95,6 +95,26 @@
         "y": 200,
         "wires": [
             [
+                "hbcp0phase0logerr"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp0phase0logerr",
+        "type": "function",
+        "z": "hbcp0phase0tab01",
+        "name": "Log error (HBC+ logger)",
+        "func": "// HBC+ (2026-11-15): a Catch node keeps the errors it catches out of the Node-RED log.\n// Hand them to the HBC+ logger: Node-RED log (max once a minute per message) and hbc/health.\nconst handle = global.get('unhandledException');\nif (typeof handle === 'function') handle(this);\nelse node.error(`${(msg.error && msg.error.message) || 'unknown error'}`);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 200,
+        "wires": [
+            [
                 "hbcp0phase0dbg01"
             ]
         ]
@@ -112,7 +132,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 340,
+        "x": 540,
         "y": 200,
         "wires": []
     }

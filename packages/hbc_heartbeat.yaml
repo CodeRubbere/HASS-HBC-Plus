@@ -3,9 +3,11 @@
 # HBC+ heartbeat fallback - phase-aware                                          (HBC+ v1.0, 2026-11-14)
 #
 # Node-RED tab "HBC+ Home Battery Start" publishes the time to MQTT hbc/heartbeat (retained) at most once
-# a minute while the control loop runs. When that heartbeat is older than 5 minutes while the master mode
-# is "Full control", Home Assistant hands the batteries back to their own firmware (anti-feed), so they
-# do not stay on their last setpoint while HBC is down.
+# a minute, and only after a GOOD control cycle: the strategy returned without an error and at least one
+# battery was written without an error (HBC+ 2026-11-15; before, every P1 update counted, even when the
+# strategy or every write failed). When that heartbeat is older than 5 minutes while the master mode is
+# "Full control", Home Assistant hands the batteries back to their own firmware (forcible stop, anti-feed,
+# RS485 off), so they do not stay on their last setpoint while HBC is down or not working.
 #
 # Phase-aware (HBC+): with input_select.house_battery_phase_guard_mode = Enforce, only ONE battery per
 # shared phase (L1/L2/L3) goes back to firmware: the one with the lowest M-number, the same rule as the
@@ -14,12 +16,19 @@
 # Batteries on 'Own circuit', alone on their phase, and all batteries on Off / Monitor are handed back
 # as before.
 #
-# When the loop runs again, the Master Switch flow (Full control) sets RS485 back to 'enable' for every
-# battery and HBC takes over again.
+# Every battery gets forcible 'stop' BEFORE RS485 goes off (HBC+ 2026-11-15). If RS485 is ever switched on
+# again while HBC is not running, the battery stays stopped instead of resuming HBC's last charge or
+# discharge command. The Master Switch flow no longer switches RS485 back on while this heartbeat is stale;
+# as soon as it is fresh again ('HBC heartbeat back'), it sets RS485 to 'enable' and HBC takes over again.
+#
+# HBC+ health (2026-11-15): the Start flow also publishes hbc/health (retained JSON) -> sensor.hbc_health:
+# ok / warning / error, with the counts of the last 10 minutes and the last error. Warnings and errors from
+# every HBC+ flow are counted and written to the Node-RED log, also when Insight mode is off. The automation
+# hbc_health_alert below notifies when the status stays 'error' (3+ errors in 10 minutes) for 5 minutes.
 #
 # Replaces the earlier nodered_heartbeat.yaml (same sensor and automation ids). DELETE that file from your
 # HA packages folder: with both files present HA sees duplicate ids and drops the fallback.
-# Set your own notify action below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
+# Set your own notify actions below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
 ###########################################################################################################
 
 mqtt:
@@ -29,6 +38,12 @@ mqtt:
       state_topic: hbc/heartbeat
       device_class: timestamp
       icon: mdi:heart-pulse
+    - name: "HBC health"
+      unique_id: hbc_health
+      state_topic: hbc/health
+      value_template: "{{ value_json.status | default('unknown') }}"
+      json_attributes_topic: hbc/health
+      icon: mdi:stethoscope
 
 template:
   - binary_sensor:
@@ -106,11 +121,20 @@ automation:
               option: stop
             continue_on_error: true
           - delay: "00:00:05"
-      # 2. hand the others back to their firmware: anti-feed, RS485 off
+      # 2. hand the others back to their firmware: forcible stop first (HBC+ 2026-11-15), then anti-feed,
+      #    RS485 off. The stop is written while RS485 is still on, so the battery stops at once, and if RS485
+      #    is ever switched on again without HBC running, it stays stopped instead of resuming HBC's last
+      #    charge / discharge command.
       - if:
           - condition: template
             value_template: "{{ plan.firmware | count > 0 }}"
         then:
+          - action: select.select_option
+            target:
+              entity_id: "{{ plan.firmware | map('regex_replace', '^(.*)$', 'select.\\1_forcible_charge_discharge') | list }}"
+            data:
+              option: stop
+            continue_on_error: true
           - action: select.select_option
             target:
               entity_id: "{{ plan.firmware | map('regex_replace', '^(.*)$', 'select.\\1_user_work_mode') | list }}"
@@ -128,7 +152,7 @@ automation:
           name: HBC+ heartbeat fallback
           message: >-
             HBC heartbeat stale since {{ states('sensor.hbc_last_run') }}.
-            Firmware anti-feed: {{ plan.firmware | join(', ') | upper or 'none' }}.
+            Firmware anti-feed (forcible stop, RS485 off): {{ plan.firmware | join(', ') | upper or 'none' }}.
             Kept on RS485 + stop: {{ plan.hold | join(', ') | upper or 'none' }}.
       # set your own notify action here, e.g. notify.mobile_app_<phone>
       - action: notify.notify
@@ -139,3 +163,49 @@ automation:
             No HBC heartbeat since {{ as_timestamp(states('sensor.hbc_last_run'), 0) | timestamp_custom('%d-%m %H:%M') }}.
             Anti-feed: {{ plan.firmware | join(', ') | upper or 'none' }}.
             Stopped (phase partner): {{ plan.hold | join(', ') | upper or 'none' }}.
+
+  # HBC+ health alert (2026-11-15): HBC keeps logging errors (sensor.hbc_health = error: 3 or more errors in
+  # the last 10 minutes) for 5 minutes. The details are in the Node-RED log. Dismissed when it is ok again.
+  - id: hbc_health_alert
+    alias: "HBC+: alert when the control loop keeps logging errors"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: sensor.hbc_health
+        to: "error"
+        for: "00:05:00"
+        id: error
+      - trigger: state
+        entity_id: sensor.hbc_health
+        to: "ok"
+        id: ok
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: error
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  notification_id: hbc_health
+                  title: "HBC+: errors in the control loop"
+                  message: >-
+                    HBC+ logged {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in the last 10 minutes.
+                    Last error ({{ as_timestamp(state_attr('sensor.hbc_health', 'last_error_at'), 0) | timestamp_custom('%H:%M') }}):
+                    {{ state_attr('sensor.hbc_health', 'last_error') }}
+                    Details are in the Node-RED log.
+              # set your own notify action here, e.g. notify.mobile_app_<phone>
+              - action: notify.notify
+                continue_on_error: true
+                data:
+                  title: "HBC+: errors in the control loop"
+                  message: >-
+                    {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in 10 min. Last:
+                    {{ state_attr('sensor.hbc_health', 'last_error') }}
+          - conditions:
+              - condition: trigger
+                id: ok
+            sequence:
+              - action: persistent_notification.dismiss
+                data:
+                  notification_id: hbc_health
