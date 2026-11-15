@@ -31,7 +31,7 @@ Battery packages contributed by the community:
 - **GridClock as data source** — Dynamic and Charge Deadline can read prices from the [Grid Clock](https://gridclock.eu) integration (`sensor.grid_clock_<zone>_prices`). Prices refresh automatically when the default zone changes.
 - **Phases dashboard** and an overload alarm in Home Assistant that works even when Node-RED is down.
 - **Shared price fetch** — the *API call to Data Source* group in *HBC+ Strategy Dynamic* is a link-call subroutine: any flow can fetch the current price list with one **link call** to *Dynamic Fetch from Data Source* (timeout ≥ 30 s), optionally for another source (`msg.dynamic.data_source`) or from the cache (`msg.dynamic_use_cache`). The caller always gets a reply in `msg.dynamic`: fresh prices, the last valid prices (`stale`) when the source fails, or `no_data`. Errors inside the group are caught, so a caller never waits for a timeout.
-- **Safety, performance and stability** improvements (fail-open code, a heartbeat fallback that only counts working control cycles, battery values that never turn into NaN, warnings and errors that always reach the Node-RED log and `sensor.hbc_health`, fewer Modbus writes, one fast read node, bug fixes).
+- **Safety, performance and stability** improvements (a fail-safe phase guard on *Enforce*, a *Full stop* when the batteries keep a phase overloaded, a heartbeat fallback that only counts working control cycles, battery values that never turn into NaN, warnings and errors that always reach the Node-RED log and `sensor.hbc_health`, fewer Modbus writes, one fast read node, bug fixes).
 
 With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without phase rules. Only *Enforce* applies them.
 
@@ -66,7 +66,7 @@ Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues
 - A Marstek over Modbus TCP works as well, as long as its entities follow the `marstek_mN_*` pattern.
 - `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops or no longer works, and the alert when HBC+ keeps logging errors) sends two notifications through `notify.notify`; set your own notify action in both.
 - `packages/hbc_control.yaml` sends a notification through `notify.notify` when the tariff source delivers no prices for 30 minutes; set your own notify action there too.
-- Requirements: Home Assistant with packages, Node-RED with `node-red-contrib-home-assistant-websocket` (0.80 or newer), `node-red-contrib-time-range-switch`, `node-red-node-smooth`, MQTT, Marstek Venus E batteries (`marstek_mN_*` entities), a P1 meter with per-phase power, `apexcharts-card` (HACS), and for Dynamic and Charge Deadline the Cheapest Energy Hours macro (HACS) with a price integration.
+- Requirements: Home Assistant with packages, Node-RED with `node-red-contrib-home-assistant-websocket` (0.80 or newer), `node-red-contrib-time-range-switch`, MQTT, Marstek Venus E batteries (`marstek_mN_*` entities), a P1 meter with per-phase power, `apexcharts-card` (HACS), and for Dynamic and Charge Deadline the Cheapest Energy Hours macro (HACS) with a price integration.
 - Always consult a qualified electrician about your installation and fuse ratings.
 
 ## License

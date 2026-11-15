@@ -14,6 +14,7 @@
 #     published by node-red/hbc-plus-phase-monitor.json (read-only tab)
 #   - script.hbc_phase_guard_defaults: run once after the first restart to set the defaults
 #   - automation hbc_phase_guard_settings_changed: notifies when one of the safety settings changes, and by whom
+#   - automation hbc_phase_overload_full_stop: Full stop when a phase stays overloaded by the batteries
 #     (helpers without 'initial:' start at their minimum / first option; they are restored after that)
 #
 # Signs (confirmed): sensor.marstek_mN_battery_power > 0 = charging; sensor.p1_meter_power_phase_N > 0 = import.
@@ -436,6 +437,106 @@ automation:
             {{ what }} (by {{ who }}). Guard {{ states('input_select.house_battery_phase_guard_mode') }},
             grid fuse {{ states('input_number.house_battery_phase_limit_w') | int(0) }} W,
             circuit {{ states('input_number.house_battery_phase_circuit_limit_w') | int(0) }} W.
+
+  # Overload -> Full stop (HBC+ 2026-11-15). When a phase stays overloaded (the alarms below turn on after 10 s)
+  # and the batteries on that phase are part of the cause, Home Assistant sets the strategy to Full stop. The
+  # Strategy arbiter treats that as a manual choice, so HBC itself stops the batteries and HA does not fight
+  # Node-RED. If HBC is not running (heartbeat stale), HA also stops the batteries on that phase directly
+  # (RS485 enable + forcible stop). Restore your strategy by hand once the cause is clear.
+  # "Part of the cause": batteries above the battery circuit, or the phase above the grid fuse while the
+  # batteries push the same way (charging on import, discharging on export). A house load alone that
+  # overloads the grid fuse while the batteries discharge is not stopped: they are helping.
+  # Only with the guard on Monitor or Enforce, i.e. once the limits on the Phases view are set.
+  - id: hbc_phase_overload_full_stop
+    alias: "HBC+: Full stop when a phase stays overloaded by the batteries"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id:
+          - binary_sensor.hbc_phase_limit_exceeded
+          - binary_sensor.hbc_phase_circuit_limit_exceeded
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_select.marstek_master_battery_mode
+        state: "Full control"
+      - condition: state
+        entity_id: input_select.house_battery_phase_guard_mode
+        state: ["Monitor", "Enforce"]
+      - condition: template
+        value_template: "{{ bad_phases | count > 0 }}"
+    variables:
+      bad_phases: >-
+        {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+        {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+        {% set ns = namespace(bad=[]) %}
+        {% for n in [1, 2, 3] %}
+          {% set p1 = states('sensor.p1_meter_power_phase_' ~ n) | float(0) %}
+          {% set b = states('sensor.hbc_phase_l' ~ n ~ '_battery_power') | float(0) %}
+          {% if b | abs > circ or (p1 > lim and b > 50) or (p1 < -lim and b < -50) %}
+            {% set ns.bad = ns.bad + ['L' ~ n] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.bad }}
+    actions:
+      - variables:
+          before: "{{ states('input_select.house_battery_strategy') }}"
+          on_phase: >-
+            {% set ns = namespace(ids=[]) %}
+            {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}
+              {% if states('input_select.marstek_m' ~ i ~ '_phase') in bad_phases %}
+                {% set ns.ids = ns.ids + ['marstek_m' ~ i] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.ids }}
+      - if:
+          - condition: template
+            value_template: "{{ before != 'Full stop' }}"
+        then:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.house_battery_strategy
+            data:
+              option: "Full stop"
+      # HBC not running: stop the batteries on that phase directly
+      - if:
+          - condition: state
+            entity_id: binary_sensor.hbc_heartbeat_stale
+            state: "on"
+          - condition: template
+            value_template: "{{ on_phase | count > 0 }}"
+        then:
+          - action: select.select_option
+            target:
+              entity_id: "{{ on_phase | map('regex_replace', '^(.*)$', 'select.\\1_rs485_control_mode') | list }}"
+            data:
+              option: enable
+            continue_on_error: true
+          - action: select.select_option
+            target:
+              entity_id: "{{ on_phase | map('regex_replace', '^(.*)$', 'select.\\1_forcible_charge_discharge') | list }}"
+            data:
+              option: stop
+            continue_on_error: true
+      - action: logbook.log
+        data:
+          name: HBC+ phase overload
+          message: >-
+            Phase {{ bad_phases | join(', ') }} overloaded for 10 s with the batteries part of the cause.
+            Strategy {{ before }} -> Full stop.
+      - action: persistent_notification.create
+        data:
+          notification_id: hbc_phase_overload
+          title: "HBC+: phase overload - Full stop"
+          message: >-
+            Phase {{ bad_phases | join(', ') }} stayed above its limit for 10 s, with the batteries part of the
+            cause. HBC+ switched from {{ before }} to Full stop. Check the Phases view, then choose your strategy again.
+      # set your own notify action here, e.g. notify.mobile_app_<phone>
+      - action: notify.notify
+        continue_on_error: true
+        data:
+          title: "HBC+: phase overload - Full stop"
+          message: "Phase {{ bad_phases | join(', ') }} overloaded by the batteries; strategy {{ before }} -> Full stop."
 
 # The planner status is display-only (current attributes on the Phases view); keep it out of the database.
 # HBC+ 2026-11-15: the per-phase battery power and headroom sensors too. They follow the P1 phase sensors,

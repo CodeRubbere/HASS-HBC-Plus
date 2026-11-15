@@ -8,7 +8,7 @@ HBC+ (Home Battery Control Plus) v1.0 stuurt tot zes thuisbatterijen aan vanuit 
 
 Naast de fasebewaking brengt HBC+ v1.0 verbeteringen op drie vlakken:
 
-- **Veiligheid** — bewaking van de hoofdzekering per fase, fail-open-code die bij een fout terugvalt op aansturing zonder faseregels, een HA-alarm dat ook zonder Node-RED werkt, en een heartbeat die de batterijen teruggeeft aan hun firmware als de regellus stopt of niet meer werkt, en waarschuwingen en fouten die altijd in het Node-RED-log en `sensor.hbc_health` terechtkomen.
+- **Veiligheid** — bewaking van de hoofdzekering per fase, een strikte regel van één batterij per fase als de fasebewaking op *Enforce* faalt, een HA-automatisering die naar *Full stop* schakelt als de batterijen een fase overbelast houden, een HA-alarm dat ook zonder Node-RED werkt, en een heartbeat die de batterijen teruggeeft aan hun firmware als de regellus stopt of niet meer werkt, en waarschuwingen en fouten die altijd in het Node-RED-log en `sensor.hbc_health` terechtkomen.
 - **Performance** — één snelle leesnode in plaats van ~43 losse reads, PID-stap en Timed-periodekeuze samengevoegd met instellingencaches, en minder Modbus-writes per tick.
 - **Stabiliteit** — bugfixes (o.a. totaal-helpers die na een herstart op 0 sprongen, een prijscache die na een bronwissel oude prijzen gebruikte, het debug board), batterijwaarden die nooit NaN worden (één onbeschikbare batterij legt de andere niet meer stil), en één consistente HA-servernode in alle flowbestanden.
 
@@ -196,9 +196,9 @@ De plannerwaarde volgt de zekeringruimte. Op *Enforce* trekt *Batteries (totals)
 
 ### Ingebouwde veiligheid
 
-- **Fail-open.** Planner, guard en totalen draaien in try/catch. Bij een fout waarschuwen ze en geven het bericht ongewijzigd door, dus aansturing zonder faseregels.
+- **Fail-safe op Enforce.** Planner, guard en totalen draaien in try/catch. Op *Off* en *Monitor* geeft een fout het bericht ongewijzigd door. Op *Enforce* past *Set Batteries* dan de strikte regel toe: per gedeelde fase draait alleen het laagste M-nummer, hooguit batterijgroep − marge (R9).
 - **Geen afhankelijkheid van andere tabbladen** in de regellus: planner en guard zitten in *Home Battery Start*. Het Phase monitor-tabblad uitschakelen verandert niets.
-- **Onafhankelijke alarmen.** `binary_sensor.hbc_phase_limit_exceeded` gaat aan als het netvermogen op een fase 10 s boven de netzekering ligt; `binary_sensor.hbc_phase_circuit_limit_exceeded` als de batterijen op een fase 10 s meer trekken dan de batterijgroep. Beide zijn puur Home Assistant en werken ook als Node-RED stilstaat.
+- **Onafhankelijke alarmen.** `binary_sensor.hbc_phase_limit_exceeded` gaat aan als het netvermogen op een fase 10 s boven de netzekering ligt; `binary_sensor.hbc_phase_circuit_limit_exceeded` als de batterijen op een fase 10 s meer trekken dan de batterijgroep. Beide zijn puur Home Assistant en werken ook als Node-RED stilstaat. Zijn de batterijen meeveroorzaker, dan schakelt HA naar *Full stop* (R10).
 - **Een heartbeat die *werkt* betekent.** De heartbeat volgt alleen op een goede regelcyclus (R6). Raakt hij verouderd, dan zet Home Assistant elke batterij die het aan de firmware teruggeeft eerst stil, en wacht de Master Switch-flow op een verse heartbeat voordat hij RS485 weer aanzet (R5).
 - **Geen NaN richting de batterijen.** Eén onbeschikbare batterijwaarde verspreidt zich niet meer naar de andere batterijen, en *Set Batteries* controleert elk setpoint voordat het geschreven wordt (R7).
 - **Fouten zijn zichtbaar.** Waarschuwingen en fouten komen altijd in het Node-RED-log en in `sensor.hbc_health`, ook met *Insight mode* uit; HA meldt het als fouten blijven komen (R8).
@@ -340,6 +340,8 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 | Een strategie geeft twee actieve batterijen op een fase | De phase guard corrigeert het en logt het (regel 6). |
 | Iemand wijzigt een batterij in de Marstek-app | De teruglezing wijkt af van het setpoint; *Set Batteries* schrijft opnieuw; het HA-alarm vangt een overbelasting binnen 10 s. |
 | Guard-modus *Off* | Geen faseregels; alleen veilig met één batterij per fase. |
+| Fout in planner of guard op *Enforce* | *Set Batteries* past de strikte regel toe: per gedeelde fase draait alleen het laagste M-nummer, hooguit batterijgroep − marge (R9). |
+| Een fase blijft 10 s overbelast met de batterijen als meeveroorzaker | HA zet de strategie op *Full stop* en stuurt een melding; draait HBC niet, dan zet HA de batterijen op die fase zelf stil (R10). |
 
 ### Ontwerpkeuzes
 
@@ -347,13 +349,13 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 - **Eén batterij per fase is de standaard.** *Shared headroom* (beide tegelijk binnen de zekeringruimte) is een optie in de instellingen.
 - **Uitbreiding met drie Marsteks (M4–M6).** Standaard fasekaart M1/M4 L1, M2/M5 L2, M3/M6 L3, per batterij aan te passen.
 - **Veiligheid boven snelheid.** De overdracht is break-before-make, en een batterij zonder verse teruglezing telt als bezig.
-- **Fail-open.** Elke nieuwe stap valt bij een fout terug op aansturing zonder faseregels; het HA-alarm werkt los van Node-RED.
+- **Fail-safe op Enforce, elders fail-open.** Op *Off* en *Monitor* verandert een fout in een nieuwe stap niets; op *Enforce* valt hij terug op de strikte regel van één batterij per fase (R9). Het HA-alarm werkt los van Node-RED en schakelt naar *Full stop* als de batterijen een fase overbelast houden (R10).
 - **Tekens:** batterijvermogen is positief bij laden, P1-fasevermogen is positief bij import.
 - **Eerst Monitor.** De fasebewaking kan al draaien met één batterij per fase; dan verandert er niets en test je de koppeling gratis, voordat er een tweede batterij op een fase komt.
 
 ## Verbeteringen in HBC+ v1.0
 
-Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, acht maken het systeem robuuster, acht maken de regellus sneller of lichter voor Modbus en de HA-database, vijf zijn features en drie verbeteren de beveiliging. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
+Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, twaalf maken het systeem robuuster, acht maken de regellus sneller of lichter voor Modbus en de HA-database, vijf zijn features en drie verbeteren de beveiliging. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
 
 | # | Wijziging | Waar | Type |
 | --- | --- | --- | --- |
@@ -373,6 +375,10 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 | R6 | Heartbeat alleen na een goede regelcyclus | Start – *HBC+ heartbeat*, *Set Batteries* | Robuustheid |
 | R7 | Eén onbeschikbare batterijwaarde legt niet meer alle batterijen stil | Start – *Batteries (totals)*, *Set Batteries*; Self-consumption – *Load distribution* | Robuustheid |
 | R8 | Waarschuwingen en fouten altijd gelogd, `sensor.hbc_health` met melding | Start, arbiter, Oscillation Guard, Phase monitor + `hbc_heartbeat.yaml` | Robuustheid |
+| R9 | Fail-safe op *Enforce*: strikte regel van één batterij per fase na een fout | Start – planner, guard, *Set Batteries* | Robuustheid |
+| R10 | HA schakelt naar *Full stop* als de batterijen een fase overbelast houden | `hbc_phase_guard.yaml` | Robuustheid |
+| R11 | Waarschuwing als een batterij opdrachten blijft negeren | Start – *Set Batteries* | Robuustheid |
+| R12 | Drempels Charge/Sell, terugval logger, timeouts link calls, geen *smooth*-palet | Charge, Sell, alle tabbladen | Robuustheid |
 | S1 | Heartbeat beoordeeld op het moment dat HA hem ontving | `hbc_heartbeat.yaml` | Beveiliging |
 | S2 | Melding als een veiligheidsinstelling van de fasebewaking verandert | `hbc_phase_guard.yaml` | Beveiliging |
 | S3 | Testknoppen uit de live flows verwijderd | Dynamic, Timed, Oscillation Guard | Beveiliging |
@@ -479,6 +485,28 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 - *Probleem:* de HBC+-logger deed niets zolang *Insight mode* uit stond (die gaat na 5 minuten vanzelf uit), ook niet bij fouten. Node-RED logt geen fouten die een Catch-node opvangt, en elk HBC+-tabblad heeft er een. Mislukte Modbus-writes en fouten in strategieën waren dus onzichtbaar.
 - *Oplossing:* de logger telt waarschuwingen en fouten altijd en schrijft ze naar het Node-RED-log, hetzelfde bericht hooguit eens per minuut (met het aantal herhalingen); *info*-regels hebben nog steeds *Insight mode* nodig. De Catch-nodes van de tabbladen Strategy arbiter, Battery Oscillation Guard en Phase monitor geven hun fouten ook aan de logger. *HBC+ health* in de Start-flow publiceert `hbc/health` (retained JSON) naar `sensor.hbc_health`: `ok`, `warning` (een waarschuwing of 1–2 fouten in 10 minuten) of `error` (3 of meer fouten in 10 minuten), met de aantallen en de laatste fout als attributen. De automatisering *HBC+: alert when the control loop keeps logging errors* in `hbc_heartbeat.yaml` maakt een persistente melding en roept `notify.notify` aan als de status 5 minuten op `error` blijft, en ruimt die op zodra de status weer `ok` is.
 
+**R9 — Op Enforce haalde een fout in de fasebewaking de faseregels weg.**
+
+- *Probleem:* planner, guard en totalen waren fail-open: bij een fout gaven ze het bericht ongewijzigd door, dus aansturing zonder faseregels. Op *Enforce* met twee batterijen op één fase konden die dan allebei op vol vermogen draaien (2 × 2500 W op een batterijgroep van 3680 W) tot de fout verdween.
+- *Oplossing:* op *Off* en *Monitor* verandert een fout nog steeds niets. Op *Enforce* is het nu fail-safe: planner en guard markeren de tick (`msg.phase_plus_failed`, `msg.phase_guard_failed`), en *Set Batteries*, de laatste stap vóór elke write, past de strikte regel toe die ook de heartbeat-fallback gebruikt: per gedeelde fase mag alleen het laagste M-nummer draaien, hooguit batterijgroep − marge; de partner wacht op 1 W. De regel heeft alleen de fasekaart en de limieten nodig, geen P1. Hij geldt ook als er op *Enforce* helemaal geen plan is. Elke correctie wordt als waarschuwing gelogd (Node-RED-log en `sensor.hbc_health`).
+
+**R10 — De overbelastingsalarmen sloegen alleen alarm.**
+
+- *Probleem:* `binary_sensor.hbc_phase_limit_exceeded` en `binary_sensor.hbc_phase_circuit_limit_exceeded` gingen na 10 s overbelasting aan, maar niets deed er iets mee.
+- *Oplossing:* de automatisering *HBC+: Full stop when a phase stays overloaded by the batteries* in `hbc_phase_guard.yaml` zet de strategie op *Full stop* als een van beide aangaat en de batterijen op die fase meeveroorzaker zijn: boven de batterijgroep, of de fase boven de netzekering terwijl de batterijen dezelfde kant op duwen (laden bij afname, ontladen bij teruglevering). Een huisbelasting alleen, terwijl de batterijen ontladen, wordt niet gestopt: dan helpen de batterijen juist. De Strategy arbiter ziet de wijziging als een handmatige keuze, dus HBC zet de batterijen zelf stil. Draait HBC niet (heartbeat verouderd), dan zet HA de batterijen op die fase ook zelf op RS485 *enable* + forcible *stop*. Hij schrijft naar het logboek, maakt een persistente melding en roept `notify.notify` aan. Hij grijpt alleen in bij *Full control* en met de guard op *Monitor* of *Enforce* (de limieten zijn ingesteld). Kies je strategie opnieuw zodra de oorzaak duidelijk is.
+
+**R11 — Een batterij die opdrachten negeerde, viel niet op.**
+
+- *Probleem:* negeerde een batterij steeds zijn opdrachten (bijvoorbeeld omdat RS485 in de Marstek-app is uitgezet), dan schreef *Set Batteries* modus en vermogen elke 20 s opnieuw, eindeloos, zonder iemand te waarschuwen.
+- *Oplossing:* na 5 keer achter elkaar opnieuw schrijven door de teruglezing logt *Set Batteries* een waarschuwing met de batterij en zijn teruggelezen waarde; die verschijnt in het Node-RED-log en `sensor.hbc_health`. Een kloppende teruglezing zet de teller terug.
+
+**R12 — Kleinere robuustheidsfixes.**
+
+- *Drempels van Charge en Sell:* de controles `Number(x) === undefined` waren nooit waar, dus een onbeschikbare doelhelper gaf NaN en het doel werd nooit bereikt (laden of verkopen ging door). De terugvalwaarden werken nu (Charge: volle energie of 100 %, Sell: 0 kWh of 11 %), de gemiddelde SoC telt alleen batterijen met geldige data, en zonder enige geldige SoC telt het doel als bereikt. *Check if low* (Sell, SoC) vergeleek met `msg.payload` en gebruikt nu de drempel zelf (dezelfde waarde). *Check if full* negeert een batterij zonder data.
+- *Terugval voor de logger:* de 47 plekken die de HBC+-logger gebruiken, vallen terug op een functie die niets doet als hij nog niet klaarstaat, in plaats van een fout te geven (bijvoorbeeld direct na een herstart).
+- *Timeouts van link calls:* de regellus wacht 1 s op een strategie; de link calls binnen de strategieën wachtten 3–30 s, wat nooit gebruikt kon worden. Ze staan nu ook op 1 s, zodat een trage strategie in zijn eigen tabblad faalt met een duidelijke fout. De prijsophaling en de aanroepen van de Strategy arbiter, die buiten de regellus draaien, houden 30 s.
+- *Palet:* de twee uitgeschakelde *smooth*-nodes en hun helper-writes zijn weg, dus `node-red-node-smooth` is niet meer nodig.
+
 ### Beveiliging
 
 **S1 — De heartbeat vertrouwde de tijd in het bericht.**
@@ -549,7 +577,7 @@ HBC+ v1.0 is een complete, zelfstandige installatie: alle packages, flows en het
 | --- | --- | --- |
 | Home Assistant | Packages aan (`homeassistant: packages: !include_dir_named packages`) | Alle HBC+-helpers komen als packages |
 | Node-RED | Add-on of standalone, met `node-red-contrib-home-assistant-websocket` 0.80 of nieuwer | Draait de regellus |
-| Node-RED-palet | `node-red-contrib-time-range-switch`, `node-red-node-smooth` | Gebruikt door HBC+-tabbladen |
+| Node-RED-palet | `node-red-contrib-time-range-switch` | Gebruikt door het Timed-tabblad (terugvalpad) |
 | MQTT | MQTT-integratie in HA met een broker | Status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`) |
 | Batterijen | Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP) | HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij |
 | Netmeter | Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import | De zekeringruimte wordt per fase uit P1 berekend |
@@ -663,7 +691,7 @@ Zet op de Phases-view, onder *Which phase is each battery on?*, elke batterij op
 3. **PID-preset.** Kies in de Self-consumption-view *Safe* (zie *Self-consumption en PID-afstelling*).
 4. **Strategie.** Kies een eerste strategie; *Self-consumption* of *Charge PV* is een veilige start.
 5. **Mastermodus.** Zet *Master Battery Mode* op **Full control**. Pas nu stuurt HBC+ de batterijen. Wil je ze teruggeven aan hun eigen firmware, kies dan *Marstek control*.
-6. **Meldingen.** Zet je eigen notify-actie (bijv. `notify.mobile_app_<telefoon>`) op de vijf plekken die een melding sturen; standaard is `notify.notify`.
+6. **Meldingen.** Zet je eigen notify-actie (bijv. `notify.mobile_app_<telefoon>`) op de zes plekken die een melding sturen; standaard is `notify.notify`.
 
 | Waar | Stuurt een melding als |
 | --- | --- |
@@ -672,6 +700,7 @@ Zet op de Phases-view, onder *Which phase is each battery on?*, elke batterij op
 | `packages/hbc_heartbeat.yaml`, automatisering *alert when the control loop keeps logging errors* | HBC+ 5 minuten lang 3 of meer fouten in 10 minuten logde |
 | `packages/hbc_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
 | `packages/hbc_phase_guard.yaml`, automatisering *notify when a phase guard safety setting changes* | Iemand of iets de guard-modus, sharing, een zekeringlimiet, de marge of de fasekaart wijzigde |
+| `packages/hbc_phase_guard.yaml`, automatisering *Full stop when a phase stays overloaded by the batteries* | Een fase 10 s overbelast bleef met de batterijen als meeveroorzaker, en HBC+ naar *Full stop* schakelde |
 
 ### Je installatie beveiligen
 
@@ -843,6 +872,8 @@ De meter toont het netvermogen tegen de netzekering: afname (positief) in lichtr
 | *Batteries (totals)* rood: `not driven: M2` | SoC of een vermogenslimiet van die batterij is langer dan 5 minuten onbeschikbaar | Herstel de Modbus-verbinding van de batterij; HBC+ stuurt hem weer aan zodra de waarden terug zijn |
 | Onboarding toont *Setup Node-RED* | De Start-flow heeft nog niet gedraaid | Importeer en deploy de flows (stap 3); controleer de servernode *HA System* |
 | De gekozen strategie blijft niet staan, of verandert vanzelf | Een hold in de Strategy arbiter (Oscillation Guard of een eigen flow) | Bekijk `input_text.hbc_strategy_arbiter` en het HA-logboek; een handmatige keuze wordt de nieuwe basis, de hold eindigt als de aanvrager hem loslaat |
+| Strategie ineens *Full stop*; melding *HBC+: phase overload - Full stop* | Een fase bleef 10 s overbelast met de batterijen als meeveroorzaker (R10) | Controleer de Phases-view en de limieten; kies daarna je strategie opnieuw |
+| Waarschuwing *… keeps ignoring commands* | De batterij volgt HBC+ niet (RS485 uitgezet in de Marstek-app, firmwaremodus, Modbus-probleem) | Controleer RS485-besturing en de werkmodus van die batterij |
 
 Wil je zien wat HBC+ besliste en waarom, open dan de view **Problem solver** (spinnen-icoon) en zet *Insight mode* aan. Voor waarschuwingen en fouten is *Insight mode* niet nodig: die staan altijd in het Node-RED-log (hetzelfde bericht hooguit eens per minuut) en in `sensor.hbc_health`.
 
