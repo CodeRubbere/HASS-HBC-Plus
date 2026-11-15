@@ -1028,15 +1028,11 @@
         },
         "nodes": [
             "3920807805ddb059",
-            "6eec1e5908ef6f67",
-            "a6adc7042299d847",
             "c0052e5300bcc427",
-            "aa69e51f3c01bbfa",
             "aaa46efd8b644f28",
-            "b297ca12d122bdaf",
             "1a0569faa93464c1",
-            "dd5c58db365e68e7",
-            "a93fd3fac44a50da"
+            "a93fd3fac44a50da",
+            "hbcp0totals0ha01"
         ],
         "x": 654,
         "y": 786,
@@ -1277,12 +1273,48 @@
         "y": 827,
         "wires": [
             [
-                "6eec1e5908ef6f67",
-                "a6adc7042299d847",
-                "aa69e51f3c01bbfa",
-                "b297ca12d122bdaf",
-                "dd5c58db365e68e7"
+                "hbcp0totals0ha01"
             ]
+        ]
+    },
+    {
+        "id": "hbcp0totals0ha01",
+        "type": "function",
+        "z": "61557a1c3e5f5404",
+        "g": "748479083171d20c",
+        "name": "Totals to HA (on change)",
+        "func": "// HBC+ (2026-11-15) Totals to HA - replaces five 'On change' (rbe) nodes, each of which got a full\n// copy of the tick message on every tick. Sends a small message to a helper only when its value\n// changed, and every 30 min as a refresh: after an HA restart a helper could otherwise keep an\n// old value until the number really changed (see the note on the totals in hbc_control.yaml).\n// Writing an unchanged value adds nothing to the HA database.\nconst KEYS = [\"batteries_available_energy\", \"batteries_max_energy\", \"batteries_total_power\", \"batteries_max_charge_power\", \"batteries_max_discharge_power\"];\nconst REFRESH_MS = 30 * 60 * 1000;\nconst now = Date.now();\nconst last = context.get('last') || {};\nconst out = KEYS.map(k => {\n    const v = msg[k];\n    const l = last[k];\n    if (l && l.v === v && now - l.t < REFRESH_MS) return null;\n    last[k] = { v, t: now };\n    return { [k]: v };\n});\ncontext.set('last', last);\nnode.status({ fill: 'grey', shape: 'dot', text: `power ${Math.round(Number(msg.batteries_total_power) || 0)} W` });\nreturn out;\n",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 947,
+        "wires": [
+            [
+                "3920807805ddb059"
+            ],
+            [
+                "c0052e5300bcc427"
+            ],
+            [
+                "aaa46efd8b644f28"
+            ],
+            [
+                "1a0569faa93464c1"
+            ],
+            [
+                "a93fd3fac44a50da"
+            ]
+        ],
+        "outputLabels": [
+            "batteries_available_energy",
+            "batteries_max_energy",
+            "batteries_total_power",
+            "batteries_max_charge_power",
+            "batteries_max_discharge_power"
         ]
     },
     {
@@ -3378,48 +3410,6 @@
         ]
     },
     {
-        "id": "6eec1e5908ef6f67",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_available_energy",
-        "topi": "topic",
-        "x": 750,
-        "y": 827,
-        "wires": [
-            [
-                "3920807805ddb059"
-            ]
-        ]
-    },
-    {
-        "id": "a6adc7042299d847",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_energy",
-        "topi": "topic",
-        "x": 750,
-        "y": 887,
-        "wires": [
-            [
-                "c0052e5300bcc427"
-            ]
-        ]
-    },
-    {
         "id": "c0052e5300bcc427",
         "type": "api-call-service",
         "z": "61557a1c3e5f5404",
@@ -3449,27 +3439,6 @@
         "y": 887,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "aa69e51f3c01bbfa",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_total_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 947,
-        "wires": [
-            [
-                "aaa46efd8b644f28"
-            ]
         ]
     },
     {
@@ -3505,27 +3474,6 @@
         ]
     },
     {
-        "id": "b297ca12d122bdaf",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_charge_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 1007,
-        "wires": [
-            [
-                "1a0569faa93464c1"
-            ]
-        ]
-    },
-    {
         "id": "1a0569faa93464c1",
         "type": "api-call-service",
         "z": "61557a1c3e5f5404",
@@ -3555,27 +3503,6 @@
         "y": 1007,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "dd5c58db365e68e7",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_discharge_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 1067,
-        "wires": [
-            [
-                "a93fd3fac44a50da"
-            ]
         ]
     },
     {
@@ -5144,32 +5071,24 @@
     },
     {
         "id": "784a902b95ad1304",
-        "type": "change",
+        "type": "function",
         "z": "e31b0cf1ca8100ca",
         "g": "8eb3086fe3b87ea8",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 110,
         "y": 202,
         "wires": [
             [
                 "264725bec6c9a03d"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "d546480866114bf6",
@@ -6474,32 +6393,24 @@
     },
     {
         "id": "dlc2_trace",
-        "type": "change",
+        "type": "function",
         "z": "dlc21a2b3c4d5e6f0",
         "g": "dlc2_g_config",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 310,
         "y": 160,
         "wires": [
             [
                 "dlc2_plan"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg."
+        ]
     },
     {
         "id": "dlc2_plan",
@@ -7310,7 +7221,8 @@
             "2e82e6f9a6c1f0d8",
             "964bb20828319763",
             "2a1f1d7f4edd6a2f",
-            "29accb897cf008db"
+            "29accb897cf008db",
+            "hbcp0dyn0debnc01"
         ],
         "x": 254,
         "y": 339,
@@ -7879,10 +7791,36 @@
         "y": 380,
         "wires": [
             [
-                "d5dffc4290abef2a"
+                "hbcp0dyn0debnc01"
             ]
         ],
         "info": "Recalculates `flow.dynamic_strategy` when a Dynamic setting changes.\n\n**Local change 2026-10-26:** the three period selectors (`..._dynamic_default`, `..._dynamic_cheapest`, `..._dynamic_expensive`) were added, so a new period strategy applies at once instead of at the next 15-min tick. See *📖 How this flow works*."
+    },
+    {
+        "id": "hbcp0dyn0debnc01",
+        "type": "trigger",
+        "z": "9006458c06964b58",
+        "g": "4e9e421a14894150",
+        "name": "wait 3 s after the last change",
+        "op1": "",
+        "op2": "",
+        "op1type": "nul",
+        "op2type": "payl",
+        "duration": "3",
+        "extend": true,
+        "overrideDelay": false,
+        "units": "s",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 560,
+        "y": 380,
+        "wires": [
+            [
+                "d5dffc4290abef2a"
+            ]
+        ]
     },
     {
         "id": "040ae7e8c4478ab3",
@@ -7973,32 +7911,24 @@
     },
     {
         "id": "e3a8a2bafd0af3c8",
-        "type": "change",
+        "type": "function",
         "z": "9006458c06964b58",
         "g": "890c74c6b5e14e0c",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 90,
         "y": 280,
         "wires": [
             [
                 "46cbbd14af612e83"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "89951fb788a3d2f9",
@@ -9085,32 +9015,24 @@
     },
     {
         "id": "5efa6fae7b9f95a3",
-        "type": "change",
+        "type": "function",
         "z": "c6efb67773d1041c",
         "g": "409969cc5795bdca",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 110,
         "y": 280,
         "wires": [
             [
                 "fe67ca79a3276609"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "7d933c82417691b1",
@@ -9219,24 +9141,17 @@
     },
     {
         "id": "hbcp0helios0trc1",
-        "type": "change",
+        "type": "function",
         "z": "hbcp0helios0tab01",
         "g": "hbcp0helios0g001",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 260,
         "y": 120,
         "wires": [
@@ -9634,32 +9549,24 @@
     },
     {
         "id": "1da12a6e80d6b69f",
-        "type": "change",
+        "type": "function",
         "z": "1ae53b821b8673a2",
         "g": "41c3dc51d46570c3",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 90,
         "y": 340,
         "wires": [
             [
                 "06e56c44976f669c"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "f7f94a9f558f31be",
@@ -11997,7 +11904,7 @@
         "z": "9a1b453354df0b0c",
         "g": "4c4999050d8a4d96",
         "name": "PID step",
-        "func": "// PID step (2026-10-13)\n// One node for what used to be a chain of 13 nodes:\n//   PID settings (cached) -> Advanced settings -> Set: Error signal -> Deadband (15W) ->\n//   Pass or Halt -> Target grid consumption unchanged -> Derivative Error / PV ->\n//   Derivative final value -> Calculate corrections -> Output dampening -> Output failsafe\n// Every node-to-node hop puts the message back in Node-RED's queue; on a busy Node-RED those\n// waits add up past the Start flow's 1 s link-call timeout. The original node bodies are kept\n// VERBATIM below as inner functions and called in the original order, so the maths, the\n// context they keep and the log lines are unchanged.\n//\n// 'Target grid consumption unchanged' compared flow.house_target_grid_consumption_in_w, which\n// nothing in this flow ever sets: undefined == undefined, so it ALWAYS took the 'Derivative\n// Error' branch. That behaviour is kept as is (Derivative PV is not called).\n//\n// Outputs:  1 PID output (-> Load distribution, PID Output helper)   2 error signal\n//           3 P-term  4 I-term  5 D-term  6 is charging  7 logdata\n//           8 halted by deadband (-> go to End)   9 settings cache stale (-> Read PID settings)\nconst out = [null, null, null, null, null, null, null, null, null];\n\n// --- PID settings cache (was 'PID settings (cached)') -----------------------------------\nconst MAX_AGE_MS = 10 * 60 * 1000;\nif (msg._pid_cfg_fresh) {\n    delete msg._pid_cfg_fresh;            // just came back from an in-path read: go on, even if it failed\n} else {\n    const stamp = Number(flow.get('pid_settings_stamp')) || 0;\n    const age = stamp ? Date.now() - stamp : Infinity;\n    if (age > MAX_AGE_MS) {\n        msg._pid_cfg_inpath = true;\n        node.status({ fill: 'yellow', shape: 'ring', text: `settings cache ${Number.isFinite(age) ? Math.round(age / 1000) + ' s old' : 'empty'} - reading HA` });\n        out[8] = msg;\n        return out;\n    }\n}\n\n// --- original node bodies, verbatim ----------------------------------------------------\nfunction advancedSettings(msg) {\n// 1. Hard coded advanced settings (flow level)\nflow.set(\"has_soc_charging_limiter\", true);         // slows charging from 95% to 100% to improve battery life\nflow.set(\"master_gain\", 1);                         // Gain scheduling. Not Implemented!\n\n// 2. Configurable advanced settings (msg level)\nmsg.advanced_settings ||= {}; // creates 'advanced_settings' if it does net yet exist\nlet mas = msg.advanced_settings;\n\n// The nullish coalescing (??) operator is a logical operator that returns its right-hand side operand when its left-hand side operand is null or undefined\n// Disable charge or discharge solutions and changes them to stop solutions\nRED.util.setMessageProperty(msg,\"advanced_settings.discharge_disabled\", mas.discharge_disabled ?? false);\nRED.util.setMessageProperty(msg,\"advanced_settings.charge_disabled\", mas.charge_disabled ?? false);\n// Prioritize discharging and charging the same battery when batteries are charged one by one\nRED.util.setMessageProperty(msg, \"advanced_settings.reverse_discharge_priority\",mas.reverse_discharge_priority ?? true);\n\n// 3. continue\nreturn msg;\n\n// Notes for home battery tinkerer friends:\n// Using RED.util.getMessageProperty / RED.util.setMessageProperty is more performant and safe.\n// If any part of the path (\"foo.bar\") is missing, it will return 'undefined' without throwing an error.\n}\nfunction setErrorSignal(msg) {\n// INPUTS\nlet P1_error_last = Number(context.get(\"p1_error_last\"))||0; // last error signal level in W\nlet dampening = Number(flow.get(\"house_battery_control_error_signal_dampening\")) || 0; // 0% - 100%\ndampening = dampening / 100; // to Number\n\n// Process Variable (PV) currently measured grid power, Setpoint (SP) desired grid power, set 0 for NoM\nvar P1_power = msg.grid_power; // PV: consume is positive, supply to grid is negative\nvar P1_setpoint = Number(RED.util.getMessageProperty(msg,\"house_target_grid_consumption_in_w\")); // SP: target value\n\n// Calc error signal\nlet P1_error_unfiltered = P1_setpoint - P1_power;\n\n// Simple averaging filter\nlet P1_error_filtered = (1 - dampening) * P1_error_unfiltered + (dampening) * P1_error_last;\n\n// OUTFLOW\ncontext.set(\"p1_error_last\", P1_error_filtered);\n\n// OUTPUT\nmsg.grid_error = P1_error_filtered; // W (watt), error signal = SP - PV\nreturn msg;\n}\nfunction deadband(msg) {\n// Deadband\n// Stop processing if error is within .. Watt of target grid consumption.\n// This to reduce CPU loads \n\n// Logger\nconst log = global.get(\"logger\");\n\n// P1\nlet P1_error = msg.grid_error; // Watt\nlet P1_deadband = 15; // Watt\n\n// Note on the deadband:\n// based on last 'assignable power' and current error, if (error > assignable power) the system will never enter the deadband. And keep calculating each interation.\n// however since we don't know if the is the assignable power will change, until we calculate the Control Value / load balancer\n// we could end up in a deadlock if we simply stop execution here, based on assignable power alone.\n\n// Within Deadband\nif(Math.abs(P1_error) < P1_deadband) {\n    // stop processing\n    node.status({fill:\"yellow\",shape:\"dot\",text:`Halt, ${Math.round(Math.abs(P1_error))} W`});\n    log(this, `**Stopped processing** 🌿power saving, ${Math.round(Math.abs(P1_error))} W is within deadband of ${P1_deadband} W`);\n    msg.payload = 'halted by deadband';\n    return msg;\n} \n\n// Outside deadband\nnode.status({fill:\"green\",shape:\"dot\",text:`Pass, ${Math.round(Math.abs(P1_error))} W`});\nreturn msg;\n\n}\nfunction derivativeError(msg) {\nvar P1_error = msg.grid_error||0;\nvar P1_last_error = Number(context.get(\"p1_last_error\")) ||0;\n\n// Error derivative\n// note: error = -PV\n// note: for simplicity we assume 1 second time steps\nlet p1_derivative = -(P1_error - P1_last_error); // devided by unity seconds\n\n// OUTFLOW\ncontext.set(\"p1_last_error\", P1_error);\n\n// OUTPUT\nmsg.grid_derivative = p1_derivative;\nreturn msg;\n}\nfunction calculateCorrections(msg) {\n// Logger\nvar logdata = \"\"; // deprecated\nconst log = global.get(\"logger\");\n\n// Timing\nlet time_last = context.get('time_last') || Date.now(); // Milliseconds\nlet time_current = Date.now(); // Milliseconds\nlet time_delta = (time_current - time_last) / 1000; // Convert to seconds\n// note: due to inherent 1 sec intervals of P1 meter we omit dt terms. This is mostly for bug checking and optimizations.\n\n// Batteries\nvar B_power = msg.batteries_total_power; // charging is positive, discharging negative\nvar anti_windup_threshold = Number(flow.get(\"batteries_total_assignable_power\")) || 0; // max available charge/discharge power.\n\n// Process Variable (PV) currently measured grid power, Setpoint (SP) desired grid power, set 0 for NoM\nvar P1_power = msg.grid_power; // PV: consume is positive, supply to grid is negative\nvar P1_setpoint = flow.get(\"house_target_grid_consumption_in_w\"); // SP: target value\nvar P1_error = msg.grid_error;  // W (watt), error signal = SP - PV\nvar P1_derivative = msg.grid_derivative; // Derivative of PV, not the error\n\n// PID values\nvar Kp = flow.get(\"house_battery_control_kp\") || 0.75;  // Proportional gain\nvar Ki = flow.get(\"house_battery_control_ki\") || 0;     // Integral gain        Ki = Kp/Ti\nvar Kd = flow.get(\"house_battery_control_kd\") || 0;     // Derivative gain      Kd = Kp*Td\n\n// helpers\nvar I_integral_sum = flow.get('I_integral_sum') || 0;\nvar Gm = flow.get(\"master_gain\")||1; // gain scheduling\n\n// optimizations\nvar hysteresis = flow.get(\"house_battery_control_hysteresis_in_w\"); // W (watt)\n\n// advanced settings\nconst isDischargeDisabled = RED.util.getMessageProperty(msg,\"advanced_settings.discharge_disabled\");\nconst isChargeDisabled = RED.util.getMessageProperty(msg,\"advanced_settings.charge_disabled\");\n\n// -- PID regulator --\n// Proportional term\nlet p_term = Gm * Kp * P1_error;\n\n// Integral term\nlet integral_max = 0;\nif (Ki > 0) {\n    // Integral term | integrate\n    I_integral_sum += P1_error; \n    // Integral term | apply anti-windup\n    integral_max = anti_windup_threshold / Ki; // the anti-windup value is set to the current controlable range of the batteries, given by the previous load balancer calculations\n    I_integral_sum = Math.min(Math.max(I_integral_sum, -integral_max), integral_max);\n} else {\n    // If Ki is 0, keep everything 0\n    I_integral_sum = 0;\n    integral_max = 0;\n}\n\n// Integral term | the term\nlet i_term = Ki * I_integral_sum;\n\n// Integral term | explain\nlogdata += `anti_windup_threshold=${anti_windup_threshold}, integral_max=${integral_max}| `; // deprecated\n\n// Differential term\nlet d_term = Gm * Kd * (-P1_derivative); // omitted '/time_delta'. inherent P1 refresh fequency.\n\n// Total PID output\nvar PID_output = p_term + i_term + d_term; // W (watt), the control input for the battery packs\n\n// Feed-forward start (2026-10-15), sent by the Charge flow's 'Regulated power' node while it\n// holds its start power. Output that power directly and seed the integral with it, so the PID\n// carries on from there (instead of building up from 0) once the hold ends.\nconst ff_power = Number(msg.pid_feedforward_w);\nif (Number.isFinite(ff_power) && ff_power > 0 && Ki > 0 && !isChargeDisabled) {\n    PID_output = ff_power;\n    p_term = 0;\n    d_term = 0;\n    I_integral_sum = Math.min(ff_power / Ki, integral_max > 0 ? integral_max : ff_power / Ki);\n    i_term = Ki * I_integral_sum;\n    log(this, `**Feed-forward** holding ${Math.round(ff_power)} W, integral seeded`);\n}\n\n// Charging or Discharging states\nvar B_was_charging = context.get(\"batteries_charging_last\") || false;\nvar B_is_charging = PID_output > 0 ? true : false;\n\n// Explain\nlogdata += `U(${time_delta}s)[${PID_output}] = P(${Kp})[${p_term}] + I(${Ki})[${i_term}] + D(${Kd})[${d_term}] | `; // deprecated\nlog(this,`**PID Controller**`);\nlog(this,`Step size: ${time_delta} s`);\nif(Kp == 0 && Ki == 0 && Kd == 0) {\n    log(this, `<font color=\"orange\">**Controller disabled**</font> All PID gains are 0. Choose a PID preset or set gains > 0.`,\"warn\");\n} else {\n    // log(this, `P-term: ${Math.floor(p_term)} W @ P-gain ${Kp}`);\n    // log(this, `I-term: ${Math.floor(i_term)} W @ I-gain ${Ki} (max. ${anti_windup_threshold} W)`);\n    // log(this, `D-term: ${Math.floor(d_term)} W @ D-gain ${Kd}`);\n    log(this, `**P** ${Math.floor(p_term)} W @ gain ${Kp}<br>**I** ${Math.floor(i_term)} W @ gain ${Ki} (max. ${anti_windup_threshold} W)<br>**D** ${Math.floor(d_term)} W @ gain ${Kd}`);\n    log(this, `**PID ${B_is_charging ? 'Charge' : 'Discharge'}:** ${Math.floor(p_term)} + ${Math.floor(i_term)} + ${Math.floor(d_term)} = **${Math.round(PID_output)} Watt**`);\n}\n\n// Only one of the advanced settings below can be active at once.\n// Advanced setting | discharge disabled\nif(isDischargeDisabled && !B_is_charging) {\n    // log explain\n    logdata += `Discharging disabled, PID unwound U(${time_delta})[0]=0+0+0 | `;\n    log(this,'**PID capped at 0**. Discharge is disabled in this strategy'); // via `msg.advanced_settings`\n    // Set all PID terms to 0 and unwind integral sum\n    PID_output = 0;\n    p_term = 0;\n    i_term = 0;\n    d_term = 0;\n    I_integral_sum = 0; // unwind\n    // maintain charge scenario\n    B_is_charging = true;\n    \n// Advanced setting | charge disabled\n} else if (isChargeDisabled && B_is_charging) {\n    // log explain\n    logdata += `Charging disabled, PID unwound U(${time_delta})[0]=0+0+0 | `;\n    log(this,'**PID capped at 0**. Charge is disabled in this strategy'); // via `msg.advanced_settings`\n    // Set all PID terms to 0 and unwind integral sum\n    PID_output = 0;\n    p_term = 0;\n    i_term = 0;\n    d_term = 0;\n    I_integral_sum = 0; // unwind\n    // maintain discharge scenario\n    B_is_charging = false;\n\n// Advanced setting | hysteresis\n} else if \n// prevents excessive switching between (dis)charge mode around the zero point.\n// if new PID_output lies within hysteresis, it will not switch charge mode. \n// set hysteresis to 0, to apply no hysteresis\n(B_is_charging !== B_was_charging && Math.abs(PID_output) < hysteresis){\n    // log explain\n    logdata += `Hysteresis prevented charge mode switch from ${B_was_charging ? \"charging\" : \"discharging\"} to ${B_is_charging ? \"charging\" : \"discharging\"} as ${Math.abs(PID_output)}W <= ${hysteresis}(hyst) | `;\n    log(this,`Hysteresis prevented charge mode switch from ${B_was_charging ? \"charging\" : \"discharging\"} to ${B_is_charging ? \"charging\" : \"discharging\"} as ${Math.abs(PID_output)}W <= ${hysteresis}(hyst)`);\n    // prevent negative charging or positive discharging values (not allowed)\n    PID_output = (PID_output < 0 && B_is_charging) || ((PID_output > 0 && !B_is_charging)) ? 0 : PID_output;\n    // maintain previous scenario\n    B_is_charging = B_was_charging;\n} \n\n// save for next iteration\ncontext.set(\"batteries_charging_last\", B_is_charging); //boolean\n\n// OUTFLOW\ncontext.set(\"time_last\", Date.now());\nflow.set(\"I_integral_sum\", I_integral_sum);\n\n// OUTPUT\nRED.util.setMessageProperty(msg, \"batteries_charging\", B_is_charging, true);\nRED.util.setMessageProperty(msg, \"I_integral_sum\", I_integral_sum,true);\nmsg.payload = Number(PID_output);\n\nreturn [msg, // payload = PID_output\n        { payload: Math.round(Number(P1_error))},\n        { payload: Math.round(parseFloat(p_term))},\n        { payload: Math.round(parseFloat(i_term))},\n        { payload: Math.round(parseFloat(d_term))},\n        { payload: B_is_charging},\n        { payload: logdata }];\n}\nfunction outputDampening(msg) {\n// INPUT\nlet PID_unfiltered = msg.payload; // W Watt\nlet PID_last = context.get(\"PID_last\")||0; // W watt\nlet PID_damp = Number(flow.get(\"house_battery_control_pid_output_dampening\"))||0; // 0% - 100%\nPID_damp = PID_damp/100; // to Number\n\n// simple averaging filter\nlet PID_filtered = (1-PID_damp)*PID_unfiltered + (PID_damp)*PID_last;\n\n// OUTFLOW\ncontext.set(\"PID_last\", PID_filtered);\n\n// OUTPUT\nmsg.payload = Number(PID_filtered)\nreturn msg;\n}\nfunction outputFailsafe(msg) {\n// INFLOW\nlet maxCharge = msg.batteries_max_charge_power||undefined;\nlet maxDischarge = msg.batteries_max_discharge_power||undefined;\nlet isCharging = msg.batteries_charging||undefined;\nlet PID_output = msg.payload; // Watt\n\n// No failsafe\nif (maxCharge === undefined || maxDischarge == undefined) {\n    node.status({ fill: \"red\", shape: \"dot\", text: \"disabled\" });\n    node.warn(`Output Failsafe is INACTIVE. Max charge or discharge limits are undefined`);\n    // continue without safeguard\n    return msg;\n} \n\n// limit\nlet limit = 0;\n\n// charging state unknown\nif(isCharging === undefined) {\n    // limit on lowest of charge / discharge\n    limit = Math.min(maxCharge,maxDischarge);    \n}\n// charging state known\nlimit = isCharging ? maxCharge : maxDischarge;\n\n// Safe output\nif (PID_output <= limit){\n    node.status({ fill: \"green\", shape: \"dot\", text: \"safe\" });\n    msg.payload = Math.round(msg.payload);\n    return msg;\n} \n\n// Unsafe, limit output\nnode.status({ fill: \"yellow\", shape: \"ring\", text: \"power limiting\" });\nmsg.payload = Math.round(Number(limit));\nreturn msg;\n}\n\n// --- the chain ---------------------------------------------------------------------------\nmsg = advancedSettings.call(this, msg);\nmsg = setErrorSignal.call(this, msg);\nmsg = deadband.call(this, msg);\nif (msg.payload === 'halted by deadband') {      // was: switch 'Pass or Halt'\n    out[7] = msg;\n    return out;\n}\nmsg = derivativeError.call(this, msg);           // was: switch 'Target grid consumption unchanged' (see top)\nconst c = calculateCorrections.call(this, msg);  // [msg, error, P, I, D, charging, logdata]\n// Feed-forward bypasses output dampening (and primes it), otherwise the jump is smoothed away\nlet m;\nif (Number.isFinite(Number(c[0].pid_feedforward_w)) && Number(c[0].pid_feedforward_w) > 0 && c[0].batteries_charging) {\n    context.set(\"PID_last\", c[0].payload);\n    m = c[0];\n} else {\n    m = outputDampening.call(this, c[0]);\n}\nm = outputFailsafe.call(this, m);\nout[0] = m;\nfor (let i = 1; i < 7; i++) out[i] = c[i];\nreturn out;\n",
+        "func": "// PID step (2026-10-13)\n// One node for what used to be a chain of 13 nodes:\n//   PID settings (cached) -> Advanced settings -> Set: Error signal -> Deadband (15W) ->\n//   Pass or Halt -> Target grid consumption unchanged -> Derivative Error / PV ->\n//   Derivative final value -> Calculate corrections -> Output dampening -> Output failsafe\n// Every node-to-node hop puts the message back in Node-RED's queue; on a busy Node-RED those\n// waits add up past the Start flow's 1 s link-call timeout. The original node bodies are kept\n// VERBATIM below as inner functions and called in the original order, so the maths, the\n// context they keep and the log lines are unchanged.\n//\n// 'Target grid consumption unchanged' compared flow.house_target_grid_consumption_in_w, which\n// nothing in this flow ever sets: undefined == undefined, so it ALWAYS took the 'Derivative\n// Error' branch. That behaviour is kept as is (Derivative PV is not called).\n//\n// Outputs:  1 PID output (-> Load distribution, PID Output helper)   2 error signal\n//           3 P-term  4 I-term  5 D-term  6 is charging  7 logdata\n//           8 halted by deadband (-> go to End)   9 settings cache stale (-> Read PID settings)\nconst out = [null, null, null, null, null, null, null, null, null];\n\n// --- PID settings cache (was 'PID settings (cached)') -----------------------------------\nconst MAX_AGE_MS = 10 * 60 * 1000;\nif (msg._pid_cfg_fresh) {\n    delete msg._pid_cfg_fresh;            // just came back from an in-path read: go on, even if it failed\n} else {\n    const stamp = Number(flow.get('pid_settings_stamp')) || 0;\n    const age = stamp ? Date.now() - stamp : Infinity;\n    if (age > MAX_AGE_MS) {\n        msg._pid_cfg_inpath = true;\n        node.status({ fill: 'yellow', shape: 'ring', text: `settings cache ${Number.isFinite(age) ? Math.round(age / 1000) + ' s old' : 'empty'} - reading HA` });\n        out[8] = msg;\n        return out;\n    }\n}\n\n// --- original node bodies, verbatim ----------------------------------------------------\nfunction advancedSettings(msg) {\n// 1. Hard coded advanced settings (flow level)\nflow.set(\"has_soc_charging_limiter\", true);         // slows charging from 95% to 100% to improve battery life\nflow.set(\"master_gain\", 1);                         // Gain scheduling. Not Implemented!\n\n// 2. Configurable advanced settings (msg level)\nmsg.advanced_settings ||= {}; // creates 'advanced_settings' if it does net yet exist\nlet mas = msg.advanced_settings;\n\n// The nullish coalescing (??) operator is a logical operator that returns its right-hand side operand when its left-hand side operand is null or undefined\n// Disable charge or discharge solutions and changes them to stop solutions\nRED.util.setMessageProperty(msg,\"advanced_settings.discharge_disabled\", mas.discharge_disabled ?? false);\nRED.util.setMessageProperty(msg,\"advanced_settings.charge_disabled\", mas.charge_disabled ?? false);\n// Prioritize discharging and charging the same battery when batteries are charged one by one\nRED.util.setMessageProperty(msg, \"advanced_settings.reverse_discharge_priority\",mas.reverse_discharge_priority ?? true);\n\n// 3. continue\nreturn msg;\n\n// Notes for home battery tinkerer friends:\n// Using RED.util.getMessageProperty / RED.util.setMessageProperty is more performant and safe.\n// If any part of the path (\"foo.bar\") is missing, it will return 'undefined' without throwing an error.\n}\nfunction setErrorSignal(msg) {\n// INPUTS\nlet P1_error_last = Number(context.get(\"p1_error_last\"))||0; // last error signal level in W\nlet dampening = Number(flow.get(\"house_battery_control_error_signal_dampening\")) || 0; // 0% - 100%\ndampening = dampening / 100; // to Number\n\n// Process Variable (PV) currently measured grid power, Setpoint (SP) desired grid power, set 0 for NoM\nvar P1_power = msg.grid_power; // PV: consume is positive, supply to grid is negative\nvar P1_setpoint = Number(RED.util.getMessageProperty(msg,\"house_target_grid_consumption_in_w\")); // SP: target value\n\n// Calc error signal\nlet P1_error_unfiltered = P1_setpoint - P1_power;\n\n// Simple averaging filter\nlet P1_error_filtered = (1 - dampening) * P1_error_unfiltered + (dampening) * P1_error_last;\n\n// OUTFLOW\ncontext.set(\"p1_error_last\", P1_error_filtered);\n\n// OUTPUT\nmsg.grid_error = P1_error_filtered; // W (watt), error signal = SP - PV\nreturn msg;\n}\nfunction deadband(msg) {\n// Deadband\n// Stop processing if error is within .. Watt of target grid consumption.\n// This to reduce CPU loads \n\n// Logger\nconst log = global.get(\"logger\");\n\n// P1\nlet P1_error = msg.grid_error; // Watt\nlet P1_deadband = 15; // Watt\n\n// Note on the deadband:\n// based on last 'assignable power' and current error, if (error > assignable power) the system will never enter the deadband. And keep calculating each interation.\n// however since we don't know if the is the assignable power will change, until we calculate the Control Value / load balancer\n// we could end up in a deadlock if we simply stop execution here, based on assignable power alone.\n\n// Within Deadband\nif(Math.abs(P1_error) < P1_deadband) {\n    // stop processing\n    node.status({fill:\"yellow\",shape:\"dot\",text:`Halt, ${Math.round(Math.abs(P1_error))} W`});\n    log(this, `**Stopped processing** 🌿power saving, ${Math.round(Math.abs(P1_error))} W is within deadband of ${P1_deadband} W`);\n    msg.payload = 'halted by deadband';\n    return msg;\n} \n\n// Outside deadband\nnode.status({fill:\"green\",shape:\"dot\",text:`Pass, ${Math.round(Math.abs(P1_error))} W`});\nreturn msg;\n\n}\nfunction derivativeError(msg) {\nvar P1_error = msg.grid_error||0;\nvar P1_last_error = Number(context.get(\"p1_last_error\")) ||0;\n\n// Error derivative\n// note: error = -PV\n// note: for simplicity we assume 1 second time steps\nlet p1_derivative = -(P1_error - P1_last_error); // devided by unity seconds\n\n// OUTFLOW\ncontext.set(\"p1_last_error\", P1_error);\n\n// OUTPUT\nmsg.grid_derivative = p1_derivative;\nreturn msg;\n}\nfunction calculateCorrections(msg) {\n// Logger\nvar logdata = \"\"; // deprecated\nconst log = global.get(\"logger\");\n\n// Timing\nlet time_last = context.get('time_last') || Date.now(); // Milliseconds\nlet time_current = Date.now(); // Milliseconds\nlet time_delta = (time_current - time_last) / 1000; // Convert to seconds\n// note: due to inherent 1 sec intervals of P1 meter we omit dt terms. This is mostly for bug checking and optimizations.\n\n// Batteries\nvar B_power = msg.batteries_total_power; // charging is positive, discharging negative\nvar anti_windup_threshold = Number(flow.get(\"batteries_total_assignable_power\")) || 0; // max available charge/discharge power.\n\n// Process Variable (PV) currently measured grid power, Setpoint (SP) desired grid power, set 0 for NoM\nvar P1_power = msg.grid_power; // PV: consume is positive, supply to grid is negative\nvar P1_setpoint = flow.get(\"house_target_grid_consumption_in_w\"); // SP: target value\nvar P1_error = msg.grid_error;  // W (watt), error signal = SP - PV\nvar P1_derivative = msg.grid_derivative; // Derivative of PV, not the error\n\n// PID values\nvar Kp = flow.get(\"house_battery_control_kp\") || 0.75;  // Proportional gain\nvar Ki = flow.get(\"house_battery_control_ki\") || 0;     // Integral gain        Ki = Kp/Ti\nvar Kd = flow.get(\"house_battery_control_kd\") || 0;     // Derivative gain      Kd = Kp*Td\n\n// helpers\nvar I_integral_sum = flow.get('I_integral_sum') || 0;\nvar Gm = flow.get(\"master_gain\")||1; // gain scheduling\n\n// optimizations\nvar hysteresis = flow.get(\"house_battery_control_hysteresis_in_w\"); // W (watt)\n\n// advanced settings\nconst isDischargeDisabled = RED.util.getMessageProperty(msg,\"advanced_settings.discharge_disabled\");\nconst isChargeDisabled = RED.util.getMessageProperty(msg,\"advanced_settings.charge_disabled\");\n\n// -- PID regulator --\n// Proportional term\nlet p_term = Gm * Kp * P1_error;\n\n// Integral term\nlet integral_max = 0;\nif (Ki > 0) {\n    // Integral term | integrate\n    I_integral_sum += P1_error; \n    // Integral term | apply anti-windup\n    integral_max = anti_windup_threshold / Ki; // the anti-windup value is set to the current controlable range of the batteries, given by the previous load balancer calculations\n    I_integral_sum = Math.min(Math.max(I_integral_sum, -integral_max), integral_max);\n} else {\n    // If Ki is 0, keep everything 0\n    I_integral_sum = 0;\n    integral_max = 0;\n}\n\n// Integral term | the term\nlet i_term = Ki * I_integral_sum;\n\n// Integral term | explain\nlogdata += `anti_windup_threshold=${anti_windup_threshold}, integral_max=${integral_max}| `; // deprecated\n\n// Differential term\nlet d_term = Gm * Kd * (-P1_derivative); // omitted '/time_delta'. inherent P1 refresh fequency.\n\n// Total PID output\nvar PID_output = p_term + i_term + d_term; // W (watt), the control input for the battery packs\n\n// Feed-forward start (2026-10-15), sent by the Charge flow's 'Regulated power' node while it\n// holds its start power. Output that power directly and seed the integral with it, so the PID\n// carries on from there (instead of building up from 0) once the hold ends.\nconst ff_power = Number(msg.pid_feedforward_w);\nif (Number.isFinite(ff_power) && ff_power > 0 && Ki > 0 && !isChargeDisabled) {\n    PID_output = ff_power;\n    p_term = 0;\n    d_term = 0;\n    I_integral_sum = Math.min(ff_power / Ki, integral_max > 0 ? integral_max : ff_power / Ki);\n    i_term = Ki * I_integral_sum;\n    log(this, `**Feed-forward** holding ${Math.round(ff_power)} W, integral seeded`);\n}\n\n// Charging or Discharging states\nvar B_was_charging = context.get(\"batteries_charging_last\") || false;\nvar B_is_charging = PID_output > 0 ? true : false;\n\n// Explain\nlogdata += `U(${time_delta}s)[${PID_output}] = P(${Kp})[${p_term}] + I(${Ki})[${i_term}] + D(${Kd})[${d_term}] | `; // deprecated\nlog(this,`**PID Controller**`);\nlog(this,`Step size: ${time_delta} s`);\nif(Kp == 0 && Ki == 0 && Kd == 0) {\n    log(this, `<font color=\"orange\">**Controller disabled**</font> All PID gains are 0. Choose a PID preset or set gains > 0.`,\"warn\");\n} else {\n    // log(this, `P-term: ${Math.floor(p_term)} W @ P-gain ${Kp}`);\n    // log(this, `I-term: ${Math.floor(i_term)} W @ I-gain ${Ki} (max. ${anti_windup_threshold} W)`);\n    // log(this, `D-term: ${Math.floor(d_term)} W @ D-gain ${Kd}`);\n    log(this, `**P** ${Math.floor(p_term)} W @ gain ${Kp}<br>**I** ${Math.floor(i_term)} W @ gain ${Ki} (max. ${anti_windup_threshold} W)<br>**D** ${Math.floor(d_term)} W @ gain ${Kd}`);\n    log(this, `**PID ${B_is_charging ? 'Charge' : 'Discharge'}:** ${Math.floor(p_term)} + ${Math.floor(i_term)} + ${Math.floor(d_term)} = **${Math.round(PID_output)} Watt**`);\n}\n\n// Only one of the advanced settings below can be active at once.\n// Advanced setting | discharge disabled\nif(isDischargeDisabled && !B_is_charging) {\n    // log explain\n    logdata += `Discharging disabled, PID unwound U(${time_delta})[0]=0+0+0 | `;\n    log(this,'**PID capped at 0**. Discharge is disabled in this strategy'); // via `msg.advanced_settings`\n    // Set all PID terms to 0 and unwind integral sum\n    PID_output = 0;\n    p_term = 0;\n    i_term = 0;\n    d_term = 0;\n    I_integral_sum = 0; // unwind\n    // maintain charge scenario\n    B_is_charging = true;\n    \n// Advanced setting | charge disabled\n} else if (isChargeDisabled && B_is_charging) {\n    // log explain\n    logdata += `Charging disabled, PID unwound U(${time_delta})[0]=0+0+0 | `;\n    log(this,'**PID capped at 0**. Charge is disabled in this strategy'); // via `msg.advanced_settings`\n    // Set all PID terms to 0 and unwind integral sum\n    PID_output = 0;\n    p_term = 0;\n    i_term = 0;\n    d_term = 0;\n    I_integral_sum = 0; // unwind\n    // maintain discharge scenario\n    B_is_charging = false;\n\n// Advanced setting | hysteresis\n} else if \n// prevents excessive switching between (dis)charge mode around the zero point.\n// if new PID_output lies within hysteresis, it will not switch charge mode. \n// set hysteresis to 0, to apply no hysteresis\n(B_is_charging !== B_was_charging && Math.abs(PID_output) < hysteresis){\n    // log explain\n    logdata += `Hysteresis prevented charge mode switch from ${B_was_charging ? \"charging\" : \"discharging\"} to ${B_is_charging ? \"charging\" : \"discharging\"} as ${Math.abs(PID_output)}W <= ${hysteresis}(hyst) | `;\n    log(this,`Hysteresis prevented charge mode switch from ${B_was_charging ? \"charging\" : \"discharging\"} to ${B_is_charging ? \"charging\" : \"discharging\"} as ${Math.abs(PID_output)}W <= ${hysteresis}(hyst)`);\n    // prevent negative charging or positive discharging values (not allowed)\n    PID_output = (PID_output < 0 && B_is_charging) || ((PID_output > 0 && !B_is_charging)) ? 0 : PID_output;\n    // maintain previous scenario\n    B_is_charging = B_was_charging;\n} \n\n// save for next iteration\ncontext.set(\"batteries_charging_last\", B_is_charging); //boolean\n\n// OUTFLOW\ncontext.set(\"time_last\", Date.now());\nflow.set(\"I_integral_sum\", I_integral_sum);\n\n// OUTPUT\nRED.util.setMessageProperty(msg, \"batteries_charging\", B_is_charging, true);\nRED.util.setMessageProperty(msg, \"I_integral_sum\", I_integral_sum,true);\nmsg.payload = Number(PID_output);\n\nreturn [msg, // payload = PID_output\n        { payload: Math.round(Number(P1_error))},\n        { payload: Math.round(parseFloat(p_term))},\n        { payload: Math.round(parseFloat(i_term))},\n        { payload: Math.round(parseFloat(d_term))},\n        { payload: B_is_charging},\n        { payload: logdata }];\n}\nfunction outputDampening(msg) {\n// INPUT\nlet PID_unfiltered = msg.payload; // W Watt\nlet PID_last = context.get(\"PID_last\")||0; // W watt\nlet PID_damp = Number(flow.get(\"house_battery_control_pid_output_dampening\"))||0; // 0% - 100%\nPID_damp = PID_damp/100; // to Number\n\n// simple averaging filter\nlet PID_filtered = (1-PID_damp)*PID_unfiltered + (PID_damp)*PID_last;\n\n// OUTFLOW\ncontext.set(\"PID_last\", PID_filtered);\n\n// OUTPUT\nmsg.payload = Number(PID_filtered)\nreturn msg;\n}\nfunction outputFailsafe(msg) {\n// INFLOW\nlet maxCharge = msg.batteries_max_charge_power||undefined;\nlet maxDischarge = msg.batteries_max_discharge_power||undefined;\nlet isCharging = msg.batteries_charging||undefined;\nlet PID_output = msg.payload; // Watt\n\n// No failsafe\nif (maxCharge === undefined || maxDischarge == undefined) {\n    node.status({ fill: \"red\", shape: \"dot\", text: \"disabled\" });\n    // HBC+ (2026-11-15): warn once per episode, not on every PID tick. A real limit of 0 W (no room on\n    // Enforce, or every battery offline) also lands here and used to flood the Node-RED log.\n    if (!context.get('failsafe_warned')) {\n        context.set('failsafe_warned', true);\n        node.warn(`Output Failsafe is INACTIVE. Max charge or discharge limits are 0 or unknown (warned once, until they are back)`);\n    }\n    // continue without safeguard\n    return msg;\n} \n\ncontext.set('failsafe_warned', false);   // HBC+: limits known again, a next episode warns again\n\n// limit\nlet limit = 0;\n\n// charging state unknown\nif(isCharging === undefined) {\n    // limit on lowest of charge / discharge\n    limit = Math.min(maxCharge,maxDischarge);    \n}\n// charging state known\nlimit = isCharging ? maxCharge : maxDischarge;\n\n// Safe output\nif (PID_output <= limit){\n    node.status({ fill: \"green\", shape: \"dot\", text: \"safe\" });\n    msg.payload = Math.round(msg.payload);\n    return msg;\n} \n\n// Unsafe, limit output\nnode.status({ fill: \"yellow\", shape: \"ring\", text: \"power limiting\" });\nmsg.payload = Math.round(Number(limit));\nreturn msg;\n}\n\n// --- the chain ---------------------------------------------------------------------------\nmsg = advancedSettings.call(this, msg);\nmsg = setErrorSignal.call(this, msg);\nmsg = deadband.call(this, msg);\nif (msg.payload === 'halted by deadband') {      // was: switch 'Pass or Halt'\n    out[7] = msg;\n    return out;\n}\nmsg = derivativeError.call(this, msg);           // was: switch 'Target grid consumption unchanged' (see top)\nconst c = calculateCorrections.call(this, msg);  // [msg, error, P, I, D, charging, logdata]\n// Feed-forward bypasses output dampening (and primes it), otherwise the jump is smoothed away\nlet m;\nif (Number.isFinite(Number(c[0].pid_feedforward_w)) && Number(c[0].pid_feedforward_w) > 0 && c[0].batteries_charging) {\n    context.set(\"PID_last\", c[0].payload);\n    m = c[0];\n} else {\n    m = outputDampening.call(this, c[0]);\n}\nm = outputFailsafe.call(this, m);\nout[0] = m;\nfor (let i = 1; i < 7; i++) out[i] = c[i];\nreturn out;\n",
         "outputs": 9,
         "timeout": 0,
         "noerr": 0,
@@ -12254,32 +12161,24 @@
     },
     {
         "id": "0712571b7dcc2a15",
-        "type": "change",
+        "type": "function",
         "z": "17d7519059560984",
         "g": "2107815757999873",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 110,
         "y": 220,
         "wires": [
             [
                 "d31b8e8647339c0e"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "47c0d76e5f88890f",
@@ -14908,32 +14807,24 @@
     },
     {
         "id": "06162fd624cd6f08",
-        "type": "change",
+        "type": "function",
         "z": "08784a7d4ebd8fe8",
         "g": "91e79e3b3acbdffa",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 110,
         "y": 280,
         "wires": [
             [
                 "tmd_pick"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "001b8c904e32e9a0",

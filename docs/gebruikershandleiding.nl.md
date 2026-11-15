@@ -353,7 +353,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 
 ## Verbeteringen in HBC+ v1.0
 
-Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, acht maken het systeem robuuster, vier maken de regellus sneller of schrijven minder naar Modbus, vijf zijn features en drie verbeteren de beveiliging. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
+Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs op, acht maken het systeem robuuster, acht maken de regellus sneller of lichter voor Modbus en de HA-database, vijf zijn features en drie verbeteren de beveiliging. Alles draait in de praktijk op een opstelling met drie batterijen (twee via RS485, één via Modbus TCP).
 
 | # | Wijziging | Waar | Type |
 | --- | --- | --- | --- |
@@ -380,6 +380,10 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 | P2 | *PID step*: 13 nodes in één, cache voor PID-instellingen | Self-consumption | Performance |
 | P3 | *Pick period*: snel pad voor Timed met instellingencache | Timed | Performance |
 | P4 | Minder Modbus-writes, per batterij op volgorde | Start – *Set Batteries* | Performance |
+| P5 | Drukke fasesensoren uit de HA-database, PID-termen er weer in | `hbc_phase_guard.yaml`, `hbc_control.yaml` | Performance |
+| P6 | Output failsafe waarschuwt één keer in plaats van elke tick | Self-consumption – *PID step* | Performance |
+| P7 | *Trace* overal in JavaScript; één node schrijft de totalen | Strategietabbladen; Start – *Totals to HA (on change)* | Performance |
+| P8 | Dynamic wacht 3 s na de laatste wijziging van een instelling | Dynamic – *User input* | Performance |
 | F1 | Feed-forward-start voor geregeld laden | Charge – *Regulated power* | Feature |
 | F2 | Grid Clock als Dynamic-databron | Dynamic + selector | Feature |
 | F3 | Charge Deadline-strategie | Eigen tabblad + package | Feature |
@@ -503,6 +507,14 @@ Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtri
 **P3 — Pick period in Timed.** Was: 20 reads, 5 configfuncties, 5 tijdvak-switches en ~15 change- en switch-nodes. Nu: één *Pick period*-functie met dezelfde logica (periodes A t/m E, het eerste passende venster wint, een venster mag over middernacht lopen, start = eind is een lege periode). Gebruikt de tijd van HA, dus de tijdzone van Node-RED doet er niet toe. *Timed settings cache* rendert alle periode-instellingen elke 30 s en bij elke wijziging; is de snapshot ouder dan 5 minuten, dan draait de oude keten.
 
 **P4 — Minder Modbus-writes.** Het schrijfontwerp blijft (awaited writes, *Write limiter*, failsafe van 30 s, *Collect completions*, *Write latency*). Daarbovenop: de **modus** wordt alleen geschreven als die verandert, als de teruglezing langer dan 20 s afwijkt, of als keep-alive elke 60 s (voorheen bij elke tick); van het **vermogen** wordt alleen het register van de huidige modus geschreven, en in `stop` niets; *Next write* voert de writes per batterij één voor één uit, eerst vermogen dan modus. Getest met 13 gesimuleerde scenario's.
+
+**P5 — De fasesensoren vulden de HA-database.** De zes sensoren `sensor.hbc_phase_lN_charge/discharge_headroom` volgen de P1-fasesensoren, dus met een meter die elke seconde rapporteert schreven ze tot zo'n 500.000 rijen per dag; de drie sensoren `sensor.hbc_phase_lN_battery_power` kwamen daar nog bij. De Phases-view toont alleen hun huidige waarde, dus alle negen zijn nu uitgesloten van de recorder (daarmee vervallen ook hun langetermijnstatistieken, die niets gebruikte). Ook `input_number.house_battery_total_battery_power` is uitgesloten; `sensor.house_total_battery_power` bewaart de geschiedenis van het totale batterijvermogen. Omgekeerd worden de P-, I- en D-termen (`input_number.house_battery_control_*_term`) weer vastgelegd: de grafiek *PID analysis* in de Self-consumption-view tekent ze, en Node-RED schrijft ze hooguit eens per 10 s.
+
+**P6 — De output failsafe overspoelde het log.** *PID step* zag een echte limiet van 0 W (geen ruimte meer op *Enforce*, of alle batterijen langer dan 5 minuten offline) als "onbekend" en schreef bij elke tick *Output Failsafe is INACTIVE*. Nu waarschuwt hij één keer per periode; het gedrag zelf is ongewijzigd.
+
+**P7 — Een lichtere regellus.** De acht overgebleven *Trace*-change-nodes (Charge, Charge Deadline, Dynamic, Full stop, Helios, Partials, Sell, Timed) gebruikten bij elke tick JSONata; het is nu dezelfde JavaScript-functie die Self-consumption al gebruikte (vergeleken met de JSONata-uitkomst in 40 gevallen). In de Start-flow vervangt *Totals to HA (on change)* vijf *On change*-nodes die elk een volledige kopie van het tick-bericht kregen: hij stuurt een klein bericht naar een helper alleen als de waarde veranderde, plus elke 30 minuten ter verversing, zodat een helper na een HA-herstart niet meer op een oude waarde blijft staan (zie B1).
+
+**P8 — Dynamic rekende bij elke stap van een schuifregelaar.** Elke wijziging van een Dynamic-instelling liet de Cheapest Energy Hours-prijsberekening in Home Assistant opnieuw draaien, dus het verslepen van een schuifregelaar deed dat vele keren. *wait 3 s after the last change* laat hem nu één keer draaien, 3 seconden na de laatste wijziging.
 
 ### Features
 
@@ -736,7 +748,7 @@ Het aantal batterijen komt nog steeds uit `input_number.house_battery_count` (ma
 | `binary_sensor.hbc_phase_circuit_limit_exceeded` | Template | Aan als de batterijen op een fase 10 s meer trekken dan de batterijgroep |
 | `script.hbc_phase_guard_defaults` | Script | Zet alle HBC+-instellingen en de fasekaart terug op de standaardwaarden |
 
-De template-sensoren en het alarm draaien alleen in Home Assistant en blijven dus werken als Node-RED stilstaat. De MQTT-statussensoren zijn alleen voor weergave en uitgesloten van de recorder.
+De template-sensoren en het alarm draaien alleen in Home Assistant en blijven dus werken als Node-RED stilstaat. De MQTT-statussensoren zijn alleen voor weergave en uitgesloten van de recorder, net als de sensoren voor batterijvermogen en ruimte per fase: de Phases-view toont alleen hun huidige waarde (P5).
 
 ### Overige HBC+-entiteiten
 

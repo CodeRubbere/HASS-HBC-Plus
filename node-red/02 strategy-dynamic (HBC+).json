@@ -162,7 +162,8 @@
             "2e82e6f9a6c1f0d8",
             "964bb20828319763",
             "2a1f1d7f4edd6a2f",
-            "29accb897cf008db"
+            "29accb897cf008db",
+            "hbcp0dyn0debnc01"
         ],
         "x": 254,
         "y": 339,
@@ -731,10 +732,36 @@
         "y": 380,
         "wires": [
             [
-                "d5dffc4290abef2a"
+                "hbcp0dyn0debnc01"
             ]
         ],
         "info": "Recalculates `flow.dynamic_strategy` when a Dynamic setting changes.\n\n**Local change 2026-10-26:** the three period selectors (`..._dynamic_default`, `..._dynamic_cheapest`, `..._dynamic_expensive`) were added, so a new period strategy applies at once instead of at the next 15-min tick. See *📖 How this flow works*."
+    },
+    {
+        "id": "hbcp0dyn0debnc01",
+        "type": "trigger",
+        "z": "9006458c06964b58",
+        "g": "4e9e421a14894150",
+        "name": "wait 3 s after the last change",
+        "op1": "",
+        "op2": "",
+        "op1type": "nul",
+        "op2type": "payl",
+        "duration": "3",
+        "extend": true,
+        "overrideDelay": false,
+        "units": "s",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 560,
+        "y": 380,
+        "wires": [
+            [
+                "d5dffc4290abef2a"
+            ]
+        ]
     },
     {
         "id": "040ae7e8c4478ab3",
@@ -825,32 +852,24 @@
     },
     {
         "id": "e3a8a2bafd0af3c8",
-        "type": "change",
+        "type": "function",
         "z": "9006458c06964b58",
         "g": "890c74c6b5e14e0c",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 90,
         "y": 280,
         "wires": [
             [
                 "46cbbd14af612e83"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "89951fb788a3d2f9",

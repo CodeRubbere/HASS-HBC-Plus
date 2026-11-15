@@ -438,6 +438,9 @@ automation:
             circuit {{ states('input_number.house_battery_phase_circuit_limit_w') | int(0) }} W.
 
 # The planner status is display-only (current attributes on the Phases view); keep it out of the database.
+# HBC+ 2026-11-15: the per-phase battery power and headroom sensors too. They follow the P1 phase sensors,
+# so with a meter that reports every second they wrote up to ~500,000 rows a day, while the Phases view
+# only shows their current value. Excluding them also drops their long-term statistics (nothing uses them).
 recorder:
   exclude:
     entities:
@@ -445,3 +448,12 @@ recorder:
       - sensor.hbc_phase_l2_active
       - sensor.hbc_phase_l3_active
       - sensor.hbc_phase_findings
+      - sensor.hbc_phase_l1_battery_power
+      - sensor.hbc_phase_l2_battery_power
+      - sensor.hbc_phase_l3_battery_power
+      - sensor.hbc_phase_l1_charge_headroom
+      - sensor.hbc_phase_l2_charge_headroom
+      - sensor.hbc_phase_l3_charge_headroom
+      - sensor.hbc_phase_l1_discharge_headroom
+      - sensor.hbc_phase_l2_discharge_headroom
+      - sensor.hbc_phase_l3_discharge_headroom

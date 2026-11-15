@@ -1287,7 +1287,9 @@ recorder:
       - sensor.hbc_time
     entity_globs:
       # PID control signals (updated every 2-40 seconds during operation)
-      - input_number.house_battery_control_*_term
+      # HBC+ 2026-11-15: the P, I and D terms are recorded again: the 'PID analysis' graph on the
+      # Self-consumption view draws them, and Node-RED writes them at most once per 10 s (on change).
+      # - input_number.house_battery_control_*_term
       - input_number.house_battery_control_*_deviation
       # - input_number.house_battery_control_error_signal
       # - input_number.house_battery_control_pid_output  # optional: this is useful for debugging
@@ -1296,6 +1298,8 @@ recorder:
       - input_number.house_battery_strategy_dynamic_*_avg_*
       # Status fields (updated frequently)
       - input_number.house_battery_total_available_energy
+      # HBC+ 2026-11-15: changes with every battery reading; sensor.house_total_battery_power keeps the history
+      - input_number.house_battery_total_battery_power
       - sensor.battery_time_remaining
       # Charge Deadline analytics: mirrored 1:1 by sensor.deadline_*_power template
       # sensors that carry state_class and therefore keep permanent statistics.

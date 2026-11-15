@@ -353,7 +353,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 ## Improvements in HBC+ v1.0
 
-Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, eight make the system more robust, four make the control loop faster or write less to Modbus, five are features, and three tighten security. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
+Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, eight make the system more robust, eight make the control loop faster or lighter on Modbus and the HA database, five are features, and three tighten security. All of it runs in practice on a three-battery setup (two over RS485, one over Modbus TCP).
 
 | # | Change | Where | Type |
 | --- | --- | --- | --- |
@@ -380,6 +380,10 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, e
 | P2 | *PID step*: 13 nodes in one, cache for PID settings | Self-consumption | Performance |
 | P3 | *Pick period*: fast path for Timed with settings cache | Timed | Performance |
 | P4 | Fewer Modbus writes, in order per battery | Start – *Set Batteries* | Performance |
+| P5 | Busy phase sensors out of the HA database, PID terms back in | `hbc_phase_guard.yaml`, `hbc_control.yaml` | Performance |
+| P6 | Output failsafe warns once instead of every tick | Self-consumption – *PID step* | Performance |
+| P7 | *Trace* in JavaScript everywhere; one node writes the totals | Strategy tabs; Start – *Totals to HA (on change)* | Performance |
+| P8 | Dynamic waits 3 s after the last setting change | Dynamic – *User input* | Performance |
 | F1 | Feed-forward start for regulated charging | Charge – *Regulated power* | Feature |
 | F2 | Grid Clock as Dynamic data source | Dynamic + selector | Feature |
 | F3 | Charge Deadline strategy | Own tab + package | Feature |
@@ -503,6 +507,14 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 **P3 — Pick period in Timed.** Was: 20 reads, 5 config functions, 5 period switches and ~15 change and switch nodes. Now: one *Pick period* function with the same logic (periods A to E, the first matching window wins, a window may run past midnight, start = end is an empty period). It uses HA's time, so Node-RED's own timezone does not matter. *Timed settings cache* renders all period settings every 30 s and on every change; if the snapshot is older than 5 minutes, the old chain runs instead.
 
 **P4 — Fewer Modbus writes.** The write design stays (awaited writes, *Write limiter*, 30 s failsafe, *Collect completions*, *Write latency*). On top of it: the **mode** is written only when it changes, when the read-back differs for more than 20 s, or as a 60 s keep-alive (before, it was written every tick); for **power** only the register of the current mode is written, and nothing in `stop`; *Next write* runs the writes one by one per battery, power first, then mode. Tested with 13 simulated scenarios.
+
+**P5 — The phase sensors filled the HA database.** The six `sensor.hbc_phase_lN_charge/discharge_headroom` sensors follow the P1 phase sensors, so with a meter that reports every second they wrote up to about 500,000 rows a day; the three `sensor.hbc_phase_lN_battery_power` sensors added more. The Phases view only shows their current value, so all nine are now excluded from the recorder (that also drops their long-term statistics, which nothing used). `input_number.house_battery_total_battery_power` is excluded too; `sensor.house_total_battery_power` keeps the history of total battery power. The other way round, the P, I and D terms (`input_number.house_battery_control_*_term`) are recorded again: the *PID analysis* graph on the Self-consumption view draws them, and Node-RED writes them at most once per 10 s.
+
+**P6 — The output failsafe flooded the log.** *PID step* treated a real limit of 0 W (no room left on *Enforce*, or every battery offline for more than 5 minutes) as "unknown" and wrote *Output Failsafe is INACTIVE* on every tick. It now warns once per episode; the behaviour itself is unchanged.
+
+**P7 — A lighter control loop.** The eight remaining *Trace* change nodes (Charge, Charge Deadline, Dynamic, Full stop, Helios, Partials, Sell, Timed) used JSONata on every tick; they are now the same JavaScript function Self-consumption already used (compared with the JSONata result in 40 cases). In the Start flow, *Totals to HA (on change)* replaces five *On change* nodes that each got a full copy of the tick message: it sends a small message to a helper only when its value changed, plus every 30 minutes as a refresh, so a helper no longer stays on an old value after an HA restart (see B1).
+
+**P8 — Dynamic recalculated on every slider step.** Every change of a Dynamic setting re-ran the Cheapest Energy Hours price calculation in Home Assistant, so dragging a slider ran it many times. *wait 3 s after the last change* now runs it once, 3 seconds after the last change.
 
 ### Features
 
@@ -736,7 +748,7 @@ The number of batteries still comes from `input_number.house_battery_count` (max
 | `binary_sensor.hbc_phase_circuit_limit_exceeded` | Template | On when the batteries on any phase draw more than the battery circuit for 10 s |
 | `script.hbc_phase_guard_defaults` | Script | Resets all HBC+ settings and the phase map to the defaults |
 
-The template sensors and the alarm run in Home Assistant only, so they keep working when Node-RED is down. The MQTT status sensors are display-only and excluded from the recorder.
+The template sensors and the alarm run in Home Assistant only, so they keep working when Node-RED is down. The MQTT status sensors are display-only and excluded from the recorder, and so are the per-phase battery power and headroom sensors: the Phases view only shows their current value (P5).
 
 ### Other HBC+ entities
 

@@ -196,15 +196,11 @@
         },
         "nodes": [
             "3920807805ddb059",
-            "6eec1e5908ef6f67",
-            "a6adc7042299d847",
             "c0052e5300bcc427",
-            "aa69e51f3c01bbfa",
             "aaa46efd8b644f28",
-            "b297ca12d122bdaf",
             "1a0569faa93464c1",
-            "dd5c58db365e68e7",
-            "a93fd3fac44a50da"
+            "a93fd3fac44a50da",
+            "hbcp0totals0ha01"
         ],
         "x": 654,
         "y": 786,
@@ -445,12 +441,48 @@
         "y": 827,
         "wires": [
             [
-                "6eec1e5908ef6f67",
-                "a6adc7042299d847",
-                "aa69e51f3c01bbfa",
-                "b297ca12d122bdaf",
-                "dd5c58db365e68e7"
+                "hbcp0totals0ha01"
             ]
+        ]
+    },
+    {
+        "id": "hbcp0totals0ha01",
+        "type": "function",
+        "z": "61557a1c3e5f5404",
+        "g": "748479083171d20c",
+        "name": "Totals to HA (on change)",
+        "func": "// HBC+ (2026-11-15) Totals to HA - replaces five 'On change' (rbe) nodes, each of which got a full\n// copy of the tick message on every tick. Sends a small message to a helper only when its value\n// changed, and every 30 min as a refresh: after an HA restart a helper could otherwise keep an\n// old value until the number really changed (see the note on the totals in hbc_control.yaml).\n// Writing an unchanged value adds nothing to the HA database.\nconst KEYS = [\"batteries_available_energy\", \"batteries_max_energy\", \"batteries_total_power\", \"batteries_max_charge_power\", \"batteries_max_discharge_power\"];\nconst REFRESH_MS = 30 * 60 * 1000;\nconst now = Date.now();\nconst last = context.get('last') || {};\nconst out = KEYS.map(k => {\n    const v = msg[k];\n    const l = last[k];\n    if (l && l.v === v && now - l.t < REFRESH_MS) return null;\n    last[k] = { v, t: now };\n    return { [k]: v };\n});\ncontext.set('last', last);\nnode.status({ fill: 'grey', shape: 'dot', text: `power ${Math.round(Number(msg.batteries_total_power) || 0)} W` });\nreturn out;\n",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 947,
+        "wires": [
+            [
+                "3920807805ddb059"
+            ],
+            [
+                "c0052e5300bcc427"
+            ],
+            [
+                "aaa46efd8b644f28"
+            ],
+            [
+                "1a0569faa93464c1"
+            ],
+            [
+                "a93fd3fac44a50da"
+            ]
+        ],
+        "outputLabels": [
+            "batteries_available_energy",
+            "batteries_max_energy",
+            "batteries_total_power",
+            "batteries_max_charge_power",
+            "batteries_max_discharge_power"
         ]
     },
     {
@@ -2546,48 +2578,6 @@
         ]
     },
     {
-        "id": "6eec1e5908ef6f67",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_available_energy",
-        "topi": "topic",
-        "x": 750,
-        "y": 827,
-        "wires": [
-            [
-                "3920807805ddb059"
-            ]
-        ]
-    },
-    {
-        "id": "a6adc7042299d847",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_energy",
-        "topi": "topic",
-        "x": 750,
-        "y": 887,
-        "wires": [
-            [
-                "c0052e5300bcc427"
-            ]
-        ]
-    },
-    {
         "id": "c0052e5300bcc427",
         "type": "api-call-service",
         "z": "61557a1c3e5f5404",
@@ -2617,27 +2607,6 @@
         "y": 887,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "aa69e51f3c01bbfa",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_total_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 947,
-        "wires": [
-            [
-                "aaa46efd8b644f28"
-            ]
         ]
     },
     {
@@ -2673,27 +2642,6 @@
         ]
     },
     {
-        "id": "b297ca12d122bdaf",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_charge_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 1007,
-        "wires": [
-            [
-                "1a0569faa93464c1"
-            ]
-        ]
-    },
-    {
         "id": "1a0569faa93464c1",
         "type": "api-call-service",
         "z": "61557a1c3e5f5404",
@@ -2723,27 +2671,6 @@
         "y": 1007,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "dd5c58db365e68e7",
-        "type": "rbe",
-        "z": "61557a1c3e5f5404",
-        "g": "748479083171d20c",
-        "name": "On change",
-        "func": "rbe",
-        "gap": "",
-        "start": "",
-        "inout": "out",
-        "septopics": false,
-        "property": "batteries_max_discharge_power",
-        "topi": "topic",
-        "x": 750,
-        "y": 1067,
-        "wires": [
-            [
-                "a93fd3fac44a50da"
-            ]
         ]
     },
     {

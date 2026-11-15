@@ -144,32 +144,24 @@
     },
     {
         "id": "5efa6fae7b9f95a3",
-        "type": "change",
+        "type": "function",
         "z": "c6efb67773d1041c",
         "g": "409969cc5795bdca",
         "name": "Trace",
-        "rules": [
-            {
-                "t": "set",
-                "p": "strategy.trace",
-                "pt": "msg",
-                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
-                "tot": "jsonata"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "func": "// HBC+ 2026-11-15 (same as Self-consumption's Trace since 2026-10-13): was a change node with the JSONata expression\n//   [strategy.trace, {\"flow\": target, \"flow_settings\": advanced_settings, \"timestamp\": $now()}]\n// Same result in plain JavaScript (JSONata is slow and this runs on every tick).\nconst prev = RED.util.getMessageProperty(msg, 'strategy.trace');\nconst trace = prev === undefined || prev === null ? [] : (Array.isArray(prev) ? prev.slice() : [prev]);\nconst entry = { flow: msg.target };\nif (msg.advanced_settings !== undefined) entry.flow_settings = msg.advanced_settings;\nentry.timestamp = new Date().toISOString();\ntrace.push(entry);\nRED.util.setMessageProperty(msg, 'strategy.trace', trace, true);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 110,
         "y": 280,
         "wires": [
             [
                 "fe67ca79a3276609"
             ]
-        ],
-        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+        ]
     },
     {
         "id": "7d933c82417691b1",
