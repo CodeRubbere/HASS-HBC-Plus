@@ -1,0 +1,391 @@
+[
+    {
+        "id": "230212c14defbe4a",
+        "type": "tab",
+        "label": "HBC+ Strategy arbiter v1.0",
+        "disabled": false,
+        "info": "# Strategy arbiter\n\nThe only flow that writes `input_select.house_battery_strategy`.\n\nOther flows **request** a strategy with a *link call* to **Strategy request**:\n`msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`; `requester` is any name, e.g. `'guard'` or the name of your own flow\n\n- Priority: oscillation guard (100) > any other requester (50) > your own choice (base). Equal priority: the hold that came first wins.\n- Effective strategy = highest active hold, otherwise the base.\n- A manual change wins: it becomes the base and marks running holds as overridden; they are not re-applied until released.\n- Release puts back the next hold or the base.\n- The reply carries `msg.arbiter_result` / `msg.strategy_action` for the caller's log.\n- State is mirrored to `input_text.hbc_strategy_arbiter` (package `hbc_strategy_arbiter.yaml`) and restored on start.\n- Every change is written to the HA logbook.\n\nAny requester name works and gets priority 50. To give one another priority, add it to `PRIO` in *Arbitrate*."
+    },
+    {
+        "id": "2f9851221db79c0f",
+        "type": "link in",
+        "z": "230212c14defbe4a",
+        "name": "Strategy request",
+        "links": [],
+        "x": 175,
+        "y": 140,
+        "wires": [
+            [
+                "e9ae8522cb3816af"
+            ]
+        ]
+    },
+    {
+        "id": "e9ae8522cb3816af",
+        "type": "api-current-state",
+        "z": "230212c14defbe4a",
+        "name": "Current strategy",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "entity_id": "input_select.house_battery_strategy",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "current_strategy",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "strategy_entity",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "",
+        "forType": "num",
+        "x": 360,
+        "y": 140,
+        "wires": [
+            [
+                "f1ca714c6353ca17"
+            ]
+        ]
+    },
+    {
+        "id": "f1ca714c6353ca17",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "name": "Arbitrate",
+        "func": "// Strategy arbiter - the ONLY writer of input_select.house_battery_strategy.\n// Requesters (via link call) send msg.arbiter = {requester, action: 'hold'|'release', strategy, reason}.\n// State (flow 'arb', mirrored to input_text.hbc_strategy_arbiter so it survives restarts):\n//   b = base strategy (the user's own choice), h = {requester: {s: strategy, a: active?}}\n// Effective strategy = highest-priority ACTIVE hold, else the base.\n// A manual change (see 'Detect manual change') becomes the new base and marks every hold\n// as overridden: an overridden hold is ignored (and not re-applied by repeated 'hold'\n// requests) until its requester releases it.\n// Priority per requester, higher wins. Any other requester name (a flow of your own) gets\n// DEFAULT_PRIO; on equal priority the hold that came first wins. Add a name here to give it\n// another priority.\nconst PRIO = { guard: 100 };\nconst DEFAULT_PRIO = 50;\nconst prio = (name) => Object.prototype.hasOwnProperty.call(PRIO, name) ? PRIO[name] : DEFAULT_PRIO;\nconst BAD = ['', 'unknown', 'unavailable', 'None', null, undefined];\ntry {\n    const r = msg.arbiter || {};\n    const who = r.requester;\n    const cur = msg.current_strategy;\n    const ent = msg.strategy_entity || {};\n    const options = (ent.attributes && Array.isArray(ent.attributes.options)) ? ent.attributes.options : [];\n    const fail = (why) => {\n        msg.arbiter_result = 'rejected: ' + why;\n        msg.strategy_action = msg.arbiter_result;\n        node.warn(`${who}: ${msg.arbiter_result}`);\n        node.status({ fill: 'red', shape: 'ring', text: msg.arbiter_result });\n        return [null, msg, null, null];\n    };\n    if (typeof who !== 'string' || !who.trim()) return fail('requester missing');\n    if (!['hold', 'release'].includes(r.action)) return fail(`unknown action '${r.action}'`);\n    if (r.action === 'hold' && (BAD.includes(r.strategy) || (options.length && !options.includes(r.strategy))))\n        return fail(`invalid strategy '${r.strategy}'`);\n\n    const st = flow.get('arb') || { b: null, h: {} };\n    if (!st.h || typeof st.h !== 'object') st.h = {};\n    const active = () => Object.entries(st.h).filter(([, v]) => v && v.a);\n    // While nobody holds, the base simply follows reality.\n    if (active().length === 0 && !BAD.includes(cur)) st.b = cur;\n    const before = JSON.stringify(st);\n\n    let note;\n    const ex = st.h[who];\n    if (r.action === 'hold') {\n        if (ex && ex.a && ex.s === r.strategy) note = `already holding ${r.strategy}`;\n        else if (ex && !ex.a) note = `hold ${ex.s} was overridden manually - ignored until released`;\n        else { st.h[who] = { s: r.strategy, a: true }; note = `hold ${r.strategy}`; }\n    } else {\n        if (!ex) note = 'nothing to release';\n        else { delete st.h[who]; note = ex.a ? `released ${ex.s}` : `released ${ex.s} (was overridden)`; }\n    }\n\n    const act = active().sort((x, y) => prio(y[0]) - prio(x[0]));\n    const target = act.length ? act[0][1].s : st.b;\n    const changed = JSON.stringify(st) !== before;\n    flow.set('arb', st);\n\n    let write = null, action;\n    if (changed && !BAD.includes(target) && target !== cur && (!options.length || options.includes(target))) {\n        msg.arbiter_target = target;\n        flow.set('arb_last_write', { v: target, ts: Date.now() });\n        action = `${cur} -> ${target}`;\n        write = msg;\n    } else {\n        action = `unchanged (${cur})`;\n    }\n    msg.arbiter_result = `${note}; ${action}`;\n    msg.strategy_action = msg.arbiter_result;\n    node.status({ fill: write ? 'green' : 'grey', shape: 'dot', text: `${who}: ${msg.arbiter_result}`.slice(0, 80) });\n    const persist = changed ? { arbiter_state_json: JSON.stringify(st) } : null;\n    const log = (changed || write) ? { arbiter_log: `${who}${r.reason ? ' (' + r.reason + ')' : ''}: ${msg.arbiter_result}` } : null;\n    return [write, write ? null : msg, persist, log];\n} catch (e) {\n    node.error('Arbiter failed: ' + e.message, msg);\n    msg.arbiter_result = 'error: ' + e.message;\n    msg.strategy_action = msg.arbiter_result;\n    return [null, msg, null, null];\n}\n",
+        "outputs": 4,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 140,
+        "wires": [
+            [
+                "5c67f7cf419dcdaa"
+            ],
+            [
+                "f1b2233b388a8b3e"
+            ],
+            [
+                "d85e544791f40067"
+            ],
+            [
+                "f11484b198c5a6d1"
+            ]
+        ]
+    },
+    {
+        "id": "5c67f7cf419dcdaa",
+        "type": "api-call-service",
+        "z": "230212c14defbe4a",
+        "name": "Set strategy",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_select.select_option",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_select.house_battery_strategy"
+        ],
+        "labelId": [],
+        "data": "{\"option\": $$.arbiter_target}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "blockInputOverrides": false,
+        "domain": "input_select",
+        "service": "select_option",
+        "x": 820,
+        "y": 80,
+        "wires": [
+            [
+                "f1b2233b388a8b3e"
+            ]
+        ]
+    },
+    {
+        "id": "f1b2233b388a8b3e",
+        "type": "link out",
+        "z": "230212c14defbe4a",
+        "name": "Return to caller",
+        "mode": "return",
+        "links": [],
+        "x": 1010,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "d85e544791f40067",
+        "type": "api-call-service",
+        "z": "230212c14defbe4a",
+        "name": "Save state",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_text.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_text.hbc_strategy_arbiter"
+        ],
+        "labelId": [],
+        "data": "{\"value\": $$.arbiter_state_json}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "blockInputOverrides": false,
+        "domain": "input_text",
+        "service": "set_value",
+        "x": 820,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f11484b198c5a6d1",
+        "type": "api-call-service",
+        "z": "230212c14defbe4a",
+        "name": "Logbook",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "logbook.log",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "{\"name\": \"Strategy arbiter\", \"message\": $$.arbiter_log, \"entity_id\": \"input_select.house_battery_strategy\"}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "blockInputOverrides": false,
+        "domain": "logbook",
+        "service": "log",
+        "x": 810,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a01468bda411a0af",
+        "type": "server-state-changed",
+        "z": "230212c14defbe4a",
+        "name": "Strategy changed",
+        "server": "176d29a.6f648d6",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "input_select.house_battery_strategy"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": true,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            }
+        ],
+        "x": 340,
+        "y": 280,
+        "wires": [
+            [
+                "6a54b72dd149f457"
+            ]
+        ]
+    },
+    {
+        "id": "6a54b72dd149f457",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "name": "Detect manual change",
+        "func": "// Every change of the strategy select. Our own writes are recognised by\n// arb_last_write (same value, within 15 s) and ignored. Anything else is a manual\n// change (dashboard, app, automation): it becomes the new base, and every active hold\n// is marked overridden so the arbiter will not put it back.\nconst BAD = ['', 'unknown', 'unavailable', 'None'];\nconst v = msg.payload;\nif (BAD.includes(v)) return null;\nconst lw = flow.get('arb_last_write');\nif (lw && lw.v === v && Date.now() - lw.ts < 15000) {\n    flow.set('arb_last_write', null);\n    node.status({ fill: 'grey', shape: 'dot', text: `own write: ${v}` });\n    return null;\n}\nconst st = flow.get('arb') || { b: null, h: {} };\nif (!st.h || typeof st.h !== 'object') st.h = {};\nconst over = [];\nfor (const [k, h] of Object.entries(st.h)) if (h && h.a) { h.a = false; over.push(`${k} (${h.s})`); }\nst.b = v;\nflow.set('arb', st);\nnode.status({ fill: 'blue', shape: 'dot', text: `manual: ${v}` + (over.length ? ` | overrides ${over.join(', ')}` : '') });\nreturn [\n    { arbiter_state_json: JSON.stringify(st) },\n    over.length ? { arbiter_log: `manual change to ${v}; overrides ${over.join(', ')}` } : null\n];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 280,
+        "wires": [
+            [
+                "d85e544791f40067"
+            ],
+            [
+                "f11484b198c5a6d1"
+            ]
+        ]
+    },
+    {
+        "id": "8a5f8fc0d1e3be6d",
+        "type": "inject",
+        "z": "230212c14defbe4a",
+        "name": "On start: restore state",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "x": 160,
+        "y": 400,
+        "wires": [
+            [
+                "96617e7703ebf29a"
+            ]
+        ]
+    },
+    {
+        "id": "96617e7703ebf29a",
+        "type": "api-current-state",
+        "z": "230212c14defbe4a",
+        "name": "Saved state",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "entity_id": "input_text.hbc_strategy_arbiter",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "saved_json",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "",
+        "forType": "num",
+        "x": 360,
+        "y": 400,
+        "wires": [
+            [
+                "7e9cada3b27ffbeb"
+            ]
+        ]
+    },
+    {
+        "id": "7e9cada3b27ffbeb",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "name": "Load state",
+        "func": "// Restore the arbiter state saved in input_text.hbc_strategy_arbiter.\n// Does not clobber state that a request may already have created during start-up.\nlet st = null;\ntry { st = JSON.parse(msg.saved_json); } catch (e) { st = null; }\nif (!st || typeof st !== 'object' || !st.h || typeof st.h !== 'object') st = { b: null, h: {} };\nif (!flow.get('arb')) {\n    flow.set('arb', st);\n    const holds = Object.entries(st.h).map(([k, v]) => `${k}:${v.s}${v.a ? '' : '(overridden)'}`).join(', ');\n    node.status({ fill: 'green', shape: 'dot', text: `restored base=${st.b} ${holds}` });\n} else {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'state already set, saved copy ignored' });\n}\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "be9b971eda2ec948",
+        "type": "catch",
+        "z": "230212c14defbe4a",
+        "name": "Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 480,
+        "wires": [
+            [
+                "76a824ed4e3cb4fe"
+            ]
+        ]
+    },
+    {
+        "id": "76a824ed4e3cb4fe",
+        "type": "debug",
+        "z": "230212c14defbe4a",
+        "name": "Arbiter errors",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 330,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "f242736a4bf91925",
+        "type": "comment",
+        "z": "230212c14defbe4a",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# HBC+ Strategy arbiter v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nThe **only writer** of `input_select.house_battery_strategy`. Other flows request a strategy with a link call to **Strategy request**: `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`.\n\n- Priority: Battery Oscillation Guard (100) > any other requester, such as a flow of your own (50) > your own choice (the base). Equal priority: the hold that came first wins.\n- Effective strategy = the highest active hold, otherwise the base.\n- A manual change wins: it becomes the new base and marks running holds as overridden.\n- A release puts back the next hold or the base.\n- State is mirrored to `input_text.hbc_strategy_arbiter` and restored at start; every change goes to the HA logbook.\n- Any requester name works and gets priority 50. To give one another priority, add it to `PRIO` in *Arbitrate*.\n\n## HBC+ v1.0\n\nNo change. The phase guard settings are not strategies and do not go through the arbiter.\n",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "176d29a.6f648d6",
+        "type": "server",
+        "name": "HA System",
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [],
+        "connectionDelay": true,
+        "cacheJson": false,
+        "heartbeat": true,
+        "heartbeatInterval": "30",
+        "statusSeparator": "",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "5d9f04faecb3f929",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.82.0"
+        }
+    }
+]

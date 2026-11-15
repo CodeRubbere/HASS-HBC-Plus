@@ -1,0 +1,481 @@
+[
+    {
+        "id": "2f2abfd43828aebf",
+        "type": "tab",
+        "label": "HBC+ Home Battery Master Switch v1.0",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "a0daf99089a2643e",
+        "type": "group",
+        "z": "2f2abfd43828aebf",
+        "name": "Marstek master control switch",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2680301c255d5bb3",
+            "727ba04d2b780353",
+            "b767aa4dd77df7e4",
+            "b99d22dc356fe973",
+            "e42a2f65a42ee154",
+            "72679d464754e2f6",
+            "04c4601efcb5fba8"
+        ],
+        "x": 34,
+        "y": 77,
+        "w": 972,
+        "h": 384
+    },
+    {
+        "id": "e42a2f65a42ee154",
+        "type": "group",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Loop",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2de256c8e67d574e",
+            "a1213d3481107583",
+            "dbec0b7004b2cff0",
+            "2c7ecb7a5aa2664f",
+            "c70da49a94fbfcec",
+            "0d9ce0192dbcf8ba"
+        ],
+        "x": 474,
+        "y": 119,
+        "w": 492,
+        "h": 262
+    },
+    {
+        "id": "2680301c255d5bb3",
+        "type": "api-current-state",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Your battery count",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_number.house_battery_count",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "number",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "battery_count",
+                "propertyType": "msg",
+                "value": "number",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 170,
+        "y": 240,
+        "wires": [
+            [
+                "727ba04d2b780353"
+            ]
+        ]
+    },
+    {
+        "id": "2de256c8e67d574e",
+        "type": "function",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Set RS485 and Work Modes",
+        "func": "// array for output \nlet outputArray = [];\n\n// battery to target\nconst target = `marstek_m${msg.battery_index}`;\n\n// HBC+ phase guard (2026-11-14): when control goes back to the Marstek firmware (RS485 'disable'),\n// only ONE battery per shared phase may do that (the lowest M-number on the phase). Its partner\n// stays under RS485 control with forcible 'stop', so two batteries in firmware mode can never\n// overload the phase fuse. Only on Enforce; Off / Monitor / any error -> unchanged.\nlet hbcPlusStandby = false;\ntry {\n    const ha = global.get('homeassistant');\n    let states = null;\n    if (ha && typeof ha === 'object') {\n        const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n        const srv = servers.find(s => s.isConnected !== false) || servers[0];\n        if (srv) states = srv.states;\n    }\n    const raw = (id) => (states && states[id] ? states[id].state : undefined);\n    const usable = (v) => v !== undefined && v !== null && v !== '' && v !== 'unknown' && v !== 'unavailable';\n    const num = (id, def) => { const v = raw(id); const n = Number(v); return usable(v) && Number.isFinite(n) ? n : def; };\n    const str = (id, def) => { const v = raw(id); return usable(v) ? String(v) : def; };\n    if (msg.rs485 === 'disable' && str('input_select.house_battery_phase_guard_mode', 'Off') === 'Enforce') {\n        const ph = str(`input_select.${target}_phase`, '');\n        if (['L1', 'L2', 'L3'].includes(ph)) {\n            const count = num('input_number.house_battery_count', 0);\n            const same = [];\n            for (let i = 1; i <= count; i++) if (str(`input_select.marstek_m${i}_phase`, '') === ph) same.push(i);\n            hbcPlusStandby = same.length > 1 && same[0] !== Number(msg.battery_index);\n        }\n    }\n} catch (e) {\n    node.warn(`HBC+ phase check failed, battery handled as before: ${e && e.message}`);\n}\n\n// Set | work mode\nconst workModeAction = {\n    \"action\": \"select.select_option\",\n    \"target\": {\n        \"entity_id\": [`select.${target}_user_work_mode`]\n    },\n    \"data\": {\n         \"option\": String(msg.work_mode)\n    }\n};\n// Add to output array. Set null for no action.\noutputArray.push(msg.work_mode && !hbcPlusStandby ? { payload: workModeAction, topic:\"user_work_mode\"}: null);\n\n// Set | rs485\nconst rs485Action = {\n    \"action\": \"select.select_option\",\n    \"target\": {\n        \"entity_id\": [`select.${target}_rs485_control_mode`]\n    },\n    \"data\": {\n         \"option\": String(msg.rs485)\n    }\n};\n// Add to output array. Set null for no action.\nif (hbcPlusStandby) {\n    // HBC+: partner on a shared phase stays under RS485 control and stopped (two messages, same output)\n    const keepRs485 = { \"action\": \"select.select_option\", \"target\": { \"entity_id\": [`select.${target}_rs485_control_mode`] }, \"data\": { \"option\": \"enable\" } };\n    const stopAction = { \"action\": \"select.select_option\", \"target\": { \"entity_id\": [`select.${target}_forcible_charge_discharge`] }, \"data\": { \"option\": \"stop\" } };\n    outputArray.push([{ payload: keepRs485, topic: \"rs485_control_mode\" }, { payload: stopAction, topic: \"forcible_charge_discharge\" }]);\n    node.status({ fill: \"yellow\", shape: \"dot\", text: `${target}: HBC+ phase partner kept on RS485 + stop` });\n} else {\n    outputArray.push(msg.rs485 ? { payload: rs485Action, topic: \"rs485_control_mode\" } : null);\n}\n\n// Store calls in msg to allow checking of loop results\nmsg.loop_result = { target, workModeAction, rs485Action };\n\n// Return msg as third output\noutputArray.push(msg);\n\n// Outputs\nreturn outputArray;",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 200,
+        "wires": [
+            [
+                "a1213d3481107583"
+            ],
+            [
+                "dbec0b7004b2cff0"
+            ],
+            [
+                "c70da49a94fbfcec"
+            ]
+        ]
+    },
+    {
+        "id": "727ba04d2b780353",
+        "type": "function",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Loop start",
+        "func": "// loop through the number of batteries set by the user\nmsg.battery_index = 1; // base-1\n\n// configurables\nlet workMode = null; // manual, anti-feed, ai, null = don't set or alter this setting\nlet rs485 = null;  // enable, disable, null = don't set or alter this setting\n\n// mode select\nswitch (msg.marstek_master_battery_mode) {\n    case \"Manual control\":\n        workMode = \"manual\";\n        rs485 = \"disable\";\n        break;\n    case \"Marstek control\":\n        // the user should select a work mode via the Marstek App or via select.marstek_mX_user_work_mode\n        rs485 = \"disable\";\n        break;\n    case \"Full control\":\n        rs485 = \"enable\";\n        break;\n    default:\n        node.status({fill:\"red\",shape:\"ring\",text:`Unhandled mode: ${msg.marstek_master_battery_mode}`});\n        return null; // stop flow\n}\n\n// Continue\nmsg.work_mode = workMode;\nmsg.rs485 = rs485;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 240,
+        "wires": [
+            [
+                "2de256c8e67d574e"
+            ]
+        ]
+    },
+    {
+        "id": "c70da49a94fbfcec",
+        "type": "function",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Loop step",
+        "func": "// Step index down\nmsg.battery_index += 1;\n\n// Continue\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 280,
+        "wires": [
+            [
+                "2c7ecb7a5aa2664f",
+                "0d9ce0192dbcf8ba"
+            ]
+        ]
+    },
+    {
+        "id": "2c7ecb7a5aa2664f",
+        "type": "switch",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Loop until",
+        "property": "battery_index",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "lte",
+                "v": "battery_count",
+                "vt": "msg"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 740,
+        "y": 280,
+        "wires": [
+            [
+                "2de256c8e67d574e"
+            ],
+            [
+                "b767aa4dd77df7e4"
+            ]
+        ]
+    },
+    {
+        "id": "a1213d3481107583",
+        "type": "api-call-service",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Set work mode",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "domain": "input_text",
+        "service": "set_value",
+        "x": 860,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dbec0b7004b2cff0",
+        "type": "api-call-service",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Set RS485",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "domain": "input_text",
+        "service": "set_value",
+        "x": 850,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0d9ce0192dbcf8ba",
+        "type": "debug",
+        "z": "2f2abfd43828aebf",
+        "g": "e42a2f65a42ee154",
+        "name": "Loop result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "loop_result",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 570,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "b767aa4dd77df7e4",
+        "type": "debug",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Done",
+        "active": true,
+        "tosidebar": false,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "b99d22dc356fe973",
+        "type": "server-state-changed",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Master control mode",
+        "server": "176d29a.6f648d6",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "input_select.marstek_master_battery_mode"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            },
+            {
+                "property": "marstek_master_battery_mode",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "x": 170,
+        "y": 300,
+        "wires": [
+            [
+                "2680301c255d5bb3"
+            ]
+        ]
+    },
+    {
+        "id": "72679d464754e2f6",
+        "type": "inject",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Check work modes periodically",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 210,
+        "y": 118,
+        "wires": [
+            [
+                "04c4601efcb5fba8"
+            ]
+        ]
+    },
+    {
+        "id": "04c4601efcb5fba8",
+        "type": "api-current-state",
+        "z": "2f2abfd43828aebf",
+        "g": "a0daf99089a2643e",
+        "name": "Master control mode",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_select.marstek_master_battery_mode",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "marstek_master_battery_mode",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 180,
+        "y": 180,
+        "wires": [
+            [
+                "2680301c255d5bb3"
+            ]
+        ]
+    },
+    {
+        "id": "036411526c027193",
+        "type": "comment",
+        "z": "2f2abfd43828aebf",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# HBC+ Home Battery Master Switch v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDecides **who controls the Marsteks**, from `input_select.marstek_master_battery_mode`. Runs when that helper changes and periodically (*Check work modes periodically*), and loops over M1 ... M*n* (`input_number.house_battery_count`).\n\n| Master mode | RS485 control | Work mode | Who controls |\n|---|---|---|---|\n| Full control | enable | unchanged | HBC+ (forcible charge / discharge) |\n| Marstek control | disable | unchanged (choose it in the Marstek app) | Marstek firmware |\n| Manual control | disable | manual | Marstek firmware, manual mode |\n\n*Set RS485 and Work Modes* builds the `select.select_option` actions per battery; *Set RS485* and *Set work mode* perform them.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\nWhen control goes back to the firmware (RS485 *disable*), two batteries on one phase could each run at full power under their own firmware and overload the phase fuse. On **Enforce**, only the battery with the lowest M-number on a shared phase is handed back. Its partner gets RS485 *enable* plus forcible *stop*, so it stays idle even when Node-RED is down; the node status turns yellow for that battery. Batteries alone on their phase, and all batteries on Off / Monitor, are handled exactly as before.\n\nThe Home Assistant fallback for a stale HBC+ heartbeat (`packages/hbc_heartbeat.yaml`) applies the same rule: on Enforce only the lowest M-number per shared phase goes back to firmware, its partner stays RS485 *enable* + forcible *stop*.\n\nFail-open: if the phase check fails, the battery is handled as before and a warning is logged.\n",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "176d29a.6f648d6",
+        "type": "server",
+        "name": "HA System",
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [],
+        "connectionDelay": true,
+        "cacheJson": false,
+        "heartbeat": true,
+        "heartbeatInterval": "30",
+        "statusSeparator": "",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "f49b5247635df6d7",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.82.0"
+        }
+    }
+]

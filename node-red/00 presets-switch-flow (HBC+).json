@@ -1,0 +1,316 @@
+[
+    {
+        "id": "a1a9363231783de9",
+        "type": "tab",
+        "label": "HBC+ Home Battery PID presets v1.0",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "211f20238929e9e5",
+        "type": "group",
+        "z": "a1a9363231783de9",
+        "name": "PID presets",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "0b1d52d3f5f87253",
+            "0c97af1e03926db3",
+            "f659358fccb80baf",
+            "e66b29e96b995840",
+            "053c9a20d06697a0",
+            "b481aef3e75f7499",
+            "2bec2b11edd01e98"
+        ],
+        "x": 34,
+        "y": 78,
+        "w": 612,
+        "h": 322
+    },
+    {
+        "id": "0b1d52d3f5f87253",
+        "type": "server-state-changed",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "PID preset selected",
+        "server": "176d29a.6f648d6",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "input_select.house_battery_control_pid_presets"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 150,
+        "y": 172,
+        "wires": [
+            [
+                "053c9a20d06697a0"
+            ]
+        ]
+    },
+    {
+        "id": "0c97af1e03926db3",
+        "type": "api-call-service",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Kp",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_control_kp"
+        ],
+        "labelId": [],
+        "data": "{\"value\": \"{{payload}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 570,
+        "y": 119,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f659358fccb80baf",
+        "type": "api-call-service",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Ki",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_control_ki"
+        ],
+        "labelId": [],
+        "data": "{\"value\": \"{{payload}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 570,
+        "y": 179,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e66b29e96b995840",
+        "type": "api-call-service",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Kd",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_control_kd"
+        ],
+        "labelId": [],
+        "data": "{\"value\": \"{{payload}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 570,
+        "y": 239,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "053c9a20d06697a0",
+        "type": "function",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Presets",
+        "func": "// See: house_battery_control.yaml > input_select: > house_battery_control_pid_presets\nconst preset = RED.util.getMessageProperty(msg,\"payload\");\nnode.status({fill:\"green\",shape:\"dot\",text:`${preset}`});\n\n\n// Default values\nlet Kp = 0; // Proportional gain\nlet Ki = 0; // Integral gain\nlet Kd = 0; // Differentiating gain\nlet Si = 0; // % Input smoothing (a Low pass moving average filter)\nlet So = 0; // % Output smoothing (a Low pass moving average filter)\n\nswitch (preset) {\n    // For people who have unstable systems with every other preset\n    case \"Very safe\":\n        Kp = 0.1;\n        Ki = 0.1;\n        Si = 0; // without Kd, this is preferred to be zero.\n        So = 10; // %\n        break;\n    // Good starting point for most\n    case \"Safe\":\n        Kp = 0.3;\n        Ki = 0.3;\n        Kd = 0.1;\n        Si = 20; // %\n        So = 0; // %\n        break;\n    // Gitcodebob's October 2025 settings for 3.2kWp PV and 5kW battery transformer power\n    case \"Regular\":\n        Kp = 0.3;\n        Ki = 0.4;\n        Kd = 0.8;\n        Si = 50; // % This high amount of filtering allows the stronger Kd\n        So = 10; // %\n        break;\n    default:\n        // Don't change values\n        return null;\n}\n\n// Prepare for three outputs\nreturn [\n    { \"payload\": Kp },\n    { \"payload\": Ki },\n    { \"payload\": Kd },\n    { \"payload\": Si },\n    { \"payload\": So }\n];",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 172,
+        "wires": [
+            [
+                "0c97af1e03926db3"
+            ],
+            [
+                "f659358fccb80baf"
+            ],
+            [
+                "e66b29e96b995840"
+            ],
+            [
+                "b481aef3e75f7499"
+            ],
+            [
+                "2bec2b11edd01e98"
+            ]
+        ]
+    },
+    {
+        "id": "b481aef3e75f7499",
+        "type": "api-call-service",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Input Smooth",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_control_error_signal_dampening"
+        ],
+        "labelId": [],
+        "data": "{\"value\": \"{{payload}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 540,
+        "y": 299,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2bec2b11edd01e98",
+        "type": "api-call-service",
+        "z": "a1a9363231783de9",
+        "g": "211f20238929e9e5",
+        "name": "Output Smoothing",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_control_pid_output_dampening"
+        ],
+        "labelId": [],
+        "data": "{\"value\": \"{{payload}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 530,
+        "y": 359,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f5d2af16c76727a8",
+        "type": "comment",
+        "z": "a1a9363231783de9",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# HBC+ Home Battery PID presets v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nApplies a **PID preset** to the Self-consumption controller when `input_select.house_battery_control_pid_presets` changes. The preset is written to five helpers that the Self-consumption flow reads:\n\n| Preset | Kp | Ki | Kd | Input smoothing | Output smoothing |\n|---|---|---|---|---|---|\n| Very safe | 0.1 | 0.1 | 0 | 0 % | 10 % |\n| Safe | 0.3 | 0.3 | 0.1 | 20 % | 0 % |\n| Regular | 0.3 | 0.4 | 0.8 | 50 % | 10 % |\n\nHelpers: `input_number.house_battery_control_kp`, `_ki`, `_kd`, `_error_signal_dampening` (input smoothing) and `_pid_output_dampening` (output smoothing). Any other option leaves the values unchanged, so manual tuning survives.\n\n## HBC+ v1.0\n\nNo change. On Enforce the PID output is spread over fewer batteries per phase (one active battery, within the fuse room), but the control loop and its tuning are the same.\n",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "176d29a.6f648d6",
+        "type": "server",
+        "name": "HA System",
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [],
+        "connectionDelay": true,
+        "cacheJson": false,
+        "heartbeat": true,
+        "heartbeatInterval": "30",
+        "statusSeparator": "",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "198695d145793921",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.82.0"
+        }
+    }
+]

@@ -1,0 +1,576 @@
+[
+    {
+        "id": "c925cef84d5e8a37",
+        "type": "tab",
+        "label": "HBC+ Battery Oscillation Guard v1.0",
+        "disabled": false,
+        "info": "# Battery Oscillation Guard\n\nWatches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger) and detects when the batteries swing\nbetween **charging and discharging at high power** repeatedly (a wave).\n\nWhen detected:\n1. Asks 'Strategy arbiter' to **hold Full stop** (*Request: hold Full stop*, link call\n   'Strategy request'). The guard has the highest priority there.\n2. After `STOP_S` seconds (default 300 = 5 min) it sends a **release** (*Request: release*).\n   The arbiter restores the strategy that was active before - or keeps a manual change made\n   during the pause, or a hold of another flow that is still running.\n3. Ignores new detections for `GRACE_S` seconds so the batteries can settle\n\nThe release is always sent at the end of a pause, also when local state was lost.\n\n## Tuning (tab Environment variables - double-click the tab)\n- `THRESHOLD_W` - a battery counts as charging above +T W, discharging below -T W (hysteresis between)\n- `WINDOW_S` / `MIN_FLIPS` - trigger when one battery flips charge<->discharge >= MIN_FLIPS times within WINDOW_S\n- `STOP_S` - how long to stay in Full stop\n- `GRACE_S` - quiet period after restoring\n- `DRY_RUN` - true = only detect + log, don't change strategy\n\n## Notes\n- Every trigger is written to the HA Logbook.\n- A phone notification (with date/time) is sent on Full stop and on restore\n  via `notify.notify` (change in the \"Notify phone\" node).\n- The strategy is no longer written here: 'Full stop' and the restore are requests to\n  'Strategy arbiter' (hold / release). The arbiter keeps its state in HA, so a\n  Node-RED restart during the pause no longer leaves the strategy on Full stop\n  (the 'On deploy' inject sends a release).\n",
+        "env": [
+            {
+                "name": "THRESHOLD_W",
+                "value": "1200",
+                "type": "num"
+            },
+            {
+                "name": "WINDOW_S",
+                "value": "900",
+                "type": "num"
+            },
+            {
+                "name": "MIN_FLIPS",
+                "value": "6",
+                "type": "num"
+            },
+            {
+                "name": "STOP_S",
+                "value": "300",
+                "type": "num"
+            },
+            {
+                "name": "GRACE_S",
+                "value": "60",
+                "type": "num"
+            },
+            {
+                "name": "DRY_RUN",
+                "value": "false",
+                "type": "bool"
+            }
+        ]
+    },
+    {
+        "id": "a6860ff3944cfdf9",
+        "type": "comment",
+        "z": "c925cef84d5e8a37",
+        "name": "Battery Oscillation Guard (readme)",
+        "info": "# Battery Oscillation Guard\n\nWatches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger) and detects when the batteries swing\nbetween **charging and discharging at high power** repeatedly (a wave).\n\nWhen detected:\n1. Asks 'Strategy arbiter' to **hold Full stop** (*Request: hold Full stop*, link call\n   'Strategy request'). The guard has the highest priority there.\n2. After `STOP_S` seconds (default 300 = 5 min) it sends a **release** (*Request: release*).\n   The arbiter restores the strategy that was active before - or keeps a manual change made\n   during the pause, or a hold of another flow that is still running.\n3. Ignores new detections for `GRACE_S` seconds so the batteries can settle\n\nThe release is always sent at the end of a pause, also when local state was lost.\n\n## Tuning (tab Environment variables - double-click the tab)\n- `THRESHOLD_W` - a battery counts as charging above +T W, discharging below -T W (hysteresis between)\n- `WINDOW_S` / `MIN_FLIPS` - trigger when one battery flips charge<->discharge >= MIN_FLIPS times within WINDOW_S\n- `STOP_S` - how long to stay in Full stop\n- `GRACE_S` - quiet period after restoring\n- `DRY_RUN` - true = only detect + log, don't change strategy\n\n## Notes\n- Every trigger is written to the HA Logbook.\n- A phone notification (with date/time) is sent on Full stop and on restore\n  via `notify.notify`; set your own phone (e.g. `notify.mobile_app_<phone>`) in the \"Notify phone\" node.\n- The strategy is no longer written here: 'Full stop' and the restore are requests to\n  'Strategy arbiter' (hold / release). The arbiter keeps its state in HA, so a\n  Node-RED restart during the pause no longer leaves the strategy on Full stop\n  (the 'On deploy' inject sends a release).\n",
+        "x": 170,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "ac26f2b63996c326",
+        "type": "server-state-changed",
+        "z": "c925cef84d5e8a37",
+        "name": "Battery power M1–M6",
+        "server": "176d29a.6f648d6",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "sensor.marstek_m1_battery_power",
+                "sensor.marstek_m2_battery_power",
+                "sensor.marstek_m3_battery_power",
+                "sensor.marstek_m4_battery_power",
+                "sensor.marstek_m5_battery_power",
+                "sensor.marstek_m6_battery_power"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": true,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "number",
+                "valueType": "entityState"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 160,
+        "y": 160,
+        "wires": [
+            [
+                "f568e0eea484babf"
+            ]
+        ]
+    },
+    {
+        "id": "f568e0eea484babf",
+        "type": "function",
+        "z": "c925cef84d5e8a37",
+        "name": "Detect oscillation",
+        "func": "// Detect charge <-> discharge oscillation per battery\nconst T         = Number(env.get('THRESHOLD_W')) || 1200;\nconst WINDOW_MS = (Number(env.get('WINDOW_S')) || 180) * 1000;\nconst MIN_FLIPS = Number(env.get('MIN_FLIPS')) || 5;\n\nconst p = Number(msg.payload);\nif (!Number.isFinite(p)) return null;\nconst now = Date.now();\n\n// Update tracking (always, so status stays live)\nconst tracks = flow.get('osc_tracks') || {};\nconst t = tracks[msg.topic] || { zone: null, flips: [] };\n\n// Hysteresis: only change zone when clearly past +T or -T\nlet zone = t.zone;\nif (p > T) zone = 'charge';\nelse if (p < -T) zone = 'discharge';\n\nif (t.zone && zone !== t.zone) t.flips.push(now);\nt.zone = zone;\nt.flips = t.flips.filter(ts => now - ts <= WINDOW_MS);\ntracks[msg.topic] = t;\nflow.set('osc_tracks', tracks);\n\nconst name = msg.topic.replace('sensor.', '');\nconst guardActive = flow.get('guard_active') === true;\nconst inGrace = now < (flow.get('grace_until') || 0);\n\nnode.status({\n    fill: guardActive ? 'red' : (inGrace ? 'blue' : (t.flips.length ? 'yellow' : 'green')),\n    shape: 'dot',\n    text: `${name}: ${Math.round(p)}W | ${t.flips.length}/${MIN_FLIPS} flips` +\n          (guardActive ? ' | GUARD ACTIVE' : (inGrace ? ' | grace' : ''))\n});\n\nif (guardActive || inGrace) return null;\n\nif (t.flips.length >= MIN_FLIPS) {\n    const flips = t.flips.length;\n    flow.set('osc_tracks', {}); // reset all windows\n    return {\n        topic: 'oscillation',\n        osc: { entity: msg.topic, flips: flips, window_s: WINDOW_MS / 1000, power: Math.round(p), threshold: T }\n    };\n}\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 160,
+        "wires": [
+            [
+                "b0892e536610fdb9"
+            ]
+        ]
+    },
+    {
+        "id": "b0892e536610fdb9",
+        "type": "api-current-state",
+        "z": "c925cef84d5e8a37",
+        "name": "Current strategy",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_select.house_battery_strategy",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "strategy",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 600,
+        "y": 80,
+        "wires": [
+            [
+                "176a499332908dc9"
+            ]
+        ]
+    },
+    {
+        "id": "176a499332908dc9",
+        "type": "function",
+        "z": "c925cef84d5e8a37",
+        "name": "Start guard",
+        "func": "// Switch to Full stop and remember the previous strategy\nconst cur = msg.strategy;\nconst osc = msg.osc || { entity: 'unknown', flips: 0, window_s: 0 };\nconst STOP_S = Number(env.get('STOP_S')) || 120;\nconst dry = String(env.get('DRY_RUN')).toLowerCase() === 'true';\n\nif (flow.get('guard_active') === true) return null;\n\nif (!cur || cur === 'unknown' || cur === 'unavailable') {\n    node.status({ fill: 'grey', shape: 'ring', text: `skipped: strategy '${cur}'` });\n    return null;\n}\nif (cur === 'Full stop') {\n    node.status({ fill: 'grey', shape: 'ring', text: 'skipped: already Full stop' });\n    return null;\n}\n\nconst what = `Oscillation on ${osc.entity} (${osc.flips} charge/discharge flips in ${osc.window_s}s)`;\n\nif (dry) {\n    msg.message = `[DRY RUN] ${what}. Would switch '${cur}' -> 'Full stop' for ${STOP_S}s`;\n    node.warn(msg.message);\n    node.status({ fill: 'yellow', shape: 'ring', text: `dry run @ ${new Date().toLocaleTimeString()}` });\n    return [null, msg];\n}\n\nflow.set('guard_active', true);\nflow.set('prev_strategy', cur);\nflow.set('trigger_count', (flow.get('trigger_count') || 0) + 1);\n\nmsg.prev_strategy = cur;\nmsg.delay = STOP_S * 1000;\nconst ts = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });\nmsg.message = `${what}. Strategy '${cur}' -> 'Full stop' for ${STOP_S}s`;\nmsg.notify = {\n    title: '⚠️ Battery oscillation – Full stop',\n    message: `${ts}\\nFull stop activated for ${STOP_S}s.\\n${what}.\\nPrevious strategy: ${cur}`\n};\nnode.status({ fill: 'red', shape: 'dot', text: `Full stop since ${ts} (was: ${cur})` });\nreturn [msg, msg, msg];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 810,
+        "y": 80,
+        "wires": [
+            [
+                "59ead24c8f847b18",
+                "01e303af091632fc"
+            ],
+            [
+                "95650deeb9e5ec50",
+                "6ac5e6a461b3c715"
+            ],
+            [
+                "86c5ead32180bdf9"
+            ]
+        ],
+        "outputLabels": [
+            "activate",
+            "log",
+            "notify"
+        ]
+    },
+    {
+        "id": "59ead24c8f847b18",
+        "type": "function",
+        "z": "c925cef84d5e8a37",
+        "name": "Request: hold Full stop",
+        "x": 1140,
+        "y": 60,
+        "wires": [
+            [
+                "6a31ba59abf71425"
+            ]
+        ],
+        "func": "// Ask the strategy arbiter for 'Full stop' (highest priority).\nmsg.arbiter = { requester: 'guard', action: 'hold', strategy: 'Full stop', reason: msg.message || 'battery oscillation' };\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": []
+    },
+    {
+        "id": "01e303af091632fc",
+        "type": "delay",
+        "z": "c925cef84d5e8a37",
+        "name": "Wait STOP_S (msg.delay)",
+        "pauseType": "delayv",
+        "timeout": "120",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1150,
+        "y": 120,
+        "wires": [
+            [
+                "3ae71693c33d9192"
+            ]
+        ]
+    },
+    {
+        "id": "3ae71693c33d9192",
+        "type": "api-current-state",
+        "z": "c925cef84d5e8a37",
+        "name": "Strategy now",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_select.house_battery_strategy",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "strategy",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 590,
+        "y": 260,
+        "wires": [
+            [
+                "ef0bbabb43d47831"
+            ]
+        ]
+    },
+    {
+        "id": "ef0bbabb43d47831",
+        "type": "function",
+        "z": "c925cef84d5e8a37",
+        "name": "Restore strategy",
+        "func": "// Restore previous strategy after the Full stop pause\nconst GRACE_S = Number(env.get('GRACE_S')) || 60;\nconst prev = flow.get('prev_strategy');\nconst cur = msg.strategy;\n\nflow.set('guard_active', false);\nflow.set('prev_strategy', null);\nflow.set('osc_tracks', {});\nflow.set('grace_until', Date.now() + GRACE_S * 1000);\n\nif (!prev) {\n    // Nothing remembered in memory (e.g. Node-RED restarted during the pause): still release,\n    // the arbiter keeps its state in HA and restores the right strategy.\n    node.status({ fill: 'grey', shape: 'ring', text: 'release sent (no local state)' });\n    return [msg, null, null];\n}\nconst ts = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });\n\nif (cur !== 'Full stop') {\n    msg.message = `Strategy was changed to '${cur}' during the pause - not restoring '${prev}'`;\n    msg.notify = {\n        title: 'ℹ️ Battery oscillation – pause ended',\n        message: `${ts}\\nPause ended. Strategy was changed manually to '${cur}' – '${prev}' not restored.`\n    };\n    node.status({ fill: 'grey', shape: 'ring', text: `not restored (now: ${cur})` });\n    return [msg, msg, msg];   // release anyway; the arbiter keeps the manual choice\n}\n\nmsg.prev_strategy = prev;\nmsg.message = `Oscillation pause finished - strategy restored to '${prev}'`;\nmsg.notify = {\n    title: '✅ Battery oscillation – strategy restored',\n    message: `${ts}\\nFull stop ended. Strategy restored to '${prev}'.`\n};\nnode.status({ fill: 'green', shape: 'dot', text: `restored '${prev}' @ ${ts}` });\nreturn [msg, msg, msg];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 800,
+        "y": 260,
+        "wires": [
+            [
+                "cd92e93d187048c9"
+            ],
+            [
+                "95650deeb9e5ec50",
+                "6ac5e6a461b3c715"
+            ],
+            [
+                "86c5ead32180bdf9"
+            ]
+        ],
+        "outputLabels": [
+            "restore",
+            "log",
+            "notify"
+        ]
+    },
+    {
+        "id": "cd92e93d187048c9",
+        "type": "function",
+        "z": "c925cef84d5e8a37",
+        "name": "Request: release",
+        "x": 1140,
+        "y": 220,
+        "wires": [
+            [
+                "0c3491f9c45b3952"
+            ]
+        ],
+        "func": "// End of the pause: release the hold. The arbiter restores the strategy that was\n// active before, or keeps a manual change made during the pause.\nmsg.arbiter = { requester: 'guard', action: 'release', reason: 'oscillation pause ended' };\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": []
+    },
+    {
+        "id": "95650deeb9e5ec50",
+        "type": "api-call-service",
+        "z": "c925cef84d5e8a37",
+        "name": "Logbook entry",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "logbook.log",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "{\"name\": \"Battery oscillation guard\", \"message\": $$.message, \"entity_id\": \"input_select.house_battery_strategy\"}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "logbook",
+        "service": "log",
+        "x": 1120,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "86c5ead32180bdf9",
+        "type": "api-call-service",
+        "z": "c925cef84d5e8a37",
+        "name": "Notify phone",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "notify.notify",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "{\"title\": $$.notify.title, \"message\": $$.notify.message}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "notify",
+        "service": "notify",
+        "x": 1120,
+        "y": 460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6ac5e6a461b3c715",
+        "type": "debug",
+        "z": "c925cef84d5e8a37",
+        "name": "Guard log",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "message",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1100,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "23180f472749fa9c",
+        "type": "inject",
+        "z": "c925cef84d5e8a37",
+        "name": "TEST: simulate oscillation",
+        "props": [
+            {
+                "p": "osc",
+                "v": "{\"entity\":\"manual test\",\"flips\":0,\"window_s\":0}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 80,
+        "wires": [
+            [
+                "b0892e536610fdb9"
+            ]
+        ]
+    },
+    {
+        "id": "ee2ecca36e8ebca7",
+        "type": "inject",
+        "z": "c925cef84d5e8a37",
+        "name": "Restore now (end pause)",
+        "props": [
+            {
+                "p": "flush",
+                "v": "1",
+                "vt": "num"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 770,
+        "y": 160,
+        "wires": [
+            [
+                "01e303af091632fc"
+            ]
+        ]
+    },
+    {
+        "id": "8b448de31d871bc9",
+        "type": "inject",
+        "z": "c925cef84d5e8a37",
+        "name": "On deploy: recover / reset",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 340,
+        "y": 260,
+        "wires": [
+            [
+                "3ae71693c33d9192"
+            ]
+        ]
+    },
+    {
+        "id": "c5b89424dc01b2b2",
+        "type": "catch",
+        "z": "c925cef84d5e8a37",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 340,
+        "wires": [
+            [
+                "4839218f48faeca0"
+            ]
+        ]
+    },
+    {
+        "id": "4839218f48faeca0",
+        "type": "debug",
+        "z": "c925cef84d5e8a37",
+        "name": "Errors",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "error",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 290,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "176d29a.6f648d6",
+        "type": "server",
+        "name": "HA System",
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [],
+        "connectionDelay": true,
+        "cacheJson": false,
+        "heartbeat": true,
+        "heartbeatInterval": "30",
+        "statusSeparator": "",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "3e8b91ae60bb0b5d",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    },
+    {
+        "id": "6a31ba59abf71425",
+        "type": "link call",
+        "z": "c925cef84d5e8a37",
+        "name": "Strategy request",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 1150,
+        "y": 100,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0c3491f9c45b3952",
+        "type": "link call",
+        "z": "c925cef84d5e8a37",
+        "name": "Strategy request",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 1150,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "hbcpdocf47d68119",
+        "type": "comment",
+        "z": "c925cef84d5e8a37",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# HBC+ Battery Oscillation Guard v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDetects batteries that **swing between charging and discharging at high power** (a wave) and pauses them.\n\n1. Watches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger). A battery counts as charging above +`THRESHOLD_W`, discharging below -`THRESHOLD_W`.\n2. When one battery flips charge <-> discharge at least `MIN_FLIPS` times within `WINDOW_S`, it asks the **Strategy arbiter** to *hold Full stop* (highest priority).\n3. After `STOP_S` seconds (default 300) it sends a *release*; the arbiter puts back the previous strategy (or a manual change made during the pause, or a hold of another flow).\n4. Ignores new detections for `GRACE_S` seconds. `DRY_RUN` = only detect and log.\n\nTuning: the tab's environment variables. Every trigger goes to the HA logbook and to the phone.\n\n## HBC+ v1.0\n\nNo change. A handover between two batteries on one phase is not a flip: one battery goes idle and the other starts, neither swings between charging and discharging. *Full stop* is always within the phase fuse limits.\n",
+        "x": 320,
+        "y": 540,
+        "wires": []
+    }
+]

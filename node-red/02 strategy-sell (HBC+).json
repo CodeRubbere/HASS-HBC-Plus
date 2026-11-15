@@ -1,0 +1,1116 @@
+[
+    {
+        "id": "17d7519059560984",
+        "type": "tab",
+        "label": "HBC+ Strategy Sell v1.0",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "2107815757999873",
+        "type": "group",
+        "z": "17d7519059560984",
+        "name": "Configuration",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "09c3449117628dc9",
+            "c18c47bacbac6eeb",
+            "0712571b7dcc2a15"
+        ],
+        "x": 34,
+        "y": 139,
+        "w": 192,
+        "h": 182
+    },
+    {
+        "id": "0d5a25185bd560da",
+        "type": "group",
+        "z": "17d7519059560984",
+        "name": "Battery solutions",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "47c0d76e5f88890f",
+            "8bcb6192e1e3e470",
+            "3e6cccb8afd6a245"
+        ],
+        "x": 34,
+        "y": 519,
+        "w": 192,
+        "h": 142
+    },
+    {
+        "id": "cb55caed48fda19c",
+        "type": "group",
+        "z": "17d7519059560984",
+        "name": "Export routine",
+        "style": {
+            "fill-opacity": "0.5",
+            "label": true,
+            "color": "#cccccc"
+        },
+        "nodes": [
+            "36bfa78c14881971",
+            "58da5c4857bfa784",
+            "5ca130f9ce1564c5",
+            "8c4a3f2942fdf1ec",
+            "b3607a14e999befc",
+            "2bbd2d9aa1d3eb04",
+            "dfb5b921e72ab3c3",
+            "34758c3503310661"
+        ],
+        "x": 254,
+        "y": 419,
+        "w": 832,
+        "h": 202
+    },
+    {
+        "id": "19fd765ad75bf61e",
+        "type": "group",
+        "z": "17d7519059560984",
+        "name": "Decide export or stop",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "97d3b938789fa786",
+            "6b379468347f8fd0",
+            "5a4410fb7801974d",
+            "90aa1bcb958d781a",
+            "8579ae6878230f01",
+            "83d53f19d5e1d256",
+            "fca40e2067ebd87a",
+            "2c9f0f5409745084",
+            "2d48d2d302e8f8d4",
+            "9bfff2319c826817",
+            "d28229fe4fd3bafc",
+            "5ec2c90306d3e00d",
+            "050e8677fc93c6ff",
+            "58a445a9a1e62f9d",
+            "3c1e4e9c981226b1",
+            "a93330e2b0b689f0",
+            "d31b8e8647339c0e",
+            "811a0992af0ee413",
+            "8281e49b7521bcb4",
+            "3fdd30412a5814c4"
+        ],
+        "x": 254,
+        "y": 139,
+        "w": 1898,
+        "h": 262
+    },
+    {
+        "id": "31e358cc3dd6a31c",
+        "type": "group",
+        "z": "17d7519059560984",
+        "name": "Unhandled exceptions",
+        "style": {
+            "label": true,
+            "stroke": "#d88a8a",
+            "color": "#d88a8a"
+        },
+        "nodes": [
+            "b744ea7fffd7e208",
+            "cf6ea77b512a2b54",
+            "5841f791f503ecc3"
+        ],
+        "x": 34,
+        "y": 419,
+        "w": 182,
+        "h": 82
+    },
+    {
+        "id": "8281e49b7521bcb4",
+        "type": "group",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "UI helper | set bounds for charge levels",
+        "style": {
+            "label": true,
+            "stroke": "#3f93cf"
+        },
+        "nodes": [
+            "77150d88a618fbb1",
+            "4caa5e4d4f6443e2",
+            "173342f0b639bbc4"
+        ],
+        "x": 1454,
+        "y": 259,
+        "w": 672,
+        "h": 82
+    },
+    {
+        "id": "811a0992af0ee413",
+        "type": "junction",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "x": 1420,
+        "y": 340,
+        "wires": [
+            [
+                "5ca130f9ce1564c5"
+            ]
+        ]
+    },
+    {
+        "id": "14674e102a96675f",
+        "type": "comment",
+        "z": "17d7519059560984",
+        "name": "Home Battery Strategy",
+        "info": "The `Home Battery Start` flow will call this strategy flow\nby matching the strategy name with the Link In name.\n\nConfigure the Link In node in the Start group.\n\nDon't modify other parts of the Start and End groups.\nThey handle the calling and returning for you.",
+        "x": 140,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "09c3449117628dc9",
+        "type": "link in",
+        "z": "17d7519059560984",
+        "g": "2107815757999873",
+        "name": "Sell",
+        "links": [],
+        "x": 110,
+        "y": 280,
+        "wires": [
+            [
+                "0712571b7dcc2a15"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "c18c47bacbac6eeb",
+        "type": "comment",
+        "z": "17d7519059560984",
+        "g": "2107815757999873",
+        "name": "Start (readme)",
+        "info": "# Setting up your battery strategy flow\n\n## Setup\nName the `Link In node` in this start group exactly after the <select> option configured in your\nselect_input.house_battery_strategy\n\nconfigure select options in:\ninput_select_house_battery_control.yaml\n\n### example\n`house_battery_strategy:\n  name: House Battery Strategy\n  options:\n    - AcmE example`\n\nThe above creates a select option, allowing user to select 'AcmE example'\n\nWhen selected, battery control will search for a flow containing a Link In node\ncalled 'AcmE example' (case sensitive).",
+        "x": 130,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "0712571b7dcc2a15",
+        "type": "change",
+        "z": "17d7519059560984",
+        "g": "2107815757999873",
+        "name": "Trace",
+        "rules": [
+            {
+                "t": "set",
+                "p": "strategy.trace",
+                "pt": "msg",
+                "to": "[\t   strategy.trace,\t   {\t       \"flow\": target,\t       \"flow_settings\": advanced_settings,\t       \"timestamp\": $now()\t   } \t]",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 110,
+        "y": 220,
+        "wires": [
+            [
+                "d31b8e8647339c0e"
+            ]
+        ],
+        "info": "Attaches a breadcrumb trace to the msg\r\nso the user can reconstruct which route has\r\nbeen traveled"
+    },
+    {
+        "id": "47c0d76e5f88890f",
+        "type": "link out",
+        "z": "17d7519059560984",
+        "g": "0d5a25185bd560da",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 185,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "8bcb6192e1e3e470",
+        "type": "comment",
+        "z": "17d7519059560984",
+        "g": "0d5a25185bd560da",
+        "name": "End (readme)",
+        "info": "Should return a solution_array of battery objects\n\n## battery object format\n`{{id: string|number, mode: string, power: number}} battery solution`\n- id is an arbitrary battery ID\n- mode is \"stop\", \"charge\", \"discharge\" for Marstek\n- power in Watts\n\n### example array\nreturn this type of solution_array via msg.solutions\n` \nlet solution_array = [];\nsolution_array.push({id:\"M1\", mode: \"charge\", power: 100}); // per battery\nreturn {solutions: solution_array};\n` ",
+        "x": 130,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "36bfa78c14881971",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Max power solution",
+        "func": "// Logger, usage: log(this, \"\");\nconst log = global.get('logger');\nlog(this, \"Discharge at **max. power**\");\n\n// INPUT\nlet batteries = msg.batteries;\nlet solution_array = [];\n\n// HBC+ phase guard (2026-11-14), only when msg.phase_plus.mode === 'Enforce':\n// on a shared phase only the planner-active battery runs (others idle at 1 W, relay stays\n// engaged) and the total stays within the fuse room. Otherwise: every battery at max, as before.\nconst pp = msg.phase_plus;\nconst enforce = !!(pp && pp.mode === 'Enforce' && pp.phases);\nconst left = {};\nif (enforce) for (const [ph, e] of Object.entries(pp.phases)) left[ph] = Number(e.room && e.room.discharge) || 0;\n\n// build solution\nmsg.batteries.forEach(battery => {\n    let calculatedPower = Number(battery.discharging_max);\n\n    const ph = enforce ? pp.phase_of[battery.id] : null;\n    if (ph) {\n        const allowed = (pp.phases[ph].active && pp.phases[ph].active.discharge) || [];\n        if (!allowed.includes(battery.id)) {\n            calculatedPower = 1;\n            log(this, `Battery ${battery.id}: HBC+ phase standby on ${ph} (idle 1 W)`);\n        } else {\n            calculatedPower = Math.max(1, Math.min(calculatedPower, left[ph]));\n            left[ph] -= calculatedPower;\n            log(this, `Battery ${battery.id}: ${calculatedPower} W (HBC+ fuse room ${ph})`);\n        }\n    }\n\n    solution_array.push({\n        id: battery.id,\n        mode: \"discharge\",\n        power: calculatedPower\n    });\n\n});\n\n// return solution\nmsg.solutions = solution_array;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 460,
+        "wires": [
+            [
+                "dfb5b921e72ab3c3"
+            ]
+        ]
+    },
+    {
+        "id": "58da5c4857bfa784",
+        "type": "link call",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Call flow",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 780,
+        "y": 520,
+        "wires": [
+            [
+                "8c4a3f2942fdf1ec",
+                "34758c3503310661"
+            ]
+        ]
+    },
+    {
+        "id": "5ca130f9ce1564c5",
+        "type": "switch",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Export at max power",
+        "property": "grid_power_has_limit_export",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "false"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 380,
+        "y": 500,
+        "wires": [
+            [
+                "36bfa78c14881971"
+            ],
+            [
+                "2bbd2d9aa1d3eb04"
+            ]
+        ]
+    },
+    {
+        "id": "8c4a3f2942fdf1ec",
+        "type": "debug",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Regulated",
+        "active": true,
+        "tosidebar": false,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 970,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "b3607a14e999befc",
+        "type": "debug",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Maximum",
+        "active": true,
+        "tosidebar": false,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "counter",
+        "x": 960,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "2bbd2d9aa1d3eb04",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Regulated power",
+        "func": "// Logger, usage: log(this, \"\");\nconst log = global.get('logger');\n\n// Which sub-strategy to use\nmsg.target = \"Self-consumption\";\n\n// Grid power limit\nconst targetGridPower = parseInt(msg.grid_power_limit_export);\n\n// Set target grid consumption for the PID controller\nmsg.house_target_grid_consumption_in_w = -targetGridPower; // negative, we are exporting to grid.\n// tell PID to avoid charge solutions during Selling.\nRED.util.setMessageProperty(msg,\"advanced_settings.charge_disabled\",true,true);\n\n// Finally\nlog(this, `**Regulated** discharging. Target grid power: ${Math.floor(targetGridPower)} W`);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 520,
+        "wires": [
+            [
+                "58da5c4857bfa784"
+            ]
+        ]
+    },
+    {
+        "id": "dfb5b921e72ab3c3",
+        "type": "change",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "Continue",
+        "rules": [
+            {
+                "t": "set",
+                "p": "target",
+                "pt": "msg",
+                "to": "Charge",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 780,
+        "y": 460,
+        "wires": [
+            [
+                "b3607a14e999befc",
+                "34758c3503310661"
+            ]
+        ]
+    },
+    {
+        "id": "77150d88a618fbb1",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "8281e49b7521bcb4",
+        "name": "Min/max",
+        "func": "\n// Lower bound\nlet output = msg.sell.threshold_energy || 0; // kWh\noutput = Math.max(output, 0);\n\n// Upper bound\nlet max_reserve = 0; // kWh\nmsg.batteries.forEach(battery => {\n    max_reserve += (Number(battery.energy_max*battery.soc_max) - Number(battery.energy_max*battery.soc_min))/100; // kWh\n});\noutput = Math.min(output, max_reserve);\n\nnode.status({fill:\"blue\",shape:\"dot\",text:`${output}`});\n\n// Output\nmsg.payload = output;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1780,
+        "y": 300,
+        "wires": [
+            [
+                "4caa5e4d4f6443e2"
+            ]
+        ]
+    },
+    {
+        "id": "4caa5e4d4f6443e2",
+        "type": "api-call-service",
+        "z": "17d7519059560984",
+        "g": "8281e49b7521bcb4",
+        "name": "Set desired energy reserve",
+        "server": "176d29a.6f648d6",
+        "version": 7,
+        "debugenabled": false,
+        "action": "input_number.set_value",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_number.house_battery_strategy_sell_target_energy"
+        ],
+        "labelId": [],
+        "data": "{\"value\": $$.payload}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "input_number",
+        "service": "set_value",
+        "x": 1980,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "173342f0b639bbc4",
+        "type": "rbe",
+        "z": "17d7519059560984",
+        "g": "8281e49b7521bcb4",
+        "name": "Desired energy changed",
+        "func": "rbe",
+        "gap": "",
+        "start": "",
+        "inout": "out",
+        "septopics": false,
+        "property": "payload",
+        "topi": "topic",
+        "x": 1590,
+        "y": 300,
+        "wires": [
+            [
+                "77150d88a618fbb1"
+            ]
+        ]
+    },
+    {
+        "id": "a93330e2b0b689f0",
+        "type": "api-current-state",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Goal",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_select.house_battery_strategy_sell_goal",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "sell.goal",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 450,
+        "y": 260,
+        "wires": [
+            [
+                "3c1e4e9c981226b1"
+            ]
+        ]
+    },
+    {
+        "id": "3c1e4e9c981226b1",
+        "type": "switch",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Sell until",
+        "property": "sell.goal",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "batteries are empty",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "state of charge",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "energy reserve",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 4,
+        "x": 580,
+        "y": 260,
+        "wires": [
+            [
+                "2c9f0f5409745084"
+            ],
+            [
+                "8579ae6878230f01"
+            ],
+            [
+                "5a4410fb7801974d"
+            ],
+            [
+                "97d3b938789fa786"
+            ]
+        ]
+    },
+    {
+        "id": "97d3b938789fa786",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Unknown -> Full stop",
+        "func": "const log = global.get(\"logger\");\n\n// Unkown export goal\nlog(this, `**${msg.sell.goal}**; Sell goal not recognized. Fallback to **Full Stop**`,\"warn\");\n\n// Full stop\nmsg.target = \"Full stop\";\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 800,
+        "y": 360,
+        "wires": [
+            [
+                "6b379468347f8fd0"
+            ]
+        ]
+    },
+    {
+        "id": "d31b8e8647339c0e",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Init",
+        "func": "msg.sell = {};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 260,
+        "wires": [
+            [
+                "a93330e2b0b689f0"
+            ]
+        ]
+    },
+    {
+        "id": "6b379468347f8fd0",
+        "type": "link call",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Call flow",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "5",
+        "x": 1000,
+        "y": 360,
+        "wires": [
+            [
+                "90aa1bcb958d781a"
+            ]
+        ]
+    },
+    {
+        "id": "5a4410fb7801974d",
+        "type": "api-current-state",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Energy reserve low",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_number.house_battery_strategy_sell_target_energy",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "sell.threshold_energy",
+                "propertyType": "msg",
+                "value": "number",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 790,
+        "y": 300,
+        "wires": [
+            [
+                "83d53f19d5e1d256"
+            ]
+        ]
+    },
+    {
+        "id": "3e6cccb8afd6a245",
+        "type": "link in",
+        "z": "17d7519059560984",
+        "g": "0d5a25185bd560da",
+        "name": "link to End",
+        "links": [
+            "90aa1bcb958d781a",
+            "050e8677fc93c6ff",
+            "34758c3503310661"
+        ],
+        "x": 75,
+        "y": 620,
+        "wires": [
+            [
+                "47c0d76e5f88890f"
+            ]
+        ]
+    },
+    {
+        "id": "90aa1bcb958d781a",
+        "type": "link out",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "go to End",
+        "mode": "link",
+        "links": [
+            "3e6cccb8afd6a245"
+        ],
+        "x": 1160,
+        "y": 360,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "8579ae6878230f01",
+        "type": "api-current-state",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "SoC low",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_number.house_battery_strategy_sell_target_soc",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "sell.threshold_soc",
+                "propertyType": "msg",
+                "value": "number",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 760,
+        "y": 240,
+        "wires": [
+            [
+                "fca40e2067ebd87a"
+            ]
+        ]
+    },
+    {
+        "id": "83d53f19d5e1d256",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Check if low",
+        "func": "// 1. Get the custom logger from global context\nconst log = global.get(\"logger\");\nlog(this,`Sell until: ${msg.sell.goal}`);\n\n// 2. Extract energy level from msg (default to 0 if property is missing)\nconst energy_remaining = Number(RED.util.getMessageProperty(msg, \"batteries_available_energy\")) || 0;\nvar energy_threshold = Number(RED.util.getMessageProperty(msg,\"sell.threshold_energy\"));\nif (energy_threshold === undefined || energy_threshold < 0){\n    log(this,`Desired energy reserve not set correctly '${energy_threshold}' kWh`,\"warn\");\n    energy_threshold = 0;\n}\n\n// 3. Logic: Determine if energy level is at or below zero\nif (energy_remaining <= energy_threshold) {\n    msg.sell.threshold_reached = true;\n    \n    // User friendly feedback via the custom logger\n    log(this, `[STOP] Energy reserve at ${energy_remaining.toFixed(1)} / ${energy_threshold.toFixed(1)} kWh`, 'info');\n} else {\n    msg.sell.threshold_reached = false;\n    \n    // User friendly feedback via the custom logger\n    log(this, `[OK] Energy reserve at ${energy_remaining.toFixed(1)} / ${energy_threshold.toFixed(1)} kWh.`, 'info');\n}\n\n// 4. Update node status for visual feedback in the editor\nnode.status({ \n    fill: msg.sell.threshold_reached ? \"red\" : \"green\", \n    shape: \"dot\", \n    text: `Threshold reached: ${msg.sell.threshold_reached}` \n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 990,
+        "y": 300,
+        "wires": [
+            [
+                "58a445a9a1e62f9d",
+                "173342f0b639bbc4"
+            ]
+        ]
+    },
+    {
+        "id": "fca40e2067ebd87a",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Check if low",
+        "func": "// 1. Get the custom logger from global context\nconst log = global.get(\"logger\");\nlog(this, `Sell until: ${msg.sell.goal}`);\n\n// 2. Extract average SoC and desired SoC level\nlet batteries = msg.batteries;\nlet soc_avg = 0;\nlet count = 0; // could use msg.battery_count\nbatteries.forEach(battery => {\n    soc_avg += battery.soc;\n    count++;\n});\n// 2a.  Current avg. SoC\nsoc_avg = Math.round(soc_avg / count * 100) / 100;\n// 2b.  Sell until SoC (11% as fallback)\nvar soc_threshold = Number(RED.util.getMessageProperty(msg,\"sell.threshold_soc\"));\nif (soc_threshold === undefined || soc_threshold < 11){\n    log(this, `Desired SoC not set correctly '${soc_threshold}' %. I've set it to 11%.`,\"warn\");\n    soc_threshold = 11;\n}\n\n// 3. Logic: Determine if SoC level is at or below desired level\nif (soc_avg <= msg.payload) {\n    msg.sell.threshold_reached = true;\n\n    // User friendly feedback via the custom logger\n    log(this, `[STOP] Average SoC at ${soc_avg.toFixed(1)}/${soc_threshold.toFixed(1)} %.`, 'info');\n} else {\n    msg.sell.threshold_reached = false;\n\n    // User friendly feedback via the custom logger\n    log(this, `[OK] Average SoC at ${soc_avg.toFixed(1)}/${soc_threshold.toFixed(1)} %.`, 'info');\n}\n\n// 4. Update node status for visual feedback in the editor\nnode.status({\n    fill: msg.sell.threshold_reached ? \"red\" : \"green\",\n    shape: \"dot\",\n    text: `Threshold reached: ${msg.sell.threshold_reached}`\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 990,
+        "y": 240,
+        "wires": [
+            [
+                "58a445a9a1e62f9d"
+            ]
+        ]
+    },
+    {
+        "id": "2c9f0f5409745084",
+        "type": "change",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Batteries are empty",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "0",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 790,
+        "y": 180,
+        "wires": [
+            [
+                "2d48d2d302e8f8d4"
+            ]
+        ]
+    },
+    {
+        "id": "2d48d2d302e8f8d4",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Check if empty",
+        "func": "// 1. Get the custom logger from global context\nconst log = global.get(\"logger\");\nlog(this,`Sell until: ${msg.sell.goal}`);\n\n// 2. Extract energy level from msg (default to 0 if property is missing)\nconst energy_remaining = Number(RED.util.getMessageProperty(msg, \"batteries_available_energy\")) || 0;\n\n// 3. Logic: Determine if energy level is at or below zero\nif (energy_remaining <= 0) {\n    msg.sell.threshold_reached = true;\n    \n    // User friendly feedback via the custom logger\n    log(this, `[STOP] All batteries are empty or at SoC_min_ (${energy_remaining} kWh).`, 'info');\n} else {\n    msg.sell.threshold_reached = false;\n    \n    // User friendly feedback via the custom logger\n    log(this, `[OK] Battery level ${energy_remaining.toFixed(2)} kWh above 0 kWh.`, 'info');\n}\n\n// 4. Update node status for visual feedback in the editor\nnode.status({ \n    fill: msg.sell.threshold_reached ? \"red\" : \"green\", \n    shape: \"dot\", \n    text: `Threshold reached: ${msg.sell.threshold_reached}` \n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1000,
+        "y": 180,
+        "wires": [
+            [
+                "58a445a9a1e62f9d"
+            ]
+        ]
+    },
+    {
+        "id": "9bfff2319c826817",
+        "type": "switch",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Until reached",
+        "property": "sell.threshold_reached",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "false"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 1330,
+        "y": 240,
+        "wires": [
+            [
+                "3fdd30412a5814c4"
+            ],
+            [
+                "811a0992af0ee413"
+            ]
+        ]
+    },
+    {
+        "id": "d28229fe4fd3bafc",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Strategy after reached",
+        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1740,
+        "y": 200,
+        "wires": [
+            [
+                "5ec2c90306d3e00d"
+            ]
+        ]
+    },
+    {
+        "id": "5ec2c90306d3e00d",
+        "type": "link call",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Call flow",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "5",
+        "x": 1920,
+        "y": 200,
+        "wires": [
+            [
+                "050e8677fc93c6ff"
+            ]
+        ]
+    },
+    {
+        "id": "050e8677fc93c6ff",
+        "type": "link out",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "go to End",
+        "mode": "link",
+        "links": [
+            "3e6cccb8afd6a245"
+        ],
+        "x": 2060,
+        "y": 200,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "58a445a9a1e62f9d",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Decided",
+        "func": "const log = global.get(\"logger\");\n\nif(msg.sell.threshold_reached){\n    log(this,`Stop discharging, Sell until ${msg.sell.goal} reached.`);\n} else {\n    log(this,`Continue discharging.`);\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1180,
+        "y": 240,
+        "wires": [
+            [
+                "9bfff2319c826817"
+            ]
+        ]
+    },
+    {
+        "id": "34758c3503310661",
+        "type": "link out",
+        "z": "17d7519059560984",
+        "g": "cb55caed48fda19c",
+        "name": "go to End",
+        "mode": "link",
+        "links": [
+            "3e6cccb8afd6a245"
+        ],
+        "x": 960,
+        "y": 520,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "b744ea7fffd7e208",
+        "type": "catch",
+        "z": "17d7519059560984",
+        "g": "31e358cc3dd6a31c",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 75,
+        "y": 460,
+        "wires": [
+            [
+                "cf6ea77b512a2b54"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "cf6ea77b512a2b54",
+        "type": "function",
+        "z": "17d7519059560984",
+        "g": "31e358cc3dd6a31c",
+        "name": "Unhandled Exception",
+        "func": "// Log unhandled exception\nconst handle = global.get('unhandledException');\nif(handle) handle(this);\n\n// Check origin of msg execution\nif (msg._linkSource) {\n    return msg; // Origin: some other flow\n} else {\n    return null; // Origin: this flow. Stop to prevent 'Missing return' warning\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 125,
+        "y": 460,
+        "wires": [
+            [
+                "5841f791f503ecc3"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "5841f791f503ecc3",
+        "type": "link out",
+        "z": "17d7519059560984",
+        "g": "31e358cc3dd6a31c",
+        "name": "link out 2",
+        "mode": "return",
+        "links": [],
+        "x": 175,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "3fdd30412a5814c4",
+        "type": "api-current-state",
+        "z": "17d7519059560984",
+        "g": "19fd765ad75bf61e",
+        "name": "Goal reached",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "input_select.house_battery_strategy_sell_goal_reached",
+        "state_type": "str",
+        "blockInputOverrides": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            },
+            {
+                "property": "charge.goal_reached_strategy",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 1540,
+        "y": 200,
+        "wires": [
+            [
+                "d28229fe4fd3bafc"
+            ]
+        ]
+    },
+    {
+        "id": "a9f483523fd25c63",
+        "type": "comment",
+        "z": "17d7519059560984",
+        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Sell v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDischarges the batteries to the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_sell_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are empty | usable energy is 0 kWh (all batteries at their min SoC) |\n| state of charge | the average SoC drops to `input_number.house_battery_strategy_sell_target_soc` |\n| energy reserve | usable energy drops to `input_number.house_battery_strategy_sell_target_energy` |\n| anything else | not recognised -> Full stop |\n\nWhen the goal is reached, the strategy in `input_select.house_battery_strategy_sell_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Export limit on** (`input_boolean.house_battery_control_has_power_limit_export`): *Regulated power* - Self-consumption is driven to grid export = the export limit, with charging disabled.\n- **No export limit**: *Max power solution* - every battery at its max discharge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the highest SoC) discharges, at min(its max, the phase's discharge room). Its partner idles at 1 W. The discharge room shrinks when PV is already exporting on that phase.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "176d29a.6f648d6",
+        "type": "server",
+        "name": "HA System",
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [],
+        "connectionDelay": true,
+        "cacheJson": false,
+        "heartbeat": true,
+        "heartbeatInterval": "30",
+        "statusSeparator": "",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "6fb5da09ca51a919",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.82.0"
+        }
+    }
+]

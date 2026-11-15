@@ -1,0 +1,10 @@
+# Strategy arbiter state (2026-10-21)
+# Node-RED tab '05 Strategy arbiter' is the only writer of input_select.house_battery_strategy.
+# It mirrors its state here as compact JSON so it survives Node-RED and HA restarts:
+#   {"b": <your own strategy>, "h": {<requester>: {"s": <held strategy>, "a": <active?>}}}
+# Written by Node-RED only - do not edit by hand (clear it to reset the arbiter).
+input_text:
+  hbc_strategy_arbiter:
+    name: "HBC strategy arbiter state"
+    icon: mdi:scale-balance
+    max: 255

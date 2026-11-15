@@ -1,0 +1,141 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ heartbeat fallback - phase-aware                                          (HBC+ v1.0, 2026-11-14)
+#
+# Node-RED tab "HBC+ Home Battery Start" publishes the time to MQTT hbc/heartbeat (retained) at most once
+# a minute while the control loop runs. When that heartbeat is older than 5 minutes while the master mode
+# is "Full control", Home Assistant hands the batteries back to their own firmware (anti-feed), so they
+# do not stay on their last setpoint while HBC is down.
+#
+# Phase-aware (HBC+): with input_select.house_battery_phase_guard_mode = Enforce, only ONE battery per
+# shared phase (L1/L2/L3) goes back to firmware: the one with the lowest M-number, the same rule as the
+# Master Switch flow. Its partner stays under RS485 control with forcible 'stop', so two batteries in
+# firmware anti-feed can never overload that phase's fuse. Partners are stopped first (break-before-make).
+# Batteries on 'Own circuit', alone on their phase, and all batteries on Off / Monitor are handed back
+# as before.
+#
+# When the loop runs again, the Master Switch flow (Full control) sets RS485 back to 'enable' for every
+# battery and HBC takes over again.
+#
+# Replaces the earlier nodered_heartbeat.yaml (same sensor and automation ids). DELETE that file from your
+# HA packages folder: with both files present HA sees duplicate ids and drops the fallback.
+# Set your own notify action below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
+###########################################################################################################
+
+mqtt:
+  sensor:
+    - name: "HBC last run"
+      unique_id: hbc_last_run
+      state_topic: hbc/heartbeat
+      device_class: timestamp
+      icon: mdi:heart-pulse
+
+template:
+  - binary_sensor:
+      - name: "HBC heartbeat stale"
+        unique_id: hbc_heartbeat_stale
+        device_class: problem
+        icon: mdi:heart-broken
+        # re-evaluated every minute through now(); stale = no heartbeat for more than 5 minutes
+        state: >
+          {% set t = states('sensor.hbc_last_run') | as_datetime(none) %}
+          {{ t is none or (now() - t).total_seconds() > 300 }}
+
+automation:
+  - id: hbc_heartbeat_fallback
+    alias: "HBC+: hand batteries back to firmware when the HBC heartbeat is stale (phase-aware)"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.hbc_heartbeat_stale
+        from: "off"
+        to: "on"
+        id: stale
+      # after an HA restart the sensor may already be 'on' (no off -> on change); check again after 5 min
+      - trigger: homeassistant
+        event: start
+        id: start
+    conditions:
+      - condition: state
+        entity_id: input_select.marstek_master_battery_mode
+        state: "Full control"
+    actions:
+      - if:
+          - condition: trigger
+            id: start
+        then:
+          - delay: "00:05:00"
+      # (re)check: still stale and still under HBC control
+      - condition: state
+        entity_id: binary_sensor.hbc_heartbeat_stale
+        state: "on"
+      - condition: state
+        entity_id: input_select.marstek_master_battery_mode
+        state: "Full control"
+      - variables:
+          count: "{{ states('input_number.house_battery_count') | int(0) }}"
+          enforce: "{{ is_state('input_select.house_battery_phase_guard_mode', 'Enforce') }}"
+          # firmware = batteries handed back; hold = phase partners kept on RS485 + stop
+          plan: >
+            {% set ns = namespace(firmware=[], hold=[], seen=[]) %}
+            {% for i in range(1, count + 1) %}
+              {% set ph = states('input_select.marstek_m' ~ i ~ '_phase') %}
+              {% if enforce and ph in ['L1', 'L2', 'L3'] and ph in ns.seen %}
+                {% set ns.hold = ns.hold + ['marstek_m' ~ i] %}
+              {% else %}
+                {% set ns.firmware = ns.firmware + ['marstek_m' ~ i] %}
+                {% if ph in ['L1', 'L2', 'L3'] %}{% set ns.seen = ns.seen + [ph] %}{% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ {'firmware': ns.firmware, 'hold': ns.hold} }}
+      # 1. phase partners first: stay under RS485 control and stop (break-before-make)
+      - if:
+          - condition: template
+            value_template: "{{ plan.hold | count > 0 }}"
+        then:
+          - action: select.select_option
+            target:
+              entity_id: "{{ plan.hold | map('regex_replace', '^(.*)$', 'select.\\1_rs485_control_mode') | list }}"
+            data:
+              option: enable
+            continue_on_error: true
+          - action: select.select_option
+            target:
+              entity_id: "{{ plan.hold | map('regex_replace', '^(.*)$', 'select.\\1_forcible_charge_discharge') | list }}"
+            data:
+              option: stop
+            continue_on_error: true
+          - delay: "00:00:05"
+      # 2. hand the others back to their firmware: anti-feed, RS485 off
+      - if:
+          - condition: template
+            value_template: "{{ plan.firmware | count > 0 }}"
+        then:
+          - action: select.select_option
+            target:
+              entity_id: "{{ plan.firmware | map('regex_replace', '^(.*)$', 'select.\\1_user_work_mode') | list }}"
+            data:
+              option: anti-feed
+            continue_on_error: true
+          - action: select.select_option
+            target:
+              entity_id: "{{ plan.firmware | map('regex_replace', '^(.*)$', 'select.\\1_rs485_control_mode') | list }}"
+            data:
+              option: disable
+            continue_on_error: true
+      - action: logbook.log
+        data:
+          name: HBC+ heartbeat fallback
+          message: >-
+            HBC heartbeat stale since {{ states('sensor.hbc_last_run') }}.
+            Firmware anti-feed: {{ plan.firmware | join(', ') | upper or 'none' }}.
+            Kept on RS485 + stop: {{ plan.hold | join(', ') | upper or 'none' }}.
+      # set your own notify action here, e.g. notify.mobile_app_<phone>
+      - action: notify.notify
+        continue_on_error: true
+        data:
+          title: "HBC stopped - batteries on firmware"
+          message: >-
+            No HBC heartbeat since {{ as_timestamp(states('sensor.hbc_last_run'), 0) | timestamp_custom('%d-%m %H:%M') }}.
+            Anti-feed: {{ plan.firmware | join(', ') | upper or 'none' }}.
+            Stopped (phase partner): {{ plan.hold | join(', ') | upper or 'none' }}.

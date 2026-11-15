@@ -1,0 +1,390 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ phase guard - helpers and sensors                                         (v0.1, 2026-11-14)
+#
+# Part of the HBC+ phase guard (see docs/user-guide.en.md, "Design background and decisions").
+# Only creates entities; nothing in HBC reads them yet, so loading this changes no behaviour.
+#   - settings: guard mode, sharing, grid fuse, battery circuit, margin, selection, swap delta, dwell
+#   - battery -> phase map for M1..M6 (input_select.marstek_mN_phase)
+#   - per phase: battery power, charge/discharge headroom (same formula as Node-RED):
+#       room = min(grid fuse - margin -/+ house net, battery circuit - margin)
+#   - binary_sensor.hbc_phase_limit_exceeded: grid power on a phase above the grid fuse for 10 s
+#   - binary_sensor.hbc_phase_circuit_limit_exceeded: the batteries on a phase above the battery circuit for 10 s
+#   - MQTT sensors for the Node-RED phase planner status (hbc/phase/L1..L3 + summary, retained JSON),
+#     published by node-red/hbc-plus-phase-monitor.json (read-only tab)
+#   - script.hbc_phase_guard_defaults: run once after the first restart to set the defaults
+#     (helpers without 'initial:' start at their minimum / first option; they are restored after that)
+#
+# Signs (confirmed): sensor.marstek_mN_battery_power > 0 = charging; sensor.p1_meter_power_phase_N > 0 = import.
+# Used by: dashboards/dashboard_hbc_plus.yaml (view 'Phases').
+###########################################################################################################
+
+input_select:
+  house_battery_phase_guard_mode:
+    name: Phase guard mode
+    icon: mdi:shield-sync-outline
+    options: ["Off", "Monitor", "Enforce"]
+  house_battery_phase_sharing:
+    name: Phase sharing
+    icon: mdi:call-split
+    options: ["One per phase", "Shared headroom"]
+  house_battery_phase_selection:
+    name: Active battery selection
+    icon: mdi:sort-variant
+    options: ["SoC balance", "Fixed order", "Rotate daily"]
+  marstek_m1_phase:
+    name: Marstek M1 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+  marstek_m2_phase:
+    name: Marstek M2 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+  marstek_m3_phase:
+    name: Marstek M3 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+  marstek_m4_phase:
+    name: Marstek M4 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+  marstek_m5_phase:
+    name: Marstek M5 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+  marstek_m6_phase:
+    name: Marstek M6 phase
+    icon: mdi:sine-wave
+    options: ["L1", "L2", "L3", "Own circuit"]
+
+input_number:
+  # Main (grid) fuse per phase: house and batteries draw through it together.
+  house_battery_phase_limit_w:
+    name: Grid fuse per phase
+    min: 1000
+    max: 17250
+    step: 10
+    unit_of_measurement: W
+    mode: box
+    icon: mdi:fuse
+  # Group (circuit breaker) the batteries of one phase share. Only the batteries are counted on it.
+  # No separate battery group? Set it to the grid fuse value.
+  house_battery_phase_circuit_limit_w:
+    name: Battery circuit per phase
+    min: 500
+    max: 17250
+    step: 10
+    unit_of_measurement: W
+    mode: box
+    icon: mdi:home-lightning-bolt-outline
+  # Margin kept free under BOTH limits (grid fuse and battery circuit) for meter error and load steps.
+  house_battery_phase_margin_w:
+    name: Phase limit margin
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: W
+    mode: box
+    icon: mdi:arrow-collapse-vertical
+  house_battery_phase_switch_soc_delta:
+    name: Phase swap SoC delta
+    min: 1
+    max: 30
+    step: 1
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-sync-outline
+  house_battery_phase_min_dwell:
+    name: Phase swap minimum dwell
+    min: 1
+    max: 120
+    step: 1
+    unit_of_measurement: min
+    mode: box
+    icon: mdi:timer-sand
+
+mqtt:
+  sensor:
+    - name: "HBC+ phase L1 active"
+      unique_id: hbc_phase_l1_active
+      state_topic: hbc/phase/L1
+      value_template: "{{ value_json.active | default('none') }}"
+      json_attributes_topic: hbc/phase/L1
+      icon: mdi:battery-sync
+    - name: "HBC+ phase L2 active"
+      unique_id: hbc_phase_l2_active
+      state_topic: hbc/phase/L2
+      value_template: "{{ value_json.active | default('none') }}"
+      json_attributes_topic: hbc/phase/L2
+      icon: mdi:battery-sync
+    - name: "HBC+ phase L3 active"
+      unique_id: hbc_phase_l3_active
+      state_topic: hbc/phase/L3
+      value_template: "{{ value_json.active | default('none') }}"
+      json_attributes_topic: hbc/phase/L3
+      icon: mdi:battery-sync
+    - name: "HBC+ phase findings"
+      unique_id: hbc_phase_findings
+      state_topic: hbc/phase/summary
+      value_template: "{{ value_json.findings | default(0) }}"
+      json_attributes_topic: hbc/phase/summary
+      icon: mdi:shield-alert-outline
+
+template:
+  - sensor:
+      - name: "HBC+ phase L1 battery power"
+        unique_id: hbc_phase_l1_battery_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:home-battery-outline
+        state: >
+          {% set ns = namespace(p=0) %}
+          {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}
+            {% if states('input_select.marstek_m' ~ i ~ '_phase') == 'L1' %}
+              {% set ns.p = ns.p + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.p | round(0) }}
+      # charge room = min(grid fuse - margin - house net, battery circuit - margin)
+      # house net = P1 phase - batteries on the phase (import +); discharge room uses + house net
+      - name: "HBC+ phase L1 charge headroom"
+        unique_id: hbc_phase_l1_charge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-up-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_1') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_1') | float(0)
+                         - states('sensor.hbc_phase_l1_battery_power') | float(0) %}
+          {{ [[lim - mar - house, circ - mar] | min, 0] | max | round(0) }}
+      - name: "HBC+ phase L1 discharge headroom"
+        unique_id: hbc_phase_l1_discharge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-down-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_1') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_1') | float(0)
+                         - states('sensor.hbc_phase_l1_battery_power') | float(0) %}
+          {{ [[lim - mar + house, circ - mar] | min, 0] | max | round(0) }}
+      - name: "HBC+ phase L2 battery power"
+        unique_id: hbc_phase_l2_battery_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:home-battery-outline
+        state: >
+          {% set ns = namespace(p=0) %}
+          {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}
+            {% if states('input_select.marstek_m' ~ i ~ '_phase') == 'L2' %}
+              {% set ns.p = ns.p + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.p | round(0) }}
+      # charge room = min(grid fuse - margin - house net, battery circuit - margin)
+      # house net = P1 phase - batteries on the phase (import +); discharge room uses + house net
+      - name: "HBC+ phase L2 charge headroom"
+        unique_id: hbc_phase_l2_charge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-up-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_2') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_2') | float(0)
+                         - states('sensor.hbc_phase_l2_battery_power') | float(0) %}
+          {{ [[lim - mar - house, circ - mar] | min, 0] | max | round(0) }}
+      - name: "HBC+ phase L2 discharge headroom"
+        unique_id: hbc_phase_l2_discharge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-down-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_2') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_2') | float(0)
+                         - states('sensor.hbc_phase_l2_battery_power') | float(0) %}
+          {{ [[lim - mar + house, circ - mar] | min, 0] | max | round(0) }}
+      - name: "HBC+ phase L3 battery power"
+        unique_id: hbc_phase_l3_battery_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:home-battery-outline
+        state: >
+          {% set ns = namespace(p=0) %}
+          {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}
+            {% if states('input_select.marstek_m' ~ i ~ '_phase') == 'L3' %}
+              {% set ns.p = ns.p + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.p | round(0) }}
+      # charge room = min(grid fuse - margin - house net, battery circuit - margin)
+      # house net = P1 phase - batteries on the phase (import +); discharge room uses + house net
+      - name: "HBC+ phase L3 charge headroom"
+        unique_id: hbc_phase_l3_charge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-up-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_3') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_3') | float(0)
+                         - states('sensor.hbc_phase_l3_battery_power') | float(0) %}
+          {{ [[lim - mar - house, circ - mar] | min, 0] | max | round(0) }}
+      - name: "HBC+ phase L3 discharge headroom"
+        unique_id: hbc_phase_l3_discharge_headroom
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-down-outline
+        availability: "{{ has_value('sensor.p1_meter_power_phase_3') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {% set mar = states('input_number.house_battery_phase_margin_w') | float(200) %}
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(lim) %}
+          {% set house = states('sensor.p1_meter_power_phase_3') | float(0)
+                         - states('sensor.hbc_phase_l3_battery_power') | float(0) %}
+          {{ [[lim - mar + house, circ - mar] | min, 0] | max | round(0) }}
+      # Plain sum of all batteries' max charge power, for comparison with what HBC reports to planners
+      - name: "House battery installed max charge power"
+        unique_id: house_battery_installed_max_charge_power
+        unit_of_measurement: W
+        device_class: power
+        icon: mdi:battery-plus-variant
+        state: >
+          {% set ns = namespace(p=0) %}
+          {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}
+            {% set ns.p = ns.p + states('number.marstek_m' ~ i ~ '_max_charge_power') | float(0) %}
+          {% endfor %}
+          {{ ns.p | round(0) }}
+
+  - binary_sensor:
+      - name: "HBC+ phase limit exceeded"
+        unique_id: hbc_phase_limit_exceeded
+        device_class: problem
+        icon: mdi:fuse-alert
+        delay_on: "00:00:10"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {{ [states('sensor.p1_meter_power_phase_1'),
+              states('sensor.p1_meter_power_phase_2'),
+              states('sensor.p1_meter_power_phase_3')]
+             | map('float', 0) | map('abs') | max > lim }}
+      - name: "HBC+ phase circuit limit exceeded"
+        unique_id: hbc_phase_circuit_limit_exceeded
+        device_class: problem
+        icon: mdi:home-lightning-bolt
+        delay_on: "00:00:10"
+        state: >
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w')
+                        | float(states('input_number.house_battery_phase_limit_w') | float(3680)) %}
+          {{ [states('sensor.hbc_phase_l1_battery_power'),
+              states('sensor.hbc_phase_l2_battery_power'),
+              states('sensor.hbc_phase_l3_battery_power')]
+             | map('float', 0) | map('abs') | max > circ }}
+
+script:
+  hbc_phase_guard_defaults:
+    alias: "HBC+ phase guard: apply defaults"
+    icon: mdi:restore
+    mode: single
+    sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_phase_guard_mode
+        data:
+          option: "Monitor"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_phase_sharing
+        data:
+          option: "One per phase"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_phase_selection
+        data:
+          option: "SoC balance"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_phase_limit_w
+        data:
+          value: 3680
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_phase_circuit_limit_w
+        data:
+          value: 3680
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_phase_margin_w
+        data:
+          value: 200
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_phase_switch_soc_delta
+        data:
+          value: 5
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_phase_min_dwell
+        data:
+          value: 15
+      # default map: M1/M4 = L1, M2/M5 = L2, M3/M6 = L3
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m1_phase
+        data:
+          option: "L1"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m2_phase
+        data:
+          option: "L2"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m3_phase
+        data:
+          option: "L3"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m4_phase
+        data:
+          option: "L1"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m5_phase
+        data:
+          option: "L2"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.marstek_m6_phase
+        data:
+          option: "L3"
+
+# The planner status is display-only (current attributes on the Phases view); keep it out of the database.
+recorder:
+  exclude:
+    entities:
+      - sensor.hbc_phase_l1_active
+      - sensor.hbc_phase_l2_active
+      - sensor.hbc_phase_l3_active
+      - sensor.hbc_phase_findings
