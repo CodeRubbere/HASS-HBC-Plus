@@ -16,6 +16,13 @@ This project is designed for hobbyists who want full control over their home bat
 
 HBC+ is a standalone version with its own development. It started from House Battery Control (HBC) v4.15.1 by **CodeBob** ([gitcodebob/marstek-venus-rs485-node-red](https://github.com/gitcodebob/marstek-venus-rs485-node-red)), the founding father of HBC: the original control loop, strategies, dashboard and helpers are his work, and all credit for that foundation goes to him. HBC+ has no further link with HBC.
 
+The Node-RED + HA control schema is based on the approach by Ruald Ordelman. And the easy to use Modbus to HA boards by [Fonske](https://github.com/fonske). Many thanks for sharing your work and ideas with the community!
+
+Battery packages contributed by the community:
+- [Fonske](https://github.com/fonske) — Marstek Venus packages over [Modbus TCP-IP](https://github.com/fonske/MarstekVenusV3-modbus-TCP-IP) and RS485 ([Lilygo](https://github.com/fonske/MarstekVenus-LilygoRS485) / [M5Stack](https://github.com/fonske/MarstekVenus-M5stackRS485)), and the reference `marstek_m1_*` entity naming that every other package maps onto
+- [Jos1958](https://github.com/Jos1958) — Anker SolarBank 3 Pro (cloud bridge)
+- [@wouterbouvy](https://github.com/wouterbouvy) — Anker SOLIX Solarbank Max AC / Solarbank 4 (local Modbus TCP)
+
 ## What HBC+ adds
 
 - **Phase guard** — a phase map for up to 6 batteries (M1–M6), one active battery per phase by default, and per-phase headroom under both the grid fuse and the battery circuit, computed from the P1 meter every tick. Optional *Shared headroom* mode.
