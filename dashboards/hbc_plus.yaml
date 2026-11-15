@@ -2397,10 +2397,10 @@ views:
               columns: 3
           - type: tile
             entity: sensor.hbc_phase_findings
-            name: Phases where HBC+ would act
+            name: Phase findings
             icon: mdi:shield-alert-outline
             grid_options:
-              columns: 12
+              columns: 3
       - type: grid
         cards:
           - type: heading

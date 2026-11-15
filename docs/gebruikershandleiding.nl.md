@@ -720,7 +720,7 @@ De Phases-view, van boven naar beneden:
 
 - **Badges** — *Choose strategy*, *Executing* (de actieve sub-strategie) en *Time*, net als op de andere views.
 - **Alarmen** — rode kaarten, alleen zichtbaar zolang `binary_sensor.hbc_phase_limit_exceeded` (netzekering) of `binary_sensor.hbc_phase_circuit_limit_exceeded` (batterijgroep) aan staat.
-- **Phase guard** — tegels voor guard-modus, sharing, netzekering, batterijgroep, limietmarge, en *Phases where HBC+ would act*.
+- **Phase guard** — tegels voor guard-modus, sharing, netzekering, batterijgroep, limietmarge, en *Phase findings*: het aantal fasen waar de batterijen afwijken van de faseregels (in *Monitor*: wat *Enforce* zou corrigeren; in *Enforce* hoort het 0 te blijven).
 - **L1 · L2 · L3** — per fase: een meter van het netvermogen tegen de zekering, de actieve batterij, het gemeten batterijvermogen op de fase, laadruimte en ontlaadruimte, plus de standby-batterij, het setpoint en de reden van de planner. Een tabel toont elke batterij op de fase met SoC, vermogen en rol: *active · charge*, *active · discharge*, *active · idle* of *standby*.
 - **Instellingen** — alle HBC+-instellingen, en *Which phase is each battery on?* voor M1–M6.
 

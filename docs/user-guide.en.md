@@ -720,7 +720,7 @@ The Phases view, top to bottom:
 
 - **Badges** — *Choose strategy*, *Executing* (the active sub-strategy) and *Time*, the same as on the other views.
 - **Alerts** — red cards, visible only while `binary_sensor.hbc_phase_limit_exceeded` (grid fuse) or `binary_sensor.hbc_phase_circuit_limit_exceeded` (battery circuit) is on.
-- **Phase guard** — tiles for guard mode, sharing, grid fuse, battery circuit, limit margin, and *Phases where HBC+ would act*.
+- **Phase guard** — tiles for guard mode, sharing, grid fuse, battery circuit, limit margin, and *Phase findings*: the number of phases where the batteries differ from the phase rules (in *Monitor*: what *Enforce* would correct; in *Enforce* it should stay 0).
 - **L1 · L2 · L3** — per phase: a gauge of grid power against the fuse, the active battery, measured battery power on the phase, charge room and discharge room, plus the planner's standby battery, setpoint and reason. A table lists every battery on the phase with SoC, power and role: *active · charge*, *active · discharge*, *active · idle*, or *standby*.
 - **Settings** — all HBC+ settings, and *Which phase is each battery on?* for M1–M6.
 
