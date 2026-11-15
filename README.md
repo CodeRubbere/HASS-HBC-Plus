@@ -10,8 +10,6 @@ This project is designed for hobbyists who want full control over their home bat
 ![Stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus)
 
 
-Repository: **[github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/CodeRubbere/HASS-HBC-Plus)**
-
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
 ## Credits
