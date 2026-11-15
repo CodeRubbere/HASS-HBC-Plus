@@ -312,8 +312,8 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 
 | # | Wijziging | Waar | Type |
 | --- | --- | --- | --- |
-| B1 | Geen `initial: 0` op de vijf totaal-helpers | `house_battery_control.yaml` | Bugfix |
-| B2 | Batterijvermogen-template leest het echte entity-id | `house_battery_control.yaml` | Bugfix |
+| B1 | Geen `initial: 0` op de vijf totaal-helpers | `hbc_control.yaml` | Bugfix |
+| B2 | Batterijvermogen-template leest het echte entity-id | `hbc_control.yaml` | Bugfix |
 | B3 | Dynamic-prijscache gekoppeld aan de databron | Dynamic – *Cache check* | Bugfix |
 | B4 | Dynamic-cache haalt opnieuw op tot morgen binnen is | Dynamic – *Cache check* | Bugfix |
 | B5 | "Nu"-balk in prijsgrafiek op basis van start/eind | Dashboard | Bugfix |
@@ -322,7 +322,7 @@ Naast de fasebewaking bevat HBC+ v1.0 de wijzigingen hieronder. Acht lossen bugs
 | B8 | Dynamic *User input* luistert naar de sub-strategiekeuzes | Dynamic – *User input* | Bugfix |
 | R1 | *Batteries (totals)* stuurt nooit NaN naar HA | Start – *Batteries (totals)* | Robuustheid |
 | R2 | Eén consistente HA-servernode in elk bestand | Alle flows | Robuustheid |
-| R3 | Mislukte prijsophaling: laatste geldige prijzen blijven, terugval op basisstrategie, melding | Dynamic + `house_battery_control.yaml` + dashboard | Robuustheid |
+| R3 | Mislukte prijsophaling: laatste geldige prijzen blijven, terugval op basisstrategie, melding | Dynamic + `hbc_control.yaml` + dashboard | Robuustheid |
 | R4 | Prijssensor vast te leggen | Dynamic – *Data source settings* + helper | Robuustheid |
 | P1 | *Read HA states (fast)*: één node in plaats van ~43 reads | Start | Performance |
 | P2 | *PID step*: 13 nodes in één, cache voor PID-instellingen | Self-consumption | Performance |
@@ -418,9 +418,9 @@ Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtri
 
 **F1 — Feed-forward-start voor geregeld laden.** Bij de start van geregeld laden bereikte de PID de importlimiet alleen via de integrator, wat met een kleine Ki een minuut of langer duurde. Nu springt het vermogen direct naar huidig batterijvermogen + (importlimiet − netvermogen) − 150 W, begrensd op het max laadvermogen. Die waarde wordt 10 s vastgehouden, daarna neemt de PID het over zonder sprong (de integrator wordt ermee gevuld). Een pauze van meer dan 30 s telt als nieuwe sessie. Uitzetten: `FF_ENABLED = false` in *Regulated power*.
 
-**F2 — Grid Clock als Dynamic-databron.** *Tariff data source* heeft Grid Clock-opties die `sensor.grid_clock_<zone>_prices` van de Grid Clock-integratie (gridclock.eu) lezen; het attribuut `prices` bevat `startsAt` en `total` in ct/kWh. Een `template_prefix` zet de lijst om naar `{start, price}` in EUR/kWh voor de Cheapest Energy Hours-macro. Een HA-automatisering in `house_battery_control_config.yaml` ververst de prijzen zodra de standaardzone van Grid Clock wijzigt. Vereist de Grid Clock-integratie.
+**F2 — Grid Clock als Dynamic-databron.** *Tariff data source* heeft Grid Clock-opties die `sensor.grid_clock_<zone>_prices` van de Grid Clock-integratie (gridclock.eu) lezen; het attribuut `prices` bevat `startsAt` en `total` in ct/kWh. Een `template_prefix` zet de lijst om naar `{start, price}` in EUR/kWh voor de Cheapest Energy Hours-macro. Een HA-automatisering in `hbc_config.yaml` ververst de prijzen zodra de standaardzone van Grid Clock wijzigt. Vereist de Grid Clock-integratie.
 
-**F3 — Charge Deadline-strategie.** Laadt tot een doel-SoC of doelenergie vóór een deadline, met voorkeur voor de goedkoopste vensters uit de Dynamic-prijslijst en bijladen van het net als PV tekortschiet. Bestaat uit het tabblad *HBC+ Strategy Charge Deadline*, het package `house_battery_deadline_charge.yaml` en een dashboardsectie (doel, schatting, geplande vensters, vervolgstrategie). *Charge Deadline* is ook kiesbaar als hoofdstrategie, in de Timed-lijst, als Dynamic-*cheapest* en als vervolgstap na *charge/sell goal reached*.
+**F3 — Charge Deadline-strategie.** Laadt tot een doel-SoC of doelenergie vóór een deadline, met voorkeur voor de goedkoopste vensters uit de Dynamic-prijslijst en bijladen van het net als PV tekortschiet. Bestaat uit het tabblad *HBC+ Strategy Charge Deadline*, het package `hbc_deadline_charge.yaml` en een dashboardsectie (doel, schatting, geplande vensters, vervolgstrategie). *Charge Deadline* is ook kiesbaar als hoofdstrategie, in de Timed-lijst, als Dynamic-*cheapest* en als vervolgstap na *charge/sell goal reached*.
 
 **F4 — Heartbeat met fallback in HA.** *HBC+ heartbeat (max every 60 s)* in de Start-flow publiceert naar MQTT `hbc/heartbeat` (retained), wat `sensor.hbc_last_run` voedt. Is die sensor ouder dan 5 minuten terwijl de mastermodus op *Full control* staat, dan geeft een HA-automatisering elke Marstek terug aan zijn firmware (RS485 uit, anti-feed) en stuurt een melding. Draait de lus weer, dan zet de master switch RS485 weer aan. Zonder dit blijven batterijen op hun laatste setpoint staan als Node-RED stopt. De fallback kent de fasen: op *Enforce* gaat per gedeelde fase alleen de batterij met het laagste M-nummer terug naar de firmware; zijn partner wordt eerst op RS485 *enable* + forcible *stop* gezet, zodat twee batterijen in firmware-anti-feed nooit samen één fase overbelasten. Batterijen alleen op hun fase of op *Own circuit*, en alle batterijen bij *Off* / *Monitor*, gaan terug zoals voorheen. De automatisering controleert ook opnieuw 5 minuten na een HA-herstart, schrijft naar het logboek en meldt via `notify.notify` (zet je eigen notify-actie in `packages/hbc_heartbeat.yaml`).
 
@@ -433,7 +433,7 @@ Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtri
 | E1 | *Strategy arbiter* + `hbc_strategy_arbiter.yaml` | Enige schrijver van `input_select.house_battery_strategy`; arbitreert tussen je eigen keuze, eigen flows (zoals een PV-limiter) en de Oscillation Guard (zie *Functionaliteit*) |
 | E2 | *Battery Oscillation Guard* | Detecteert laad/ontlaad-golven en houdt via de arbiter *Full stop* vast; drempels via de omgevingsvariabelen van het tabblad, melding via de node *Notify phone* |
 | E3 | Marstek via Modbus TCP | Een batterij via Modbus TCP werkt ongewijzigd met HBC+, zolang de entiteiten het patroon `marstek_mN_*` volgen |
-| E4 | P1-alias uitgeschakeld in `house_battery_control_config.yaml` | Niet nodig als je meter al `sensor.p1_meter_power` levert (bijv. HomeWizard); zet hem aan bij een andere meter |
+| E4 | P1-alias uitgeschakeld in `hbc_config.yaml` | Niet nodig als je meter al `sensor.p1_meter_power` levert (bijv. HomeWizard); zet hem aan bij een andere meter |
 
 ### Bekende open punten
 
@@ -471,15 +471,16 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 | --- | --- |
 | `README.md` | Korte introductie, snelstart en credits |
 | `LICENSE` | GPL-3.0-licentie |
+| `.gitattributes` | Git-instelling: normaliseert de regeleinden van tekstbestanden |
 | `.gitignore` | Houdt macOS- en editorbestanden buiten de repository |
 
 **packages/** — Home Assistant-packages; kopieer ze alle zes naar de map `packages/` van HA.
 
 | Bestand | Inhoud |
 | --- | --- |
-| `house_battery_control.yaml` | Kernhelpers en -sensoren: batterijaantal, totalen, PID-instellingen, strategiekeuze, Timed- en Dynamic-instellingen, prijsmelding |
-| `house_battery_control_config.yaml` | Configuratie van jouw installatie: P1-alias (uitgeschakeld) en de automatisering die de prijzen ververst als de Grid Clock-zone wijzigt |
-| `house_battery_deadline_charge.yaml` | Helpers en sensoren van Charge Deadline: doel, deadline, planning en goedkope vensters |
+| `hbc_control.yaml` | Kernhelpers en -sensoren: batterijaantal, totalen, PID-instellingen, strategiekeuze, Timed- en Dynamic-instellingen, prijsmelding |
+| `hbc_config.yaml` | Configuratie van jouw installatie: P1-alias (uitgeschakeld) en de automatisering die de prijzen ververst als de Grid Clock-zone wijzigt |
+| `hbc_deadline_charge.yaml` | Helpers en sensoren van Charge Deadline: doel, deadline, planning en goedkope vensters |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: de status van de Strategy arbiter, bewaard over herstarts heen |
 | `hbc_heartbeat.yaml` | Fasebewuste HA-fallback als HBC+ stopt: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale` en de automatisering die de batterijen teruggeeft aan hun firmware |
 | `hbc_phase_guard.yaml` | Fasebewaking: instellingen, fasekaart M1–M6, vermogen en zekeringruimte per fase, overbelastingsalarm, MQTT-statussensoren en het script met standaardwaarden |
@@ -527,8 +528,8 @@ Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Code
 
 ### Stap 2 — Home Assistant-packages
 
-1. Kopieer alle zes bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Staat er nog een eerdere `nodered_heartbeat.yaml`, verwijder die dan: `hbc_heartbeat.yaml` vervangt hem, en met beide bestanden ziet HA dubbele ids en valt de fallback weg.
-2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, voeg dan template-aliassen toe in `house_battery_control_config.yaml`.
+1. Kopieer alle zes bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
+2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, voeg dan template-aliassen toe in `hbc_config.yaml`.
 3. *Ontwikkelhulpmiddelen* → *Configuratie controleren*, en herstart Home Assistant.
 4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, en de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA herstelt de waarden na elke volgende herstart.
 
@@ -565,15 +566,15 @@ Zet op de Phases-view, onder *Which phase is each battery on?*, elke batterij op
 | --- | --- |
 | Node-RED, *HBC+ Battery Oscillation Guard v1.0*, node *Notify phone* | De batterijen slingeren en op *Full stop* worden gehouden |
 | `packages/hbc_heartbeat.yaml`, automatisering *hand batteries back to firmware when the HBC heartbeat is stale* | De regellus stopte en de batterijen teruggingen naar hun firmware |
-| `packages/house_battery_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
+| `packages/hbc_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
 
 ### HBC+ bijwerken
 
 Een nieuwe HBC+-versie komt als nieuwe release van [de repository](https://github.com/CodeRubbere/HASS-HBC-Plus). Je instellingen blijven behouden: ze staan in de helpers, en Home Assistant zet ze na een herstart terug.
 
 1. **Maak een back-up** zoals in stap 1.
-2. **Lees de release notes** op hernoemde of verwijderde bestanden, en verwijder die uit de map `packages/` van HA (in v1.0: `nodered_heartbeat.yaml` werd `hbc_heartbeat.yaml`).
-3. **Packages:** kopieer de nieuwe `packages/*.yaml` over de oude heen. Heb je zelf een package aangepast (de P1-alias in `house_battery_control_config.yaml`, een notify-actie), neem die wijziging dan over in het nieuwe bestand. Daarna *Configuratie controleren* en HA herstarten.
+2. **Lees de release notes** op hernoemde of verwijderde bestanden, en verwijder die uit de map `packages/` van HA (in v1.0 werden `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` en `nodered_heartbeat.yaml` hernoemd naar `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` en `hbc_heartbeat.yaml`).
+3. **Packages:** kopieer de nieuwe `packages/*.yaml` over de oude heen. Heb je zelf een package aangepast (de P1-alias in `hbc_config.yaml`, een notify-actie), neem die wijziging dan over in het nieuwe bestand. Daarna *Configuratie controleren* en HA herstarten.
 4. **Flows:** importeer `node-red/hbc-plus-all-flows.json` met **Replace** en deploy. Wijzigingen die je in HBC+-tabbladen maakte worden overschreven, dus zet je notify-actie in *Notify phone* opnieuw.
 5. **Dashboard:** heeft de release `dashboards/hbc_plus.yaml` gewijzigd, plak hem dan opnieuw in de ruwe configuratie-editor.
 6. **Nieuwe instellingen:** een helper die nieuw is in een release start op zijn minimum. Stel hem direct na het bijwerken in; de release notes noemen hem (bijvoorbeeld *Battery circuit per phase*). *HBC+ phase guard: apply defaults* zet hem ook, maar zet ook de fasekaart terug.
@@ -620,12 +621,12 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | --- | --- | --- |
 | `sensor.hbc_last_run` | `hbc_heartbeat.yaml` | Tijd van de laatste HBC+-heartbeat (MQTT `hbc/heartbeat`) |
 | `binary_sensor.hbc_heartbeat_stale` | `hbc_heartbeat.yaml` | Aan als er meer dan 5 minuten geen heartbeat was; in *Full control* geeft dit de batterijen terug aan hun firmware |
-| `sensor.hbc_energy_prices_data` | `house_battery_control.yaml` | De huidige prijslijst voor het dashboard; attribuut `status` is `ok`, `stale` of `no_data` |
-| `binary_sensor.hbc_price_data_missing` | `house_battery_control.yaml` | Aan als er een tariefbron gekozen is maar geen geldige prijzen beschikbaar zijn |
-| `input_text.house_battery_strategy_dynamic_price_sensor` | `house_battery_control.yaml` | Optioneel: legt de prijssensor voor Dynamic vast (zie R4) |
+| `sensor.hbc_energy_prices_data` | `hbc_control.yaml` | De huidige prijslijst voor het dashboard; attribuut `status` is `ok`, `stale` of `no_data` |
+| `binary_sensor.hbc_price_data_missing` | `hbc_control.yaml` | Aan als er een tariefbron gekozen is maar geen geldige prijzen beschikbaar zijn |
+| `input_text.house_battery_strategy_dynamic_price_sensor` | `hbc_control.yaml` | Optioneel: legt de prijssensor voor Dynamic vast (zie R4) |
 | `input_text.hbc_strategy_arbiter` | `hbc_strategy_arbiter.yaml` | Status van de Strategy arbiter, teruggezet na een herstart |
-| `input_boolean.house_battery_control_has_node_red` | `house_battery_control.yaml` | Wordt aangezet door de Start-flow zodra die draait; gebruikt door de onboarding-checklist |
-| `sensor.hbc_time` | `house_battery_control.yaml` | Lokale tijd (UU:MM) voor de badge *Time* op de dashboardviews |
+| `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Wordt aangezet door de Start-flow zodra die draait; gebruikt door de onboarding-checklist |
+| `sensor.hbc_time` | `hbc_control.yaml` | Lokale tijd (UU:MM) voor de badge *Time* op de dashboardviews |
 
 ### Waarden kiezen
 

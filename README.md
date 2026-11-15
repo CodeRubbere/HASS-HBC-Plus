@@ -49,7 +49,7 @@ Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues
 - The Battery Oscillation Guard sends phone notifications through `notify.notify`. Set your own notify action (e.g. `notify.mobile_app_<phone>`) in its *Notify phone* node.
 - A Marstek over Modbus TCP works as well, as long as its entities follow the `marstek_mN_*` pattern.
 - `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops) also sends a notification through `notify.notify`; set your own notify action there.
-- `packages/house_battery_control.yaml` sends a notification through `notify.notify` when the tariff source delivers no prices for 30 minutes; set your own notify action there too.
+- `packages/hbc_control.yaml` sends a notification through `notify.notify` when the tariff source delivers no prices for 30 minutes; set your own notify action there too.
 - Requirements: Home Assistant with packages, Node-RED with `node-red-contrib-home-assistant-websocket` (0.80 or newer), `node-red-contrib-time-range-switch`, `node-red-node-smooth`, MQTT, Marstek Venus E batteries (`marstek_mN_*` entities), a P1 meter with per-phase power, `apexcharts-card` (HACS), and for Dynamic and Charge Deadline the Cheapest Energy Hours macro (HACS) with a price integration.
 - Always consult a qualified electrician about your installation and fuse ratings.
 

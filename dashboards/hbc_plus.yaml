@@ -27,7 +27,7 @@ views:
 
               1. Edit the file
 
-              `packages/house_battery_control_config.yaml` 
+              `packages/hbc_config.yaml` 
 
               1. Find the `<< YOUR GRID POWER SENSOR HERE` tag 
 

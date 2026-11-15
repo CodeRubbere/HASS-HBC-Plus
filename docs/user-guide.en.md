@@ -312,8 +312,8 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 
 | # | Change | Where | Type |
 | --- | --- | --- | --- |
-| B1 | No `initial: 0` on the five total helpers | `house_battery_control.yaml` | Bug fix |
-| B2 | Battery power template reads the real entity id | `house_battery_control.yaml` | Bug fix |
+| B1 | No `initial: 0` on the five total helpers | `hbc_control.yaml` | Bug fix |
+| B2 | Battery power template reads the real entity id | `hbc_control.yaml` | Bug fix |
 | B3 | Dynamic price cache tied to the data source | Dynamic – *Cache check* | Bug fix |
 | B4 | Dynamic cache refetches until tomorrow is in | Dynamic – *Cache check* | Bug fix |
 | B5 | "Now" bar in the price chart based on start/end | Dashboard | Bug fix |
@@ -322,7 +322,7 @@ Besides the phase guard, HBC+ v1.0 contains the changes below. Eight fix bugs, f
 | B8 | Dynamic *User input* listens to the sub-strategy choices | Dynamic – *User input* | Bug fix |
 | R1 | *Batteries (totals)* never sends NaN to HA | Start – *Batteries (totals)* | Robustness |
 | R2 | One consistent HA server node in every file | All flows | Robustness |
-| R3 | Price fetch failure: last valid prices kept, baseline fallback, alert | Dynamic + `house_battery_control.yaml` + dashboard | Robustness |
+| R3 | Price fetch failure: last valid prices kept, baseline fallback, alert | Dynamic + `hbc_control.yaml` + dashboard | Robustness |
 | R4 | Price sensor can be pinned | Dynamic – *Data source settings* + helper | Robustness |
 | P1 | *Read HA states (fast)*: one node instead of ~43 reads | Start | Performance |
 | P2 | *PID step*: 13 nodes in one, cache for PID settings | Self-consumption | Performance |
@@ -418,9 +418,9 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 **F1 — Feed-forward start for regulated charging.** At the start of regulated charging, the PID reached the import limit only through the integrator, which took a minute or more with a small Ki. Now the power jumps straight to current battery power + (import limit − grid power) − 150 W, capped at the max charge power. That value is held for 10 s, then the PID takes over without a step (the integrator is pre-loaded with it). A pause of more than 30 s counts as a new session. Turn it off with `FF_ENABLED = false` in *Regulated power*.
 
-**F2 — Grid Clock as Dynamic data source.** *Tariff data source* has Grid Clock options that read `sensor.grid_clock_<zone>_prices` from the Grid Clock integration (gridclock.eu); its `prices` attribute holds `startsAt` and `total` in ct/kWh. A `template_prefix` converts the list to `{start, price}` in EUR/kWh for the Cheapest Energy Hours macro. An HA automation in `house_battery_control_config.yaml` refreshes the prices as soon as the Grid Clock default zone changes. Requires the Grid Clock integration.
+**F2 — Grid Clock as Dynamic data source.** *Tariff data source* has Grid Clock options that read `sensor.grid_clock_<zone>_prices` from the Grid Clock integration (gridclock.eu); its `prices` attribute holds `startsAt` and `total` in ct/kWh. A `template_prefix` converts the list to `{start, price}` in EUR/kWh for the Cheapest Energy Hours macro. An HA automation in `hbc_config.yaml` refreshes the prices as soon as the Grid Clock default zone changes. Requires the Grid Clock integration.
 
-**F3 — Charge Deadline strategy.** Charges to a target SoC or target energy before a deadline, preferring the cheapest windows from the Dynamic price list and topping up from the grid when PV falls short. It consists of the tab *HBC+ Strategy Charge Deadline*, the package `house_battery_deadline_charge.yaml` and a dashboard section (goal, estimate, planned windows, follow-up strategy). *Charge Deadline* can also be chosen as main strategy, in the Timed list, as Dynamic *cheapest* and as the follow-up after *charge/sell goal reached*.
+**F3 — Charge Deadline strategy.** Charges to a target SoC or target energy before a deadline, preferring the cheapest windows from the Dynamic price list and topping up from the grid when PV falls short. It consists of the tab *HBC+ Strategy Charge Deadline*, the package `hbc_deadline_charge.yaml` and a dashboard section (goal, estimate, planned windows, follow-up strategy). *Charge Deadline* can also be chosen as main strategy, in the Timed list, as Dynamic *cheapest* and as the follow-up after *charge/sell goal reached*.
 
 **F4 — Heartbeat with fallback in HA.** *HBC+ heartbeat (max every 60 s)* in the Start flow publishes to MQTT `hbc/heartbeat` (retained), which feeds `sensor.hbc_last_run`. When that sensor is older than 5 minutes while the master mode is *Full control*, an HA automation hands every Marstek back to its firmware (RS485 off, anti-feed) and sends a notification. When the loop runs again, the master switch turns RS485 back on. Without this, batteries keep their last setpoint when Node-RED stops. The fallback is phase-aware: on *Enforce*, only the battery with the lowest M-number on a shared phase goes back to firmware; its partner is first set to RS485 *enable* + forcible *stop*, so two batteries in firmware anti-feed can never overload one phase. Batteries alone on their phase or on *Own circuit*, and all batteries on *Off* / *Monitor*, are handed back as before. The automation also checks again 5 minutes after an HA restart, writes to the logbook and notifies through `notify.notify` (set your own notify action in `packages/hbc_heartbeat.yaml`).
 
@@ -433,7 +433,7 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 | E1 | *Strategy arbiter* + `hbc_strategy_arbiter.yaml` | Only writer of `input_select.house_battery_strategy`; arbitrates between your own choice, flows of your own (such as a PV limiter) and the Oscillation Guard (see *Functionality*) |
 | E2 | *Battery Oscillation Guard* | Detects charge/discharge waves and holds *Full stop* through the arbiter; thresholds in the tab's environment variables, notification through the *Notify phone* node |
 | E3 | Marstek over Modbus TCP | A battery over Modbus TCP works with HBC+ unchanged, as long as its entities follow the `marstek_mN_*` pattern |
-| E4 | P1 alias disabled in `house_battery_control_config.yaml` | Not needed when your meter already provides `sensor.p1_meter_power` (e.g. HomeWizard); enable it for another meter |
+| E4 | P1 alias disabled in `hbc_config.yaml` | Not needed when your meter already provides `sensor.p1_meter_power` (e.g. HomeWizard); enable it for another meter |
 
 ### Known open points
 
@@ -471,15 +471,16 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 | --- | --- |
 | `README.md` | Short introduction, quick start and credits |
 | `LICENSE` | GPL-3.0 licence |
+| `.gitattributes` | Git setting: normalises line endings of text files |
 | `.gitignore` | Keeps macOS and editor files out of the repository |
 
 **packages/** — Home Assistant packages; copy all six into your HA `packages/` folder.
 
 | File | Contents |
 | --- | --- |
-| `house_battery_control.yaml` | Core helpers and sensors: battery count, totals, PID settings, strategy selection, Timed and Dynamic settings, price-data alert |
-| `house_battery_control_config.yaml` | Your installation-specific config: P1 alias (disabled) and the automation that refreshes prices when the Grid Clock zone changes |
-| `house_battery_deadline_charge.yaml` | Charge Deadline helpers and sensors: target, deadline, plan and cheap windows |
+| `hbc_control.yaml` | Core helpers and sensors: battery count, totals, PID settings, strategy selection, Timed and Dynamic settings, price-data alert |
+| `hbc_config.yaml` | Your installation-specific config: P1 alias (disabled) and the automation that refreshes prices when the Grid Clock zone changes |
+| `hbc_deadline_charge.yaml` | Charge Deadline helpers and sensors: target, deadline, plan and cheap windows |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: the Strategy arbiter state, kept across restarts |
 | `hbc_heartbeat.yaml` | Phase-aware HA fallback when HBC+ stops: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale` and the automation that hands the batteries back to their firmware |
 | `hbc_phase_guard.yaml` | Phase guard: settings, phase map M1–M6, per-phase power and fuse headroom, overload alarm, MQTT status sensors and the defaults script |
@@ -527,8 +528,8 @@ Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/Cod
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all six files from `packages/` into your HA `packages/` folder (replace older copies). If an earlier `nodered_heartbeat.yaml` is there, delete it: `hbc_heartbeat.yaml` replaces it, and with both present HA sees duplicate ids and drops the fallback.
-2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, add template aliases in `house_battery_control_config.yaml`.
+1. Copy all six files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
+2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, add template aliases in `hbc_config.yaml`.
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
 4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
 
@@ -565,15 +566,15 @@ On the Phases view, under *Which phase is each battery on?*, set the phase of ev
 | --- | --- |
 | Node-RED, *HBC+ Battery Oscillation Guard v1.0*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
 | `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped and the batteries went back to their firmware |
-| `packages/house_battery_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
+| `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
 
 ### Updating HBC+
 
 A new HBC+ version comes as a new release of [the repository](https://github.com/CodeRubbere/HASS-HBC-Plus). Your settings are kept: they live in the helpers, and Home Assistant restores them after a restart.
 
 1. **Back up** as in Step 1.
-2. **Read the release notes** for files that were renamed or removed, and delete those from your HA `packages/` folder (in v1.0: `nodered_heartbeat.yaml` became `hbc_heartbeat.yaml`).
-3. **Packages:** copy the new `packages/*.yaml` over the old ones. If you changed a package yourself (the P1 alias in `house_battery_control_config.yaml`, a notify action), carry that change over into the new file. Then *Check configuration* and restart HA.
+2. **Read the release notes** for files that were renamed or removed, and delete those from your HA `packages/` folder (in v1.0: `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` and `nodered_heartbeat.yaml` became `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` and `hbc_heartbeat.yaml`).
+3. **Packages:** copy the new `packages/*.yaml` over the old ones. If you changed a package yourself (the P1 alias in `hbc_config.yaml`, a notify action), carry that change over into the new file. Then *Check configuration* and restart HA.
 4. **Flows:** import `node-red/hbc-plus-all-flows.json` with **Replace** and deploy. Changes you made inside HBC+ tabs are overwritten, so set your notify action in *Notify phone* again.
 5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor.
 6. **New settings:** a helper that is new in a release starts at its minimum. Set it right after the update; the release notes name it (for example *Battery circuit per phase*). Running *HBC+ phase guard: apply defaults* also sets it, but resets the phase map too.
@@ -620,12 +621,12 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | --- | --- | --- |
 | `sensor.hbc_last_run` | `hbc_heartbeat.yaml` | Time of the last HBC+ heartbeat (MQTT `hbc/heartbeat`) |
 | `binary_sensor.hbc_heartbeat_stale` | `hbc_heartbeat.yaml` | On when there was no heartbeat for more than 5 minutes; in *Full control* this hands the batteries back to their firmware |
-| `sensor.hbc_energy_prices_data` | `house_battery_control.yaml` | The current price list for the dashboard; attribute `status` is `ok`, `stale` or `no_data` |
-| `binary_sensor.hbc_price_data_missing` | `house_battery_control.yaml` | On when a tariff source is chosen but no valid prices are available |
-| `input_text.house_battery_strategy_dynamic_price_sensor` | `house_battery_control.yaml` | Optional: pins the price sensor for Dynamic (see R4) |
+| `sensor.hbc_energy_prices_data` | `hbc_control.yaml` | The current price list for the dashboard; attribute `status` is `ok`, `stale` or `no_data` |
+| `binary_sensor.hbc_price_data_missing` | `hbc_control.yaml` | On when a tariff source is chosen but no valid prices are available |
+| `input_text.house_battery_strategy_dynamic_price_sensor` | `hbc_control.yaml` | Optional: pins the price sensor for Dynamic (see R4) |
 | `input_text.hbc_strategy_arbiter` | `hbc_strategy_arbiter.yaml` | State of the Strategy arbiter, restored after a restart |
-| `input_boolean.house_battery_control_has_node_red` | `house_battery_control.yaml` | Turned on by the Start flow once it runs; used by the onboarding checklist |
-| `sensor.hbc_time` | `house_battery_control.yaml` | Local time (HH:MM) for the *Time* badge on the dashboard views |
+| `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Turned on by the Start flow once it runs; used by the onboarding checklist |
+| `sensor.hbc_time` | `hbc_control.yaml` | Local time (HH:MM) for the *Time* badge on the dashboard views |
 
 ### Choosing values
 

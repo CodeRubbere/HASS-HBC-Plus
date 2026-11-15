@@ -6,7 +6,7 @@
 # PV surplus is used first (Nul-op-de-Meter); any shortfall is topped up from the grid.
 # Peak shaving keeps functioning (the Self-consumption PID and the import limit stay in charge).
 #
-# Install: drop this file in your `packages/` folder (same place as house_battery_control.yaml).
+# Install: drop this file in your `packages/` folder (same place as hbc_control.yaml).
 #
 # Activation is adding one option to your existing strategy selectors:
 #   input_select.house_battery_strategy:
@@ -20,7 +20,7 @@
 #   Timed   + any period strategy               = Charge Deadline -> Time slot
 #   Charge Deadline as the master strategy                        -> Manual window
 #
-# house_battery_control.yaml is touched too: the strategy option in the selectors, and
+# hbc_control.yaml is touched too: the strategy option in the selectors, and
 # two recorder exclusions for the sensors here that re-render every minute.
 ###########################################################################################################
 
@@ -181,7 +181,7 @@ input_boolean:
   # Subtract the PV still forecast for the rest of today from the energy that has to
   # come from the grid, so a sunny afternoon is not pre-empted by grid charging in
   # the morning. Uses sensor.solar_forecast_surplus_today (forecast minus the house
-  # reserve) from house_battery_control.yaml. OFF = ignore the forecast (default:
+  # reserve) from hbc_control.yaml. OFF = ignore the forecast (default:
   # the plan then only reacts to PV it can actually measure).
   house_battery_deadline_reserve_pv:
     name: Deadline reserve forecast PV
@@ -1567,7 +1567,7 @@ template:
       # carry no state_class and so produce NO long-term statistics - once the recorder
       # purge window passes, their history is gone entirely. These mirrors add
       # state_class: measurement, so HA keeps permanent hourly statistics. The helpers
-      # themselves are excluded from the recorder in house_battery_control.yaml, so this
+      # themselves are excluded from the recorder in hbc_control.yaml, so this
       # costs no extra rows. Point dashboards at these sensors, not the helpers.
       # Quantised to 10 W: at watt resolution these change on nearly every write and
       # each change is a recorder row, for a difference no one can see on a bar.
