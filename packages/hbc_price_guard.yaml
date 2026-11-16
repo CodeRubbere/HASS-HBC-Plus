@@ -1,0 +1,156 @@
+###########################################################################################################
+# HBC+ v1.2 - Price guard (negative prices)
+#
+# While the current quarter's price is below a threshold, Node-RED swaps the strategy that is about
+# to run (see the user guide, "Price guard"):
+#   export_negative (sell < export threshold): Sell -> Charge PV, Zero import -> Self-consumption,
+#                                              Standby / peak shave -> Charge PV
+#   import_negative (buy < import threshold):  every strategy except Full stop -> Charge, until full
+# Off by default. "On" only takes effect with Tariff data source = Grid Clock feed (all-in prices);
+# otherwise it behaves as Monitor. The import override also stays in Monitor while a phase carries
+# two batteries and the phase guard is not on Enforce.
+#
+# Everything here is plain Home Assistant: sensor.hbc_price_state and the binary sensors also work
+# when Node-RED is down, so a PV limiter or your own automation can use them.
+###########################################################################################################
+
+input_select:
+  house_battery_price_guard_mode:
+    name: Price guard
+    icon: mdi:cash-lock
+    options: ["Off", "Monitor", "On"]
+
+input_number:
+  # Below this buy price (ct/kWh) you are paid to import: charge. Starts at its minimum, 0.
+  house_battery_price_guard_import_threshold:
+    name: Import threshold
+    icon: mdi:transmission-tower-import
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: "cents/kWh"
+    mode: box
+  # Below this sell price (ct/kWh) feeding in costs money: stop exporting. Starts at 0.
+  house_battery_price_guard_export_threshold:
+    name: Export threshold
+    icon: mdi:transmission-tower-export
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: "cents/kWh"
+    mode: box
+
+template:
+  - sensor:
+      # normal / export_negative / import_negative for the current quarter, from Dynamic's marks.
+      - name: "HBC price state"
+        unique_id: hbc_price_state
+        icon: mdi:cash-clock
+        state: >-
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {%- set imp = states('input_number.house_battery_price_guard_import_threshold') | float(0) -%}
+          {%- set exp = states('input_number.house_battery_price_guard_export_threshold') | float(0) -%}
+          {%- set now_ts = as_timestamp(now()) -%}
+          {%- set ns = namespace(s='normal') -%}
+          {%- for iv in marks -%}
+            {%- if as_timestamp(iv.start, 0) <= now_ts and now_ts < as_timestamp(iv.end, 0) -%}
+              {%- set buy = iv.price | float(0) -%}
+              {%- set sell = (iv.sell if iv.sell is defined and iv.sell is not none else iv.price) | float(0) -%}
+              {%- set ns.s = 'import_negative' if buy < imp else ('export_negative' if sell < exp else 'normal') -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.s }}
+        attributes:
+          # end of the current run of quarters in this state, and start of the next non-normal run
+          until: >-
+            {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+            {%- set imp = states('input_number.house_battery_price_guard_import_threshold') | float(0) -%}
+            {%- set exp = states('input_number.house_battery_price_guard_export_threshold') | float(0) -%}
+            {%- set now_ts = as_timestamp(now()) -%}
+            {%- set ns = namespace(cur=none, until=none, done=false) -%}
+            {%- for iv in marks if not ns.done -%}
+              {%- set buy = iv.price | float(0) -%}
+              {%- set sell = (iv.sell if iv.sell is defined and iv.sell is not none else iv.price) | float(0) -%}
+              {%- set s = 'import_negative' if buy < imp else ('export_negative' if sell < exp else 'normal') -%}
+              {%- if ns.cur is none and as_timestamp(iv.start, 0) <= now_ts and now_ts < as_timestamp(iv.end, 0) -%}
+                {%- set ns.cur = s -%}{%- set ns.until = iv.end -%}
+              {%- elif ns.cur is not none -%}
+                {%- if s == ns.cur -%}{%- set ns.until = iv.end -%}{%- else -%}{%- set ns.done = true -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.until }}
+          # Plain text on purpose: "today 13:30", "tomorrow 12:00" or "none in the price list".
+          # (An empty timestamp showed as January 1, 1970 on the dashboard.)
+          next_negative: >-
+            {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+            {%- set imp = states('input_number.house_battery_price_guard_import_threshold') | float(0) -%}
+            {%- set exp = states('input_number.house_battery_price_guard_export_threshold') | float(0) -%}
+            {%- set now_ts = as_timestamp(now()) -%}
+            {%- set ns = namespace(prev=none, nxt=none) -%}
+            {%- for iv in marks if ns.nxt is none -%}
+              {%- set buy = iv.price | float(0) -%}
+              {%- set sell = (iv.sell if iv.sell is defined and iv.sell is not none else iv.price) | float(0) -%}
+              {%- set neg = buy < imp or sell < exp -%}
+              {%- if as_timestamp(iv.start, 0) > now_ts and neg and ns.prev == false -%}
+                {%- set ns.nxt = iv.start -%}
+              {%- endif -%}
+              {%- if as_timestamp(iv.end, 0) > now_ts -%}{%- set ns.prev = neg -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if ns.nxt -%}
+              {%- set t = as_timestamp(ns.nxt) -%}
+              {%- set day = 'today' if t | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') else 'tomorrow' -%}
+              {{ day }} {{ t | timestamp_custom('%H:%M') }}
+            {%- else -%}
+              none in the price list
+            {%- endif -%}
+          buy: "{{ states('sensor.hbc_energy_price_now') }}"
+          sell: "{{ states('sensor.hbc_energy_export_price_now') }}"
+
+  - binary_sensor:
+      # Feeding in costs money right now (also true while you are paid to import).
+      - name: "HBC export price negative"
+        unique_id: hbc_export_price_negative
+        icon: mdi:transmission-tower-export
+        state: "{{ states('sensor.hbc_price_state') in ['export_negative', 'import_negative'] }}"
+      # You are paid to import right now.
+      - name: "HBC import price negative"
+        unique_id: hbc_import_price_negative
+        icon: mdi:transmission-tower-import
+        state: "{{ is_state('sensor.hbc_price_state', 'import_negative') }}"
+      # Signal for a PV limiter (HPVC, an inverter automation): exporting costs money and the
+      # batteries cannot take more. HBC+ itself never curtails.
+      - name: "HBC PV curtail advised"
+        unique_id: hbc_pv_curtail_advised
+        icon: mdi:solar-power-variant-outline
+        state: >-
+          {%- set full = states('input_number.house_battery_total_available_energy') | float(0)
+                         >= states('input_number.house_battery_total_max_available_energy') | float(0) - 0.1 -%}
+          {{ is_state('binary_sensor.hbc_export_price_negative', 'on') and full }}
+      # A phase that carries two (or more) batteries in the phase map. Used by the price guard's
+      # safety rule for import_negative (charging at full power needs phase guard Enforce then).
+      - name: "HBC phase shared"
+        unique_id: hbc_phase_shared
+        icon: mdi:call-split
+        state: >-
+          {%- set n = states('input_number.house_battery_count') | int(1) -%}
+          {%- set ns = namespace(phases=[]) -%}
+          {%- for i in range(1, n + 1) -%}
+            {%- set p = states('input_select.marstek_m' ~ i ~ '_phase') -%}
+            {%- if p in ['L1', 'L2', 'L3'] -%}{%- set ns.phases = ns.phases + [p] -%}{%- endif -%}
+          {%- endfor -%}
+          {{ ns.phases | length != ns.phases | unique | list | length }}
+
+  # What the price guard did in the last control cycle (event from Node-RED).
+  - trigger:
+      - trigger: event
+        event_type: hbc_price_guard_status
+    sensor:
+      - name: "HBC price guard"
+        unique_id: hbc_price_guard
+        icon: mdi:cash-lock
+        state: "{{ trigger.event.data.kind | default('none') }}"
+        attributes:
+          action: "{{ trigger.event.data.action | default('') }}"
+          reason: "{{ trigger.event.data.reason | default('') }}"
+          price_state: "{{ trigger.event.data.state | default('normal') }}"
+          mode: "{{ trigger.event.data.mode | default('') }}"

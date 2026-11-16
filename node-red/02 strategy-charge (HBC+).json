@@ -98,7 +98,8 @@
             "761c2d1574664007",
             "f0d1e7bc13fed412",
             "d5d2b2868aedf0b2",
-            "e1729c98ebfc4e78"
+            "e1729c98ebfc4e78",
+            "hbcp12c000000003"
         ],
         "x": 254,
         "y": 81,
@@ -719,7 +720,7 @@
         "z": "e31b0cf1ca8100ca",
         "g": "75c1fbefaf9d8881",
         "name": "Set reached strategy",
-        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\nreturn msg;",
+        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\n// HBC+ v1.2 price guard: swap the strategy about to run while prices are below a threshold.\n// msg.price_override is built once per tick in 'Strategy selection' (Home Battery Start).\n// No override object = no change; Full stop is never changed. Monitor only records 'would'.\n{\n    const po = msg.price_override;\n    const to = po && po.map && msg.target !== 'Full stop' ? po.map[msg.target] : undefined;\n    if (to && to !== msg.target) {\n        const step = `${msg.target} → ${to}`;\n        if (po.active) { po.applied = step; msg.target = to; }\n        else if (po.mode !== 'Off') { po.would = step; }\n    }\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -891,7 +892,7 @@
         "y": 240,
         "wires": [
             [
-                "08f7ceb5e2233915"
+                "hbcp12c000000003"
             ]
         ]
     },
@@ -1354,6 +1355,27 @@
         "x": 250,
         "y": 40,
         "wires": []
+    },
+    {
+        "id": "hbcp12c000000003",
+        "type": "function",
+        "z": "e31b0cf1ca8100ca",
+        "g": "75c1fbefaf9d8881",
+        "name": "Price goal",
+        "func": "// HBC+ v1.2 price guard: while you are paid to import (import_negative, guard On),\n// charge until the batteries are full, whatever 'Charge until' says. Monitor: unchanged.\nconst po = msg.price_override;\nif (po && po.charge_full && po.active && msg.charge && msg.charge.goal !== 'batteries are full') {\n    po.applied = po.applied || `Charge until: ${msg.charge.goal} → batteries are full`;\n    msg.charge.goal = 'batteries are full';\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 280,
+        "wires": [
+            [
+                "08f7ceb5e2233915"
+            ]
+        ]
     },
     {
         "id": "176d29a.6f648d6",

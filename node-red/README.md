@@ -29,6 +29,12 @@ Or import the files one by one.
 | `hbc-plus-all-flows.json` | all of the above | one import file |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
 
+## Changes in v1.2 (in development)
+Tabs still carry v1.1 in their name until the release.
+- **Dynamic:** *Data source settings* has a second output for the new source *Grid Clock feed*: *Grid Clock feed request* -> *Grid Clock feed* (http request, ETag) -> *Grid Clock feed parse* -> *Cleanup*; the status goes to the HA event `hbc_gridclock_status`. New *Price split* (before *Cache data source*) gives every source a sell list (sell = buy without the feed). *Determine dynamic strategy* adds `sell` and `neg` to every mark and values the HIGH side at the sell price when the expensive strategy is *Sell* (otherwise the v1.1 code runs unchanged). New group *Grid Clock suppliers* fills the supplier and grid-operator selects from `index.json`. *Selected* applies the price guard.
+- **Start:** *Read HA states (fast)* reads the price-guard entities as optional (a missing one is never a fallback). *Strategy selection* builds `msg.price_override` once per tick and applies it to the top-level strategy; *HBC+ price guard status* fires `hbc_price_guard_status` when it changes.
+- **Timed** (*Pick period*), **Charge** (*Set reached strategy*, new *Price goal*), **Sell** (*Strategy after reached*): apply the price guard.
+
 ## Changes in v1.1
 The table above shows each tab's changes compared with HBC. New in v1.1 (details in the user guide, *What's new in HBC+ v1.1*):
 - **Robustness (R5-R12):** heartbeat only after a good cycle and no longer undone by the Master Switch; held values and checked

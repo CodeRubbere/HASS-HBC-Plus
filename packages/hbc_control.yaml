@@ -790,6 +790,7 @@ input_select:
       - ENTSO-E
       - Frank Energie
       - Grid Clock
+      - Grid Clock feed # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - GE-Spot
       - Tibber (core)
       - Tibber (custom)

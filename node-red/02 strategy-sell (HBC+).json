@@ -874,7 +874,7 @@
         "z": "17d7519059560984",
         "g": "19fd765ad75bf61e",
         "name": "Strategy after reached",
-        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\nreturn msg;",
+        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\n// HBC+ v1.2 price guard: swap the strategy about to run while prices are below a threshold.\n// msg.price_override is built once per tick in 'Strategy selection' (Home Battery Start).\n// No override object = no change; Full stop is never changed. Monitor only records 'would'.\n{\n    const po = msg.price_override;\n    const to = po && po.map && msg.target !== 'Full stop' ? po.map[msg.target] : undefined;\n    if (to && to !== msg.target) {\n        const step = `${msg.target} → ${to}`;\n        if (po.active) { po.applied = step; msg.target = to; }\n        else if (po.mode !== 'Off') { po.would = step; }\n    }\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

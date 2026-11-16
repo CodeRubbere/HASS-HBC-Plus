@@ -312,6 +312,54 @@ Kiest een strategie op basis van de energieprijzen van vandaag en morgen.
 
 De prijzen worden ververst om middernacht, om 13:15 en 15:00, na een bronwissel, en tot de prijzen van morgen binnen zijn. Valt de bron uit, dan houdt Dynamic de laatste geldige prijzen aan of valt terug op *Default to* (zie R3). Andere flows kunnen dezelfde prijzen ophalen via de link call (zie *Gedeelde prijsophaling*).
 
+### Grid Clock-feed
+
+*Tariefbron* **Grid Clock feed** (nieuw in v1.2) leest all-in inkoop- en terugleverprijzen per kwartier voor je eigen leverancier uit de openbare bestanden van [Grid Clock](https://gridclock.eu). Grid Clock rekent ze uit met de formule van de leverancier, btw en de energiebelasting van het land. In Nederland schakelt hij op 1 januari 2027, als salderen stopt, zelf over op aparte terugleverprijzen. HBC+ heeft zelf geen instellingen voor belasting of opslag.
+
+**Instellen.**
+
+1. Kies *Grid Clock feed* bij **Tariff data source** (view Timed/Dynamic).
+2. Kies je **Zone** (NL of BE) en je **Supplier** (leverancier). Zolang je er geen kiest, gebruikt HBC+ de marktprijs, met terugleverprijs = inkoopprijs.
+3. België: kies je **Grid operator** (netbeheerder). Zijn distributie- en transportkosten per kWh komen bij de inkoopprijs.
+4. Kijk naar de regel **Grid Clock feed** onder de bron: `ok` of `not modified` is goed; `error` toont de reden.
+
+**Wat er verstuurd wordt.** Geen account, token of registratie. HBC+ haalt `v1/hbc/<zone>/index.json` en `v1/hbc/<zone>/<leverancier>/latest.json` op van `cdn.gridclock.eu`; de zone en de korte naam van de leverancier (de *slug*, zoals `frank-energie`) staan in het adres, verder niets. Zoals elk webverzoek gaat het via Cloudflare, dat je IP-adres ziet. Grid Clock bewaart niets over HBC+-gebruikers. De gekozen leverancier staat in `input_text.house_battery_gridclock_provider_slug`.
+
+**Wanneer.** Op dezelfde momenten als elke andere bron: na middernacht, om 13:15 en 15:00, elk kwartier tot de prijzen van morgen er zijn, en meteen na het wijzigen van zone of leverancier. Een ongewijzigd bestand kost een `304`. Lukt het ophalen niet, dan houdt Dynamic de laatste geldige prijzen aan, zoals bij elke bron (R3). De leverancierslijst wordt bij de start en dagelijks om 00:10 ververst.
+
+Testen tegen de staging-bestanden van Grid Clock: zet de omgevingsvariabele `GRIDCLOCK_FEED_URL` op het tabblad *HBC+ Strategy Dynamic* (standaard `https://cdn.gridclock.eu/v1/hbc`).
+
+### Inkoop- en terugleverprijs
+
+Vanaf v1.2 heeft elk kwartier een **inkoopprijs** (wat een afgenomen kWh kost) en een **terugleverprijs** (wat een teruggeleverde kWh oplevert). Met de Grid Clock-feed verschillen ze zodra salderen gestopt is; bij elke andere bron is terugleverprijs = inkoopprijs, precies zoals v1.1 een kWh waardeerde.
+
+- Dynamic koppelt goedkope en dure kwartieren zoals voorheen. Staat *Strategy during expensive period* op **Sell**, dan telt een duur kwartier met zijn terugleverprijs. Dynamic markeert dus alleen een Sell-periode als de terugleverprijs de inkoopprijs van een goedkoop kwartier met minstens *Minimum spread* verslaat. Zonder salderen gebeurt dat zelden; het dashboard raadt dan *Self-consumption* aan. Met elke andere strategie voor dure periodes verandert er niets.
+- `sensor.hbc_energy_price_now` blijft de inkoopprijs; `sensor.hbc_energy_export_price_now` is de terugleverprijs van nu. Elke regel in het attribuut `marks` van `sensor.hbc_energy_prices_data` heeft naast `price` ook `sell` en `neg` (`import`, `export` of leeg).
+- De grafiek *Price intervals* toont de terugleverprijs als grijze lijn over de inkoopstaven. Paarse staven zijn kwartieren waarin terugleveren geld kost; donkerpaars als je betaald krijgt voor afnemen.
+
+### Prijsbewaking (price guard)
+
+De prijsbewaking verandert wat de batterijen doen bij negatieve prijzen. Standaard staat hij **Off**; **Monitor** laat alleen zien wat hij zou doen; **On** grijpt in.
+
+| Toestand (`sensor.hbc_price_state`) | Wanneer | Wat de prijsbewaking doet |
+| --- | --- | --- |
+| `export_negative` | Terugleverprijs onder *Export threshold* (standaard 0 ct) | Sell → Charge PV, Zero import → Self-consumption, Standby / peak shave → Charge PV: overschot van de panelen gaat de batterijen in in plaats van het net op |
+| `import_negative` | Inkoopprijs onder *Import threshold* (standaard 0 ct) | Elke strategie behalve Full stop → Charge, tot de batterijen vol zijn |
+| `normal` | Anders | Niets |
+
+De prijsbewaking werkt op de strategie die echt draait: de substrategie van Dynamic of Timed, en de vervolgstrategie na een doel van Charge of Sell. Je eigen keuze in `input_select.house_battery_strategy` verandert nooit, en de wissel stopt bij het eerste kwartier met normale prijzen. `sensor.hbc_price_guard` laat zien wat hij deed (`override`, `would` of `none`) en waarom.
+
+**Veiligheid.**
+
+1. **On** grijpt alleen in met *Tariff data source* = *Grid Clock feed*: alleen de feed heeft de echte all-in prijzen. Bij een andere bron lijkt een marktprijs onder nul negatief terwijl je nog energiebelasting betaalt; dan blijft de prijsbewaking op Monitor.
+2. **Full stop** wordt nooit veranderd (Oscillation Guard, overbelastingsalarm, handmatige stop), en er verandert niets zolang de EV-stoptrigger aan staat.
+3. **Import** op vol vermogen alleen met de fasebewaking op *Enforce*, of als geen enkele fase twee batterijen heeft (`binary_sensor.hbc_phase_shared`). Anders blijft dat deel op Monitor, zodat twee batterijen op één groep van 16 A nooit samen op vol vermogen laden.
+4. Ontbreekt een entiteit van de prijsbewaking, dan is er geen prijsbewaking: de regellus werkt dan zoals in v1.1.
+
+**Voor een PV-begrenzer.** `binary_sensor.hbc_export_price_negative`, `binary_sensor.hbc_import_price_negative` en `binary_sensor.hbc_pv_curtail_advised` (terugleveren kost geld en de batterijen zijn vol). HBC+ zelf knijpt de panelen nooit af. Het zijn gewone Home Assistant-sensoren, die ook werken als Node-RED uit ligt.
+
+**Dashboard.** De sectie *Price guard* op de view Timed/Dynamic bevat modus, drempels, toestand en actie; de view Home toont een melding zolang de prijsbewaking een strategie wisselt. Begin een paar dagen met **Monitor**.
+
 ### Geavanceerde instellingen
 
 - **Batterijprioriteit** (`input_select.house_battery_control_priority_change_interval`): Self-consumption gebruikt de batterijen in volgorde van prioriteit, te beginnen met `input_number.house_battery_control_prioritize_battery`. De prioriteit schuift door naar de volgende batterij elke 30 minuten (*Auto balance*), dagelijks om 02:00 (*Daily*), op zondag om 02:00 (*Weekly*), of helemaal niet (*Never*). Behalve bij *Auto balance* ontlaadt HBC+ in omgekeerde volgorde, zodat de batterij die als eerste laadt als laatste ontlaadt.
@@ -352,6 +400,26 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 - **Fail-safe op Enforce, elders fail-open.** Op *Off* en *Monitor* verandert een fout in een nieuwe stap niets; op *Enforce* valt hij terug op de strikte regel van één batterij per fase (R9). Het HA-alarm werkt los van Node-RED en schakelt naar *Full stop* als de batterijen een fase overbelast houden (R10).
 - **Tekens:** batterijvermogen is positief bij laden, P1-fasevermogen is positief bij import.
 - **Eerst Monitor.** De fasebewaking kan al draaien met één batterij per fase; dan verandert er niets en test je de koppeling gratis, voordat er een tweede batterij op een fase komt.
+
+## Nieuw in HBC+ v1.2
+
+*In ontwikkeling — release gepland op 10 december 2026*
+
+v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027: vanaf dan levert een teruggeleverde kWh minder op dan een afgenomen kWh kost.
+
+- **F6 — Grid Clock-feed.** Een nieuwe *Tariff data source* met all-in inkoop- en terugleverprijzen per kwartier voor je eigen leverancier, openbaar en zonder token (zie [Grid Clock-feed](#grid-clock-feed)).
+- **F7 — Inkoop- en terugleverprijs.** Elk kwartier heeft naast de inkoopprijs een terugleverprijs; Dynamic waardeert *Sell* met de terugleverprijs; nieuw zijn `sensor.hbc_energy_export_price_now` en een terugleverlijn in de grafiek (zie [Inkoop- en terugleverprijs](#inkoop--en-terugleverprijs)).
+- **F8 — Prijsbewaking.** Stopt met terugleveren en laadt juist bij negatieve prijzen, met signalen voor een PV-begrenzer (zie [Prijsbewaking (price guard)](#prijsbewaking-price-guard)).
+
+Met de standaardinstellingen werkt v1.2 precies als v1.1. Offline gecontroleerd: met terugleverprijs = inkoopprijs geeft Dynamic in 96 prijslijsten dezelfde markeringen, strategie en spreads, en met de prijsbewaking op Off is de strategiekeuze voor elke strategie gelijk.
+
+### Bijwerken vanaf v1.1
+
+1. **Back-up maken** zoals in [Stap 1](#stap-1--back-up-maken).
+2. **Packages:** kopieer alle bestanden uit `packages/`. Twee zijn nieuw (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` is gewijzigd. *Configuratie controleren* en HA herstarten.
+3. **Flows:** verwijder elk tabblad waarvan de naam met *HBC+* begint, importeer `node-red/hbc-plus-all-flows.json` en deploy, zoals in [HBC+ bijwerken](#hbc-bijwerken).
+4. **Dashboard:** plak `dashboards/hbc_plus.yaml` opnieuw in de raw-configuratie-editor.
+5. **Optioneel:** kies *Grid Clock feed* en je leverancier, en laat de prijsbewaking eerst op *Monitor* draaien.
 
 ## Nieuw in HBC+ v1.1
 
@@ -638,7 +706,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `.gitattributes` | Git-instelling: normaliseert de regeleinden van tekstbestanden |
 | `.gitignore` | Houdt macOS- en editorbestanden buiten de repository |
 
-**packages/** — Home Assistant-packages; kopieer ze alle zes naar de map `packages/` van HA.
+**packages/** — Home Assistant-packages; kopieer ze alle acht naar de map `packages/` van HA.
 
 | Bestand | Inhoud |
 | --- | --- |
@@ -648,6 +716,8 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: de status van de Strategy arbiter, bewaard over herstarts heen |
 | `hbc_heartbeat.yaml` | Fasebewuste HA-fallback als HBC+ stopt: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale`, de automatisering die de batterijen teruggeeft aan hun firmware, en `sensor.hbc_health` met de foutmelding |
 | `hbc_phase_guard.yaml` | Fasebewaking: instellingen, fasekaart M1–M6, vermogen en zekeringruimte per fase, overbelastingsalarm, MQTT-statussensoren, het script met standaardwaarden en de melding als een veiligheidsinstelling verandert |
+| `hbc_gridclock.yaml` | Grid Clock-feed (v1.2): keuze van zone, leverancier en netbeheerder, status van de feed, terugleverprijs nu |
+| `hbc_price_guard.yaml` | Prijsbewaking (v1.2): modus, drempels, prijstoestand, signalen voor een PV-begrenzer, controle op gedeelde fase |
 
 **dashboards/**
 
@@ -693,7 +763,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 
 ### Stap 2 — Home Assistant-packages
 
-1. Kopieer alle zes bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
+1. Kopieer alle acht bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
 2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, voeg dan template-aliassen toe in `hbc_config.yaml`.
 3. *Ontwikkelhulpmiddelen* → *Configuratie controleren*, en herstart Home Assistant.
 4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, en de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA herstelt de waarden na elke volgende herstart.
@@ -827,6 +897,25 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Wordt aangezet door de Start-flow zodra die draait; gebruikt door de onboarding-checklist |
 | `sensor.hbc_time` | `hbc_control.yaml` | Lokale tijd (UU:MM) voor de badge *Time* op de dashboardviews |
 
+### Grid Clock-feed en prijsbewaking (v1.2)
+
+| Entiteit | Package | Wat het is |
+| --- | --- | --- |
+| `input_select.house_battery_gridclock_zone` | `hbc_gridclock.yaml` | Zone van de Grid Clock-feed (NL, BE) |
+| `input_select.house_battery_gridclock_provider` | `hbc_gridclock.yaml` | Leverancier; de keuzes vult Node-RED uit `index.json` |
+| `input_select.house_battery_gridclock_grid_operator` | `hbc_gridclock.yaml` | Netbeheerder (BE); zijn ct/kWh komt bij de inkoopprijs |
+| `input_text.house_battery_gridclock_provider_slug`, `…_grid_operator_name` | `hbc_gridclock.yaml` | De onthouden keuzes (geschreven door Node-RED) |
+| `sensor.hbc_grid_clock_feed` | `hbc_gridclock.yaml` | Laatste ophaalpoging: `ok`, `not modified` of `error`; attributen reden, leverancier, einde salderen, prijzen tot |
+| `sensor.hbc_energy_export_price_now` | `hbc_gridclock.yaml` | Terugleverprijs van het huidige kwartier |
+| `binary_sensor.hbc_sell_prices_separate` | `hbc_gridclock.yaml` | Aan als de prijslijst terugleverprijzen heeft die van de inkoopprijzen verschillen |
+| `input_select.house_battery_price_guard_mode` | `hbc_price_guard.yaml` | Off (standaard) · Monitor · On |
+| `input_number.house_battery_price_guard_import_threshold`, `…_export_threshold` | `hbc_price_guard.yaml` | Drempels in ct/kWh (0–20, standaard 0) |
+| `sensor.hbc_price_state` | `hbc_price_guard.yaml` | `normal`, `export_negative` of `import_negative`; attributen `until`, `next_negative`, `buy`, `sell` |
+| `sensor.hbc_price_guard` | `hbc_price_guard.yaml` | Wat de prijsbewaking de laatste cyclus deed: `override`, `would` of `none`; attributen `action`, `reason` |
+| `binary_sensor.hbc_export_price_negative`, `binary_sensor.hbc_import_price_negative` | `hbc_price_guard.yaml` | Prijstoestand als aan/uit, voor automatiseringen en PV-begrenzers |
+| `binary_sensor.hbc_pv_curtail_advised` | `hbc_price_guard.yaml` | Terugleveren kost geld en de batterijen zijn vol |
+| `binary_sensor.hbc_phase_shared` | `hbc_price_guard.yaml` | Een fase heeft twee batterijen in de fasekaart |
+
 ### Waarden kiezen
 
 - **Netzekering:** je hoofdzekering per fase in A × 230 V (3 × 16 A → 3680 W, de standaardwaarde; 3 × 25 A → 5750 W; 3 × 32 A → 7360 W). Een aansluiting heeft op elke fase dezelfde zekering, dus één waarde geldt voor L1–L3.
@@ -864,7 +953,7 @@ Het dashboard *Home Battery Control Plus* heeft een view **Phases**, die drie vr
 | Home Battery Control Plus | Onboarding, mastermodus, strategiekeuze, batterijoverzicht |
 | Self-consumption | PID-afstelling en -analyse |
 | Charge/Sell | Doelen en limieten voor Charge, Sell en Charge Deadline |
-| Timed/Dynamic | Tijdvakken, prijsbron en goedkope/dure periodes |
+| Timed/Dynamic | Tijdvakken, prijsbron (met de Grid Clock-feed: zone, leverancier, inkoop- en terugleverprijs nu), goedkope/dure periodes en de prijsbewaking |
 | **Phases** (nieuw) | Status van de phase guard, kaarten per fase, instellingen en fasekaart |
 | Problem solver (spinnen-icoon) | *Flow trace* en *Insights*: de route van de laatste tick en de uitleg van elke node; zet *Insight mode* aan (gaat na 5 min vanzelf uit) |
 | Advanced settings | Batterijlevensduur, peak shaving, laad-/ontlaadlimieten |
@@ -910,6 +999,9 @@ De meter toont het netvermogen tegen de netzekering: afname (positief) in lichtr
 | De gekozen strategie blijft niet staan, of verandert vanzelf | Een hold in de Strategy arbiter (Oscillation Guard of een eigen flow) | Bekijk `input_text.hbc_strategy_arbiter` en het HA-logboek; een handmatige keuze wordt de nieuwe basis, de hold eindigt als de aanvrager hem loslaat |
 | Strategie ineens *Full stop*; melding *HBC+: phase overload - Full stop* | Een fase bleef 10 s overbelast met de batterijen als meeveroorzaker (R10) | Controleer de Phases-view en de limieten; kies daarna je strategie opnieuw |
 | Waarschuwing *… keeps ignoring commands* | De batterij volgt HBC+ niet (RS485 uitgezet in de Marstek-app, firmwaremodus, Modbus-probleem) | Controleer RS485-besturing en de werkmodus van die batterij |
+| *Grid Clock feed* toont `error`, reden `HTTP 404` | Geen feedbestand voor deze zone of leverancier (nog niet), of de leverancier is verwijderd | Kies een andere leverancier; de lijst ververst bij de start en dagelijks om 00:10 |
+| De leverancierslijst toont alleen *Market price (no supplier)* | De leveranciersindex kon niet geladen worden (geen internet, of het Dynamic-tabblad is niet gedeployd) | Bekijk de status van de groep *Grid Clock suppliers* in het Dynamic-tabblad; hij probeert het bij de start en dagelijks opnieuw |
+| Prijsbewaking op *On*, maar hij toont alleen *would* | De tariefbron is niet *Grid Clock feed*, of import bij een gedeelde fase terwijl de fasebewaking niet op *Enforce* staat | Zie de waarschuwingen in de sectie *Price guard* |
 
 Wil je zien wat HBC+ besliste en waarom, open dan de view **Problem solver** (spinnen-icoon) en zet *Insight mode* aan. Voor waarschuwingen en fouten is *Insight mode* niet nodig: die staan altijd in het Node-RED-log (hetzelfde bericht hooguit eens per minuut) en in `sensor.hbc_health`.
 
