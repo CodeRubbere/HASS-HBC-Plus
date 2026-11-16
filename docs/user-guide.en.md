@@ -625,7 +625,7 @@ Both limits default to 16 A per phase (3680 W): the main (grid) fuse and the bat
 
 ## Installation
 
-Download HBC+ from [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/CodeRubbere/HASS-HBC-Plus) (*Code* → *Download ZIP*, or clone it). Installation takes about 30 minutes and changes nothing about how the batteries behave until you switch the guard to *Enforce*.
+Download the latest release from the [Releases page](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest): under *Assets*, choose *Source code (zip)* and unzip it. Each release is a tested version; the files on the repository's main page (*Code* → *Download ZIP*) can include work that is not released yet. Installation takes about 30 minutes and changes nothing about how the batteries behave until you switch the guard to *Enforce*.
 
 ### What is in the repository
 
@@ -768,7 +768,7 @@ An ACL file applies to **every** MQTT user: give each user that logs in (Zigbee2
 
 ### Updating HBC+
 
-A new HBC+ version comes as a new release of [the repository](https://github.com/CodeRubbere/HASS-HBC-Plus). Your settings are kept: they live in the helpers, and Home Assistant restores them after a restart.
+A new HBC+ version comes as a new release on the [Releases page](https://github.com/CodeRubbere/HASS-HBC-Plus/releases); download it as in [Installation](#installation). Your settings are kept: they live in the helpers, and Home Assistant restores them after a restart.
 
 1. **Back up** as in Step 1.
 2. **Read the release notes** for files that were renamed or removed, and delete those from your HA `packages/` folder (in v1.0: `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` and `nodered_heartbeat.yaml` became `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` and `hbc_heartbeat.yaml`).
@@ -922,6 +922,7 @@ Questions, bugs and ideas: open an issue in [the repository](https://github.com/
 ## Related
 
 - [HASS-HBC-Plus on GitHub](https://github.com/CodeRubbere/HASS-HBC-Plus) — the repository.
+- [Releases](https://github.com/CodeRubbere/HASS-HBC-Plus/releases) — every version with its release notes.
 - [Nederlandse handleiding](gebruikershandleiding.nl.md) — the Dutch version of this guide.
 - [node-red/README.md](../node-red/README.md) — per-tab overview of the HBC+ changes.
 

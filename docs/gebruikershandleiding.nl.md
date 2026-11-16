@@ -625,7 +625,7 @@ Beide limieten staan standaard op 16 A per fase (3680 W): de hoofdzekering (net)
 
 ## Installatie
 
-Download HBC+ van [github.com/CodeRubbere/HASS-HBC-Plus](https://github.com/CodeRubbere/HASS-HBC-Plus) (*Code* → *Download ZIP*, of clone de repository). De installatie duurt ongeveer 30 minuten en verandert niets aan het gedrag van de batterijen tot je de guard op *Enforce* zet.
+Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest): kies onder *Assets* voor *Source code (zip)* en pak het uit. Elke release is een geteste versie; de bestanden op de hoofdpagina van de repository (*Code* → *Download ZIP*) kunnen werk bevatten dat nog niet is uitgebracht. De installatie duurt ongeveer 30 minuten en verandert niets aan het gedrag van de batterijen tot je de guard op *Enforce* zet.
 
 ### Wat er in de repository staat
 
@@ -768,7 +768,7 @@ Een ACL-bestand geldt voor **elke** MQTT-gebruiker: geef elke gebruiker die inlo
 
 ### HBC+ bijwerken
 
-Een nieuwe HBC+-versie komt als nieuwe release van [de repository](https://github.com/CodeRubbere/HASS-HBC-Plus). Je instellingen blijven behouden: ze staan in de helpers, en Home Assistant zet ze na een herstart terug.
+Een nieuwe HBC+-versie komt als nieuwe release op de [Releases-pagina](https://github.com/CodeRubbere/HASS-HBC-Plus/releases); download die zoals bij [Installatie](#installatie). Je instellingen blijven behouden: ze staan in de helpers, en Home Assistant zet ze na een herstart terug.
 
 1. **Maak een back-up** zoals in stap 1.
 2. **Lees de release notes** op hernoemde of verwijderde bestanden, en verwijder die uit de map `packages/` van HA (in v1.0 werden `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` en `nodered_heartbeat.yaml` hernoemd naar `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` en `hbc_heartbeat.yaml`).
@@ -922,6 +922,7 @@ Vragen, bugs en ideeën: open een issue in [de repository](https://github.com/Co
 ## Gerelateerd
 
 - [HASS-HBC-Plus op GitHub](https://github.com/CodeRubbere/HASS-HBC-Plus) — de repository.
+- [Releases](https://github.com/CodeRubbere/HASS-HBC-Plus/releases) — elke versie met de release notes.
 - [English user guide](user-guide.en.md) — de Engelse versie van deze handleiding.
 - [node-red/README.md](../node-red/README.md) — overzicht per tabblad van de HBC+-wijzigingen.
 
