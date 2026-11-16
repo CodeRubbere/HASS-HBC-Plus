@@ -10,6 +10,8 @@ This project is designed for hobbyists who want full control over their home bat
 ![License](https://img.shields.io/github/license/gitcodebob/marstek-venus-rs485-node-red)
 [![GitHub stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=flat)](https://github.com/CodeRubbere/HASS-HBC-Plus/stargazers)
 
+**Current version: v1.1** (16 November 2026) · [What's new in v1.1](docs/user-guide.en.md#whats-new-in-hbc-v11)
+
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
 ## Credits
@@ -52,11 +54,13 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 1. Make sure Home Assistant (with packages and MQTT) and Node-RED (with the palettes listed under *Before you use it*) are running.
 2. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
 3. Copy `packages/*.yaml` to your HA `packages/` folder, restart HA, and run the script **HBC+ phase guard: apply defaults** once.
-4. Import `node-red/hbc-plus-all-flows.json` in Node-RED with **Replace**, check that the *HA System* server node has **Expose to global context** on, and Deploy.
-5. Add the dashboard from `dashboards/hbc_plus.yaml`, set your phase map, grid fuse and battery circuit on the **Phases** view.
+4. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
+5. Add a dashboard named *Home Battery Control Plus* (keep the URL `home-battery-control-plus`) with the contents of `dashboards/hbc_plus.yaml`, set your phase map, grid fuse and battery circuit on the **Phases** view.
 6. Run in **Monitor** for a few days, then switch to **Enforce**.
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
+
+**Updating from v1.0?** Follow [Updating from v1.0](docs/user-guide.en.md#updating-from-v10): new packages and notifications, and the old HBC+ tabs are deleted before the import.
 
 Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues).
 

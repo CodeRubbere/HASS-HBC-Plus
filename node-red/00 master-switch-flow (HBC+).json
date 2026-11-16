@@ -2,7 +2,7 @@
     {
         "id": "2f2abfd43828aebf",
         "type": "tab",
-        "label": "HBC+ Home Battery Master Switch v1.0",
+        "label": "HBC+ Home Battery Master Switch v1.1",
         "disabled": false,
         "info": "",
         "env": []
@@ -18,7 +18,6 @@
         "nodes": [
             "2680301c255d5bb3",
             "727ba04d2b780353",
-            "b767aa4dd77df7e4",
             "b99d22dc356fe973",
             "e42a2f65a42ee154",
             "72679d464754e2f6",
@@ -28,8 +27,8 @@
         ],
         "x": 34,
         "y": 77,
-        "w": 972,
-        "h": 384
+        "w": 1178,
+        "h": 364
     },
     {
         "id": "e42a2f65a42ee154",
@@ -46,12 +45,13 @@
             "dbec0b7004b2cff0",
             "2c7ecb7a5aa2664f",
             "c70da49a94fbfcec",
-            "0d9ce0192dbcf8ba"
+            "0d9ce0192dbcf8ba",
+            "b767aa4dd77df7e4"
         ],
-        "x": 474,
+        "x": 694,
         "y": 119,
         "w": 492,
-        "h": 262
+        "h": 282
     },
     {
         "id": "2680301c255d5bb3",
@@ -117,8 +117,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 620,
-        "y": 200,
+        "x": 840,
+        "y": 220,
         "wires": [
             [
                 "a1213d3481107583"
@@ -144,7 +144,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 350,
+        "x": 470,
         "y": 240,
         "wires": [
             [
@@ -165,8 +165,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 560,
-        "y": 280,
+        "x": 780,
+        "y": 300,
         "wires": [
             [
                 "2c7ecb7a5aa2664f",
@@ -195,8 +195,8 @@
         "checkall": "true",
         "repair": false,
         "outputs": 2,
-        "x": 740,
-        "y": 280,
+        "x": 960,
+        "y": 300,
         "wires": [
             [
                 "2de256c8e67d574e"
@@ -230,7 +230,7 @@
         "blockInputOverrides": false,
         "domain": "input_text",
         "service": "set_value",
-        "x": 860,
+        "x": 1080,
         "y": 160,
         "wires": [
             []
@@ -260,8 +260,8 @@
         "blockInputOverrides": false,
         "domain": "input_text",
         "service": "set_value",
-        "x": 850,
-        "y": 200,
+        "x": 1070,
+        "y": 220,
         "wires": [
             []
         ]
@@ -280,15 +280,15 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 570,
-        "y": 340,
+        "x": 790,
+        "y": 360,
         "wires": []
     },
     {
         "id": "b767aa4dd77df7e4",
         "type": "debug",
         "z": "2f2abfd43828aebf",
-        "g": "a0daf99089a2643e",
+        "g": "e42a2f65a42ee154",
         "name": "Done",
         "active": true,
         "tosidebar": false,
@@ -298,8 +298,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 910,
-        "y": 420,
+        "x": 1090,
+        "y": 360,
         "wires": []
     },
     {
@@ -521,7 +521,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
+        "x": 480,
         "y": 180,
         "wires": [
             [
@@ -533,8 +533,8 @@
         "id": "036411526c027193",
         "type": "comment",
         "z": "2f2abfd43828aebf",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Home Battery Master Switch v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDecides **who controls the Marsteks**, from `input_select.marstek_master_battery_mode`. Runs when that helper changes and periodically (*Check work modes periodically*), and loops over M1 ... M*n* (`input_number.house_battery_count`).\n\n| Master mode | RS485 control | Work mode | Who controls |\n|---|---|---|---|\n| Full control | enable | unchanged | HBC+ (forcible charge / discharge) |\n| Marstek control | disable | unchanged (choose it in the Marstek app) | Marstek firmware |\n| Manual control | disable | manual | Marstek firmware, manual mode |\n\n*Set RS485 and Work Modes* builds the `select.select_option` actions per battery; *Set RS485* and *Set work mode* perform them.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\nWhen control goes back to the firmware (RS485 *disable*), two batteries on one phase could each run at full power under their own firmware and overload the phase fuse. On **Enforce**, only the battery with the lowest M-number on a shared phase is handed back. Its partner gets RS485 *enable* plus forcible *stop*, so it stays idle even when Node-RED is down; the node status turns yellow for that battery. Batteries alone on their phase, and all batteries on Off / Monitor, are handled exactly as before.\n\nThe Home Assistant fallback for a stale HBC+ heartbeat (`packages/hbc_heartbeat.yaml`) applies the same rule: on Enforce only the lowest M-number per shared phase goes back to firmware, its partner stays RS485 *enable* + forcible *stop*.\n\nWhile `binary_sensor.hbc_heartbeat_stale` is on, the periodic check skips *Full control* (*Skip while HBC heartbeat is stale*): switching RS485 back on would undo that fallback, and a battery would resume the last forcible command in its registers with no control loop running. *HBC heartbeat back* re-applies the master mode as soon as the heartbeat is fresh again. A change of the master mode itself is always applied.\n\nFail-open: if the phase check fails, the battery is handled as before and a warning is logged.\n",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# HBC+ Home Battery Master Switch v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDecides **who controls the Marsteks**, from `input_select.marstek_master_battery_mode`. Runs when that helper changes and periodically (*Check work modes periodically*), and loops over M1 ... M*n* (`input_number.house_battery_count`).\n\n| Master mode | RS485 control | Work mode | Who controls |\n|---|---|---|---|\n| Full control | enable | unchanged | HBC+ (forcible charge / discharge) |\n| Marstek control | disable | unchanged (choose it in the Marstek app) | Marstek firmware |\n| Manual control | disable | manual | Marstek firmware, manual mode |\n\n*Set RS485 and Work Modes* builds the `select.select_option` actions per battery; *Set RS485* and *Set work mode* perform them.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\nWhen control goes back to the firmware (RS485 *disable*), two batteries on one phase could each run at full power under their own firmware and overload the phase fuse. On **Enforce**, only the battery with the lowest M-number on a shared phase is handed back. Its partner gets RS485 *enable* plus forcible *stop*, so it stays idle even when Node-RED is down; the node status turns yellow for that battery. Batteries alone on their phase, and all batteries on Off / Monitor, are handled exactly as before.\n\nThe Home Assistant fallback for a stale HBC+ heartbeat (`packages/hbc_heartbeat.yaml`) applies the same rule: on Enforce only the lowest M-number per shared phase goes back to firmware, its partner stays RS485 *enable* + forcible *stop*.\n\nWhile `binary_sensor.hbc_heartbeat_stale` is on, the periodic check skips *Full control* (*Skip while HBC heartbeat is stale*): switching RS485 back on would undo that fallback, and a battery would resume the last forcible command in its registers with no control loop running. *HBC heartbeat back* re-applies the master mode as soon as the heartbeat is fresh again. A change of the master mode itself is always applied.\n\nFail-open: if the phase check fails, the battery is handled as before and a warning is logged.\n",
         "x": 250,
         "y": 40,
         "wires": []
@@ -554,11 +554,11 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "f49b5247635df6d7",
+        "id": "78fb144a4ea7ccb2",
         "type": "global-config",
         "env": [],
         "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.82.0"
+            "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
     }
 ]

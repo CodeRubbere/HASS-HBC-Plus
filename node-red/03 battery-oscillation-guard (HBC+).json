@@ -2,7 +2,7 @@
     {
         "id": "c925cef84d5e8a37",
         "type": "tab",
-        "label": "HBC+ Battery Oscillation Guard v1.0",
+        "label": "HBC+ Battery Oscillation Guard v1.1",
         "disabled": false,
         "info": "# Battery Oscillation Guard\n\nWatches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger) and detects when the batteries swing\nbetween **charging and discharging at high power** repeatedly (a wave).\n\nWhen detected:\n1. Asks 'Strategy arbiter' to **hold Full stop** (*Request: hold Full stop*, link call\n   'Strategy request'). The guard has the highest priority there.\n2. After `STOP_S` seconds (default 300 = 5 min) it sends a **release** (*Request: release*).\n   The arbiter restores the strategy that was active before - or keeps a manual change made\n   during the pause, or a hold of another flow that is still running.\n3. Ignores new detections for `GRACE_S` seconds so the batteries can settle\n\nThe release is always sent at the end of a pause, also when local state was lost.\n\n## Tuning (tab Environment variables - double-click the tab)\n- `THRESHOLD_W` - a battery counts as charging above +T W, discharging below -T W (hysteresis between)\n- `WINDOW_S` / `MIN_FLIPS` - trigger when one battery flips charge<->discharge >= MIN_FLIPS times within WINDOW_S\n- `STOP_S` - how long to stay in Full stop\n- `GRACE_S` - quiet period after restoring\n- `DRY_RUN` - true = only detect + log, don't change strategy\n\n## Notes\n- Every trigger is written to the HA Logbook.\n- A phone notification (with date/time) is sent on Full stop and on restore\n  via `notify.notify` (change in the \"Notify phone\" node).\n- The strategy is no longer written here: 'Full stop' and the restore are requests to\n  'Strategy arbiter' (hold / release). The arbiter keeps its state in HA, so a\n  Node-RED restart during the pause no longer leaves the strategy on Full stop\n  (the 'On deploy' inject sends a release).\n",
         "env": [
@@ -45,7 +45,7 @@
         "name": "Battery Oscillation Guard (readme)",
         "info": "# Battery Oscillation Guard\n\nWatches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger) and detects when the batteries swing\nbetween **charging and discharging at high power** repeatedly (a wave).\n\nWhen detected:\n1. Asks 'Strategy arbiter' to **hold Full stop** (*Request: hold Full stop*, link call\n   'Strategy request'). The guard has the highest priority there.\n2. After `STOP_S` seconds (default 300 = 5 min) it sends a **release** (*Request: release*).\n   The arbiter restores the strategy that was active before - or keeps a manual change made\n   during the pause, or a hold of another flow that is still running.\n3. Ignores new detections for `GRACE_S` seconds so the batteries can settle\n\nThe release is always sent at the end of a pause, also when local state was lost.\n\n## Tuning (tab Environment variables - double-click the tab)\n- `THRESHOLD_W` - a battery counts as charging above +T W, discharging below -T W (hysteresis between)\n- `WINDOW_S` / `MIN_FLIPS` - trigger when one battery flips charge<->discharge >= MIN_FLIPS times within WINDOW_S\n- `STOP_S` - how long to stay in Full stop\n- `GRACE_S` - quiet period after restoring\n- `DRY_RUN` - true = only detect + log, don't change strategy\n\n## Notes\n- Every trigger is written to the HA Logbook.\n- A phone notification (with date/time) is sent on Full stop and on restore\n  via `notify.notify`; set your own phone (e.g. `notify.mobile_app_<phone>`) in the \"Notify phone\" node.\n- The strategy is no longer written here: 'Full stop' and the restore are requests to\n  'Strategy arbiter' (hold / release). The arbiter keeps its state in HA, so a\n  Node-RED restart during the pause no longer leaves the strategy on Full stop\n  (the 'On deploy' inject sends a release).\n",
         "x": 170,
-        "y": 40,
+        "y": 100,
         "wires": []
     },
     {
@@ -98,7 +98,7 @@
             }
         ],
         "x": 160,
-        "y": 160,
+        "y": 140,
         "wires": [
             [
                 "f568e0eea484babf"
@@ -117,8 +117,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 410,
-        "y": 160,
+        "x": 390,
+        "y": 140,
         "wires": [
             [
                 "b0892e536610fdb9"
@@ -156,7 +156,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 600,
-        "y": 80,
+        "y": 140,
         "wires": [
             [
                 "176a499332908dc9"
@@ -176,7 +176,7 @@
         "finalize": "",
         "libs": [],
         "x": 810,
-        "y": 80,
+        "y": 140,
         "wires": [
             [
                 "59ead24c8f847b18",
@@ -201,20 +201,20 @@
         "type": "function",
         "z": "c925cef84d5e8a37",
         "name": "Request: hold Full stop",
-        "x": 1140,
-        "y": 60,
-        "wires": [
-            [
-                "6a31ba59abf71425"
-            ]
-        ],
         "func": "// Ask the strategy arbiter for 'Full stop' (highest priority).\nmsg.arbiter = { requester: 'guard', action: 'hold', strategy: 'Full stop', reason: msg.message || 'battery oscillation' };\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": []
+        "libs": [],
+        "x": 1150,
+        "y": 127,
+        "wires": [
+            [
+                "6a31ba59abf71425"
+            ]
+        ]
     },
     {
         "id": "01e303af091632fc",
@@ -234,7 +234,7 @@
         "allowrate": false,
         "outputs": 1,
         "x": 1150,
-        "y": 120,
+        "y": 200,
         "wires": [
             [
                 "3ae71693c33d9192"
@@ -272,7 +272,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 590,
-        "y": 260,
+        "y": 320,
         "wires": [
             [
                 "ef0bbabb43d47831"
@@ -292,7 +292,7 @@
         "finalize": "",
         "libs": [],
         "x": 800,
-        "y": 260,
+        "y": 320,
         "wires": [
             [
                 "cd92e93d187048c9"
@@ -316,20 +316,20 @@
         "type": "function",
         "z": "c925cef84d5e8a37",
         "name": "Request: release",
-        "x": 1140,
-        "y": 220,
-        "wires": [
-            [
-                "0c3491f9c45b3952"
-            ]
-        ],
         "func": "// End of the pause: release the hold. The arbiter restores the strategy that was\n// active before, or keeps a manual change made during the pause.\nmsg.arbiter = { requester: 'guard', action: 'release', reason: 'oscillation pause ended' };\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": []
+        "libs": [],
+        "x": 1140,
+        "y": 280,
+        "wires": [
+            [
+                "0c3491f9c45b3952"
+            ]
+        ]
     },
     {
         "id": "95650deeb9e5ec50",
@@ -354,8 +354,8 @@
         "blockInputOverrides": true,
         "domain": "logbook",
         "service": "log",
-        "x": 1120,
-        "y": 300,
+        "x": 1140,
+        "y": 340,
         "wires": [
             []
         ]
@@ -383,7 +383,7 @@
         "blockInputOverrides": true,
         "domain": "notify",
         "service": "notify",
-        "x": 1120,
+        "x": 1130,
         "y": 460,
         "wires": [
             []
@@ -402,8 +402,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1100,
-        "y": 380,
+        "x": 1120,
+        "y": 400,
         "wires": []
     },
     {
@@ -424,7 +424,7 @@
         "onceDelay": 0.1,
         "topic": "",
         "x": 770,
-        "y": 160,
+        "y": 220,
         "wires": [
             [
                 "01e303af091632fc"
@@ -449,7 +449,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 340,
-        "y": 260,
+        "y": 320,
         "wires": [
             [
                 "3ae71693c33d9192"
@@ -464,7 +464,7 @@
         "scope": null,
         "uncaught": false,
         "x": 120,
-        "y": 340,
+        "y": 400,
         "wires": [
             [
                 "hbcp0osc0logerr1"
@@ -483,8 +483,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 300,
-        "y": 340,
+        "x": 330,
+        "y": 400,
         "wires": [
             [
                 "4839218f48faeca0"
@@ -504,8 +504,46 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 490,
-        "y": 340,
+        "x": 570,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "6a31ba59abf71425",
+        "type": "link call",
+        "z": "c925cef84d5e8a37",
+        "name": "Strategy request",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 1380,
+        "y": 127,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0c3491f9c45b3952",
+        "type": "link call",
+        "z": "c925cef84d5e8a37",
+        "name": "Strategy request",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 1380,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "hbcpdocf47d68119",
+        "type": "comment",
+        "z": "c925cef84d5e8a37",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# HBC+ Battery Oscillation Guard v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDetects batteries that **swing between charging and discharging at high power** (a wave) and pauses them.\n\n1. Watches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger). A battery counts as charging above +`THRESHOLD_W`, discharging below -`THRESHOLD_W`.\n2. When one battery flips charge <-> discharge at least `MIN_FLIPS` times within `WINDOW_S`, it asks the **Strategy arbiter** to *hold Full stop* (highest priority).\n3. After `STOP_S` seconds (default 300) it sends a *release*; the arbiter puts back the previous strategy (or a manual change made during the pause, or a hold of another flow).\n4. Ignores new detections for `GRACE_S` seconds. `DRY_RUN` = only detect and log.\n\nTuning: the tab's environment variables. Every trigger goes to the HA logbook and to the phone.\n\n## HBC+ v1.0\n\nNo change. A handover between two batteries on one phase is not a flip: one battery goes idle and the other starts, neither swings between charging and discharging. *Full stop* is always within the phase fuse limits.\n",
+        "x": 242,
+        "y": 60,
         "wires": []
     },
     {
@@ -523,49 +561,11 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "3e8b91ae60bb0b5d",
+        "id": "198de8a55a66bd91",
         "type": "global-config",
         "env": [],
         "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.80.3"
+            "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
-    },
-    {
-        "id": "6a31ba59abf71425",
-        "type": "link call",
-        "z": "c925cef84d5e8a37",
-        "name": "Strategy request",
-        "links": [],
-        "linkType": "dynamic",
-        "timeout": "30",
-        "x": 1150,
-        "y": 100,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "0c3491f9c45b3952",
-        "type": "link call",
-        "z": "c925cef84d5e8a37",
-        "name": "Strategy request",
-        "links": [],
-        "linkType": "dynamic",
-        "timeout": "30",
-        "x": 1150,
-        "y": 260,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "hbcpdocf47d68119",
-        "type": "comment",
-        "z": "c925cef84d5e8a37",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Battery Oscillation Guard v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nDetects batteries that **swing between charging and discharging at high power** (a wave) and pauses them.\n\n1. Watches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger). A battery counts as charging above +`THRESHOLD_W`, discharging below -`THRESHOLD_W`.\n2. When one battery flips charge <-> discharge at least `MIN_FLIPS` times within `WINDOW_S`, it asks the **Strategy arbiter** to *hold Full stop* (highest priority).\n3. After `STOP_S` seconds (default 300) it sends a *release*; the arbiter puts back the previous strategy (or a manual change made during the pause, or a hold of another flow).\n4. Ignores new detections for `GRACE_S` seconds. `DRY_RUN` = only detect and log.\n\nTuning: the tab's environment variables. Every trigger goes to the HA logbook and to the phone.\n\n## HBC+ v1.0\n\nNo change. A handover between two batteries on one phase is not a flip: one battery goes idle and the other starts, neither swings between charging and discharging. *Full stop* is always within the phase fuse limits.\n",
-        "x": 320,
-        "y": 540,
-        "wires": []
     }
 ]

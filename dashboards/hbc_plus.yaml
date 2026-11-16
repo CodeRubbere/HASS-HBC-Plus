@@ -105,7 +105,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/advanced-settings
+              navigation_path: /home-battery-control-plus/advanced-settings
             visibility:
               - condition: and
                 conditions:
@@ -306,7 +306,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/1
+              navigation_path: /home-battery-control-plus/timed-dynamic
             visibility:
               - condition: state
                 entity: binary_sensor.hbc_price_data_missing
@@ -317,7 +317,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/1
+              navigation_path: /home-battery-control-plus/timed-dynamic
             visibility:
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_data_source
@@ -392,7 +392,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/1
+              navigation_path: /home-battery-control-plus/self-consumption
           - type: markdown
             content: >-
               <ha-alert alert-type="warning">High controller sensitivity,
@@ -426,7 +426,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /home-battery/1
+              navigation_path: /home-battery-control-plus/self-consumption
       - type: grid
         cards:
           - type: heading
@@ -661,7 +661,7 @@ views:
             heading_style: subtitle
             tap_action:
               action: navigate
-              navigation_path: /dashboard-hbc/5
+              navigation_path: /home-battery-control-plus/problem-solver
             heading: Problem solver
           - type: markdown
             content: -----
@@ -681,13 +681,13 @@ views:
     header:
       card:
         type: markdown
-        content: '### Home Battery Control Plus *(HBC+ v1.0)*'
+        content: '### Home Battery Control Plus *(HBC+ v1.1)*'
         text_only: true
     cards: []
   - type: sections
     max_columns: 3
     icon: mdi:transmission-tower-off
-    path: ''
+    path: self-consumption
     sections:
       - type: grid
         cards:
@@ -848,6 +848,7 @@ views:
   - type: sections
     max_columns: 4
     title: Charge/Sell
+    path: charge-sell
     sections:
       - type: grid
         cards:
@@ -1696,6 +1697,7 @@ views:
   - type: sections
     max_columns: 3
     title: Timed/Dynamic
+    path: timed-dynamic
     icon: mdi:timer-cog-outline
     sections:
       - type: grid
@@ -2762,7 +2764,7 @@ views:
   - type: sections
     max_columns: 3
     icon: mdi:spider-outline
-    path: ''
+    path: problem-solver
     background:
       opacity: 10
       alignment: center

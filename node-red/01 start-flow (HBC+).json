@@ -2,9 +2,9 @@
     {
         "id": "61557a1c3e5f5404",
         "type": "tab",
-        "label": "HBC+ Home Battery Start v1.0",
+        "label": "HBC+ Home Battery Start v1.1",
         "disabled": false,
-        "info": "# HBC+ Home Battery Start v1.0\n\nPart of **HBC+ v1.0** (Home Battery Control Plus). This tab is the control loop: every other tab works through it.\n\n## What it does, each tick\n1. **Trigger** - a P1 measurement starts the cycle; the rate is limited so the batteries are never flooded with writes.\n2. **Read** - *Read HA states (fast)* reads the batteries (`marstek_mN_*`) and the P1 meter.\n3. **Totals** - *Batteries (totals)* sums SoC, power and energy over all batteries and computes the per-phase planner ceilings (see below).\n4. **Strategy** - the strategy selected through the *Strategy arbiter* calculates the desired battery power.\n5. **Phase guard** - limits each battery so the fuse of its phase is never overloaded (Off / Monitor / Enforce).\n6. **Set Batteries** - writes the setpoints to the Marsteks.\n7. **Heartbeat** - publishes that the loop works: only after a good cycle (the strategy returned without an error, and at least one battery was written without an error).\n\n## Details\n- **Battery totals guard** - an `unavailable`/`unknown` battery value never becomes NaN. Per battery and value: a valid number is used and remembered; a missing one uses that battery's last good value for up to 5 min; after that the battery adds 0 to the totals. The strategies get the same held values, and a battery without a usable SoC or power limit for more than 5 min gets limits of 0 W and `data_ok = false`, so it is not driven. Node status: green OK, yellow holding, red counted as 0 (battery and value named); a warning is logged only when that state changes.\n- **Phase planner** - on *Enforce* the ceiling per phase follows a moving average (15 min) of the house load on that phase, rounded to 100 W with 250 W hysteresis, so strategies plan with the room that is really there.\n- **Set Batteries** - writes are awaited, one cycle at a time (*Write limiter*, with coalescing); a value only counts as sent after the write succeeded (*Collect completions*); *write errors* are caught with a 30 s stale-lock failsafe; *Write latency* feeds the rate limiter. The mode is written only on change after a successful write, when HA's read-back disagrees for 20 s, or as a 60 s keep-alive; only the power register in use is written (none in *stop*); power is written before the mode, through one *Write (awaited)* node. Every solution is validated first (mode stop / charge / discharge, power a number, clamped to 0 ... max; otherwise *stop*), and nothing is written to a battery whose RS485 is off (its firmware is in control).\n- **Heartbeat** - *HBC+ heartbeat (max every 60 s)* publishes `hbc/heartbeat` (retained ISO time) -> `sensor.hbc_last_run` (`packages/hbc_heartbeat.yaml`). It is fed from the end of a cycle (*Write latency* and *solutions present*, through the link *HBC+ cycle result*), so it stops when the strategy fails on every tick or every battery write fails. When it is older than 5 min while `input_select.marstek_master_battery_mode` is *Full control*, Home Assistant hands the batteries back to their firmware (phase-aware) and notifies; the Master Switch flow re-enables RS485 only once the heartbeat is fresh again.\n- **Logger and health** - *Custom logger* always counts warnings and errors and writes them to the Node-RED log (the same message at most once a minute), also with Insight mode off. *HBC+ health* publishes `hbc/health` (retained JSON) -> `sensor.hbc_health` (ok / warning / error, with the last error) when it changes.\n- The battery strategy (`input_select.house_battery_strategy`) is changed by other flows only through the *Strategy arbiter* tab.\n\nMore: `docs/user-guide.en.md` in the repository (https://github.com/CodeRubbere/HASS-HBC-Plus).\n",
+        "info": "# HBC+ Home Battery Start v1.1\n\nPart of **HBC+ v1.1** (Home Battery Control Plus). This tab is the control loop: every other tab works through it.\n\n## What it does, each tick\n1. **Trigger** - a P1 measurement starts the cycle; the rate is limited so the batteries are never flooded with writes.\n2. **Read** - *Read HA states (fast)* reads the batteries (`marstek_mN_*`) and the P1 meter.\n3. **Totals** - *Batteries (totals)* sums SoC, power and energy over all batteries and computes the per-phase planner ceilings (see below).\n4. **Strategy** - the strategy selected through the *Strategy arbiter* calculates the desired battery power.\n5. **Phase guard** - limits each battery so the fuse of its phase is never overloaded (Off / Monitor / Enforce).\n6. **Set Batteries** - writes the setpoints to the Marsteks.\n7. **Heartbeat** - publishes that the loop works: only after a good cycle (the strategy returned without an error, and at least one battery was written without an error).\n\n## Details\n- **Battery totals guard** - an `unavailable`/`unknown` battery value never becomes NaN. Per battery and value: a valid number is used and remembered; a missing one uses that battery's last good value for up to 5 min; after that the battery adds 0 to the totals. The strategies get the same held values, and a battery without a usable SoC or power limit for more than 5 min gets limits of 0 W and `data_ok = false`, so it is not driven. Node status: green OK, yellow holding, red counted as 0 (battery and value named); a warning is logged only when that state changes.\n- **Phase planner** - on *Enforce* the ceiling per phase follows a moving average (15 min) of the house load on that phase, rounded to 100 W with 250 W hysteresis, so strategies plan with the room that is really there.\n- **Set Batteries** - writes are awaited, one cycle at a time (*Write limiter*, with coalescing); a value only counts as sent after the write succeeded (*Collect completions*); *write errors* are caught with a 30 s stale-lock failsafe; *Write latency* feeds the rate limiter. The mode is written only on change after a successful write, when HA's read-back disagrees for 20 s, or as a 60 s keep-alive; only the power register in use is written (none in *stop*); power is written before the mode, through one *Write (awaited)* node. Every solution is validated first (mode stop / charge / discharge, power a number, clamped to 0 ... max; otherwise *stop*), and nothing is written to a battery whose RS485 is off (its firmware is in control).\n- **Heartbeat** - *HBC+ heartbeat (max every 60 s)* publishes `hbc/heartbeat` (retained ISO time) -> `sensor.hbc_last_run` (`packages/hbc_heartbeat.yaml`). It is fed from the end of a cycle (*Write latency* and *solutions present*, through the link *HBC+ cycle result*), so it stops when the strategy fails on every tick or every battery write fails. When it is older than 5 min while `input_select.marstek_master_battery_mode` is *Full control*, Home Assistant hands the batteries back to their firmware (phase-aware) and notifies; the Master Switch flow re-enables RS485 only once the heartbeat is fresh again.\n- **Logger and health** - *Custom logger* always counts warnings and errors and writes them to the Node-RED log (the same message at most once a minute), also with Insight mode off. *HBC+ health* publishes `hbc/health` (retained JSON) -> `sensor.hbc_health` (ok / warning / error, with the last error) when it changes.\n- The battery strategy (`input_select.house_battery_strategy`) is changed by other flows only through the *Strategy arbiter* tab.\n\nMore: `docs/user-guide.en.md` in the repository (https://github.com/CodeRubbere/HASS-HBC-Plus).\n",
         "env": []
     },
     {
@@ -87,8 +87,8 @@
             "7c1400bf4aed420d",
             "2ac016c72e7fcc64"
         ],
-        "x": 1114,
-        "y": 66,
+        "x": 1154,
+        "y": 79,
         "w": 592,
         "h": 82
     },
@@ -160,7 +160,7 @@
         ],
         "x": 24,
         "y": 286,
-        "w": 1422,
+        "w": 1442,
         "h": 140
     },
     {
@@ -202,9 +202,9 @@
             "a93fd3fac44a50da",
             "hbcp0totals0ha01"
         ],
-        "x": 654,
-        "y": 786,
-        "w": 452,
+        "x": 634,
+        "y": 779,
+        "w": 592,
         "h": 322
     },
     {
@@ -260,8 +260,8 @@
             "d17e73310c61b927",
             "5b39eca0d6b39f12"
         ],
-        "x": 1454,
-        "y": 186,
+        "x": 1494,
+        "y": 179,
         "w": 252,
         "h": 142
     },
@@ -280,8 +280,8 @@
             "27ede1f74204fe8e",
             "2a85015fb74a1370"
         ],
-        "x": 1524,
-        "y": 346,
+        "x": 1554,
+        "y": 359,
         "w": 182,
         "h": 82
     },
@@ -437,8 +437,8 @@
         "id": "4dc8dd4870d4c346",
         "type": "junction",
         "z": "61557a1c3e5f5404",
-        "x": 540,
-        "y": 827,
+        "x": 500,
+        "y": 860,
         "wires": [
             [
                 "hbcp0totals0ha01"
@@ -458,8 +458,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 740,
-        "y": 947,
+        "x": 770,
+        "y": 920,
         "wires": [
             [
                 "3920807805ddb059"
@@ -1625,8 +1625,8 @@
         "blockInputOverrides": false,
         "domain": "input_boolean",
         "service": "turn_on",
-        "x": 1580,
-        "y": 107,
+        "x": 1620,
+        "y": 120,
         "wires": [
             []
         ]
@@ -1653,8 +1653,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 1230,
-        "y": 107,
+        "x": 1270,
+        "y": 120,
         "wires": [
             [
                 "2ac016c72e7fcc64",
@@ -1680,8 +1680,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1400,
-        "y": 107,
+        "x": 1440,
+        "y": 120,
         "wires": [
             [
                 "ec52ad041f1a124c"
@@ -2394,7 +2394,7 @@
         "links": [
             "987cb2aaed9140b5"
         ],
-        "x": 1405,
+        "x": 1425,
         "y": 347,
         "wires": []
     },
@@ -2571,8 +2571,8 @@
         "blockInputOverrides": true,
         "domain": "input_number",
         "service": "set_value",
-        "x": 940,
-        "y": 827,
+        "x": 1060,
+        "y": 820,
         "wires": [
             []
         ]
@@ -2603,8 +2603,8 @@
         "blockInputOverrides": true,
         "domain": "input_number",
         "service": "set_value",
-        "x": 950,
-        "y": 887,
+        "x": 1070,
+        "y": 880,
         "wires": [
             []
         ]
@@ -2635,8 +2635,8 @@
         "blockInputOverrides": true,
         "domain": "input_number",
         "service": "set_value",
-        "x": 940,
-        "y": 947,
+        "x": 1060,
+        "y": 940,
         "wires": [
             []
         ]
@@ -2667,8 +2667,8 @@
         "blockInputOverrides": true,
         "domain": "input_number",
         "service": "set_value",
-        "x": 960,
-        "y": 1007,
+        "x": 1080,
+        "y": 1000,
         "wires": [
             []
         ]
@@ -2699,8 +2699,8 @@
         "blockInputOverrides": true,
         "domain": "input_number",
         "service": "set_value",
-        "x": 970,
-        "y": 1067,
+        "x": 1090,
+        "y": 1060,
         "wires": [
             []
         ]
@@ -3035,8 +3035,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1560,
-        "y": 227,
+        "x": 1600,
+        "y": 220,
         "wires": [
             [
                 "5b39eca0d6b39f12"
@@ -3056,8 +3056,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1580,
-        "y": 287,
+        "x": 1620,
+        "y": 280,
         "wires": [
             []
         ]
@@ -3070,8 +3070,8 @@
         "name": "",
         "scope": null,
         "uncaught": true,
-        "x": 1565,
-        "y": 387,
+        "x": 1595,
+        "y": 400,
         "wires": [
             [
                 "27ede1f74204fe8e"
@@ -3092,8 +3092,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1615,
-        "y": 387,
+        "x": 1645,
+        "y": 400,
         "wires": [
             [
                 "2a85015fb74a1370"
@@ -3111,8 +3111,8 @@
         "links": [
             "987cb2aaed9140b5"
         ],
-        "x": 1665,
-        "y": 387,
+        "x": 1695,
+        "y": 400,
         "wires": []
     },
     {
@@ -3847,8 +3847,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 540,
-        "y": 460,
+        "x": 560,
+        "y": 480,
         "wires": [
             [
                 "f13ef019cf82d21f"
@@ -3864,8 +3864,8 @@
             "hbcp0hb0lnkout01",
             "hbcp0hb0lnkout02"
         ],
-        "x": 395,
-        "y": 460,
+        "x": 365,
+        "y": 480,
         "wires": [
             [
                 "7f1cab805933febc"
@@ -3895,7 +3895,7 @@
         "domain": "mqtt",
         "service": "publish",
         "x": 870,
-        "y": 460,
+        "y": 480,
         "wires": [
             []
         ]
@@ -4013,8 +4013,8 @@
         "id": "hbcpdoc6d518b161",
         "type": "comment",
         "z": "61557a1c3e5f5404",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Home Battery Start v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nThe control loop of HBC+. On every P1 update (rate limited) it reads the batteries and the settings, runs the selected strategy, and writes one setpoint per battery to the Marsteks.\n\n## One control tick\n\n1. **Start / Rate limiter** - triggered by `sensor.p1_meter_power`. *Operational thresholds* switches between a fast and a power-saving rate, based on how much the grid power changes and how long the last strategy run and battery write took.\n2. **Read HA states (fast)** - reads every battery (M1 ... M*n*, `input_number.house_battery_count`) and the HBC+ settings in one node, from the Home Assistant states in global context (server option *Expose to global context*). Falls back to the original chain of current-state nodes when those states are not available.\n3. **Batteries (totals)** - total battery power, max charge / discharge power and usable energy. Written (on change) to the `input_number.house_battery_total_*` helpers. A value that is briefly unavailable is held for up to 5 min; the strategies get the held value too. A battery without a usable SoC or power limit for more than 5 min is not driven (limits 0 W, `data_ok = false`).\n4. **Update battery order** - rotates the battery priority (`input_number.house_battery_control_prioritize_battery`, `input_select.house_battery_control_priority_change_interval`).\n5. **HBC+ phase planner** - new, see below.\n6. **Strategy selection** - `input_select.house_battery_strategy`, or the EV stop trigger strategy while `sensor.ev_is_charging` is on. A dynamic link call runs the strategy tab whose link-in has that name. The strategy returns `msg.solutions`: one `{id, mode, power}` per battery (mode `charge` / `discharge` / `stop`).\n7. **solutions present -> HBC+ phase guard -> Write limiter** - the guard is new, see below. *Write limiter* allows one write cycle at a time and keeps only the newest setpoints while a cycle is in flight.\n8. **Set Batteries** - per battery: power first, then mode, each only when it changed, when Home Assistant's read-back differs for more than 20 s, or (mode) as a 60 s keep-alive. Writes are awaited; *Collect completions* marks a value as sent only after success; *Write latency* feeds the rate limiter. Each solution is validated first (mode, power a number, 0 ... max; otherwise *stop*), and a battery with RS485 off (firmware in control) gets no writes.\n\nAlso on this tab: the **HBC+ heartbeat** (`hbc/heartbeat` at most every 60 s and only after a good cycle -> `sensor.hbc_last_run`; Home Assistant hands the batteries back to their firmware when it goes stale), **HBC+ health** (`hbc/health` -> `sensor.hbc_health`: warnings and errors of the last 10 minutes), the debug dashboard and logger (warnings and errors always reach the Node-RED log, also with Insight mode off), insight mode, peak shave settings and the unhandled-exception handling.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- **HBC+ phase planner** (between *Update battery order* and *Strategy selection*). Off: the msg passes untouched. Monitor / Enforce: adds `msg.phase_plus` with, per phase L1-L3 that has batteries:\n  - the **room** for charging and discharging: min(grid fuse - margin -/+ house net, battery circuit - margin), where house net = P1 phase power minus the battery power on that phase;\n  - the **active battery** per direction: *SoC balance* (charge the emptiest, discharge the fullest, swap only after the SoC delta **and** the minimum dwell), *Fixed order* or *Rotate daily*; with *Shared headroom* every battery that can serve the direction is active;\n  - **break-before-make**: a newly chosen battery stays blocked while the previous one still runs above 100 W, or has no data.\n- **Strategies** use `msg.phase_plus` only on Enforce: *Load distribution* (Self-consumption) and *Max power solution* (Charge, Sell).\n- **HBC+ phase guard** (between *solutions present* and *Write limiter*): last check of `msg.solutions`. Enforce: a battery that is not active on its phase goes to idle (1 W, relay stays engaged) and the total per phase and direction is trimmed to the fuse room; corrections go to the debug board. Monitor: the node status shows `would: ...` and nothing changes. The last result is in global `hbcplus_guard_last`.\n- **Batteries (totals)**: on Enforce the max charge / discharge power is counted per phase - one battery (or the shared room) capped at battery circuit - margin and at the room the house leaves under the grid fuse (house load per phase averaged over ~15 min, rounded to 100 W, changed only by >= 250 W) - plus the own-circuit batteries. Charge Deadline and HELIOS plan with that value.\n- **Errors**: the planner, the guard and the totals addition run in try/catch. On Off / Monitor an error passes the msg on unchanged. On **Enforce** it is fail-safe: *Set Batteries* then applies the strict rule (per shared phase only the lowest M-number runs, at most battery circuit - margin). Home Assistant also switches to *Full stop* when a phase stays overloaded (`hbc_phase_guard.yaml`). The Home Assistant alarm `binary_sensor.hbc_phase_limit_exceeded` works independently of Node-RED.\n- Signs: battery power > 0 = charging; P1 phase power > 0 = import.\n",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# HBC+ Home Battery Start v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nThe control loop of HBC+. On every P1 update (rate limited) it reads the batteries and the settings, runs the selected strategy, and writes one setpoint per battery to the Marsteks.\n\n## One control tick\n\n1. **Start / Rate limiter** - triggered by `sensor.p1_meter_power`. *Operational thresholds* switches between a fast and a power-saving rate, based on how much the grid power changes and how long the last strategy run and battery write took.\n2. **Read HA states (fast)** - reads every battery (M1 ... M*n*, `input_number.house_battery_count`) and the HBC+ settings in one node, from the Home Assistant states in global context (server option *Expose to global context*). Falls back to the original chain of current-state nodes when those states are not available.\n3. **Batteries (totals)** - total battery power, max charge / discharge power and usable energy. Written (on change) to the `input_number.house_battery_total_*` helpers. A value that is briefly unavailable is held for up to 5 min; the strategies get the held value too. A battery without a usable SoC or power limit for more than 5 min is not driven (limits 0 W, `data_ok = false`).\n4. **Update battery order** - rotates the battery priority (`input_number.house_battery_control_prioritize_battery`, `input_select.house_battery_control_priority_change_interval`).\n5. **HBC+ phase planner** - new, see below.\n6. **Strategy selection** - `input_select.house_battery_strategy`, or the EV stop trigger strategy while `sensor.ev_is_charging` is on. A dynamic link call runs the strategy tab whose link-in has that name. The strategy returns `msg.solutions`: one `{id, mode, power}` per battery (mode `charge` / `discharge` / `stop`).\n7. **solutions present -> HBC+ phase guard -> Write limiter** - the guard is new, see below. *Write limiter* allows one write cycle at a time and keeps only the newest setpoints while a cycle is in flight.\n8. **Set Batteries** - per battery: power first, then mode, each only when it changed, when Home Assistant's read-back differs for more than 20 s, or (mode) as a 60 s keep-alive. Writes are awaited; *Collect completions* marks a value as sent only after success; *Write latency* feeds the rate limiter. Each solution is validated first (mode, power a number, 0 ... max; otherwise *stop*), and a battery with RS485 off (firmware in control) gets no writes.\n\nAlso on this tab: the **HBC+ heartbeat** (`hbc/heartbeat` at most every 60 s and only after a good cycle -> `sensor.hbc_last_run`; Home Assistant hands the batteries back to their firmware when it goes stale), **HBC+ health** (`hbc/health` -> `sensor.hbc_health`: warnings and errors of the last 10 minutes), the debug dashboard and logger (warnings and errors always reach the Node-RED log, also with Insight mode off), insight mode, peak shave settings and the unhandled-exception handling.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- **HBC+ phase planner** (between *Update battery order* and *Strategy selection*). Off: the msg passes untouched. Monitor / Enforce: adds `msg.phase_plus` with, per phase L1-L3 that has batteries:\n  - the **room** for charging and discharging: min(grid fuse - margin -/+ house net, battery circuit - margin), where house net = P1 phase power minus the battery power on that phase;\n  - the **active battery** per direction: *SoC balance* (charge the emptiest, discharge the fullest, swap only after the SoC delta **and** the minimum dwell), *Fixed order* or *Rotate daily*; with *Shared headroom* every battery that can serve the direction is active;\n  - **break-before-make**: a newly chosen battery stays blocked while the previous one still runs above 100 W, or has no data.\n- **Strategies** use `msg.phase_plus` only on Enforce: *Load distribution* (Self-consumption) and *Max power solution* (Charge, Sell).\n- **HBC+ phase guard** (between *solutions present* and *Write limiter*): last check of `msg.solutions`. Enforce: a battery that is not active on its phase goes to idle (1 W, relay stays engaged) and the total per phase and direction is trimmed to the fuse room; corrections go to the debug board. Monitor: the node status shows `would: ...` and nothing changes. The last result is in global `hbcplus_guard_last`.\n- **Batteries (totals)**: on Enforce the max charge / discharge power is counted per phase - one battery (or the shared room) capped at battery circuit - margin and at the room the house leaves under the grid fuse (house load per phase averaged over ~15 min, rounded to 100 W, changed only by >= 250 W) - plus the own-circuit batteries. Charge Deadline plans with that value (a future HELIOS integration would too).\n- **Errors**: the planner, the guard and the totals addition run in try/catch. On Off / Monitor an error passes the msg on unchanged. On **Enforce** it is fail-safe: *Set Batteries* then applies the strict rule (per shared phase only the lowest M-number runs, at most battery circuit - margin). Home Assistant also switches to *Full stop* when a phase stays overloaded (`hbc_phase_guard.yaml`). The Home Assistant alarm `binary_sensor.hbc_phase_limit_exceeded` works independently of Node-RED.\n- Signs: battery power > 0 = charging; P1 phase power > 0 = import.\n",
         "x": 250,
         "y": 40,
         "wires": []
@@ -4034,11 +4034,11 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "6df2c3cd0eacf132",
+        "id": "60f1875ec34440a1",
         "type": "global-config",
         "env": [],
         "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.82.0"
+            "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
     }
 ]

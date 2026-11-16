@@ -2,7 +2,7 @@
     {
         "id": "hbcp0helios0tab01",
         "type": "tab",
-        "label": "HBC+ Strategy Helios (placeholder) v1.0",
+        "label": "HBC+ Strategy Helios (placeholder) v1.1",
         "disabled": false,
         "info": "Placeholder for a future HELIOS integration: runs Full stop. See the How this flow works comment.",
         "env": []
@@ -70,7 +70,7 @@
         "z": "hbcp0helios0tab01",
         "g": "hbcp0helios0g001",
         "name": "Fall back to Full stop",
-        "func": "// Helios placeholder (HBC+ v1.0)\n// HBC+ keeps 'Helios' in the strategy list for a future HELIOS integration, but the HELIOS\n// flow itself is not part of HBC+ v1.0. Without this tab, selecting 'Helios' would make\n// Home Battery Start fail on a link call with no target, and the batteries would keep their\n// last setpoint. This placeholder runs Full stop instead and warns (at most every 10 min).\n// Delete this tab before you import a real HELIOS flow: two 'Helios' link-in nodes make\n// the dynamic link call ambiguous.\nconst log = (global.get('logger') || (() => {}));\nconst now = Date.now();\nif (now - (context.get('lastWarn') || 0) > 600000) {\n    context.set('lastWarn', now);\n    if (log) log(this, \"**Helios** selected, but the HELIOS flow is not installed - running Full stop\", \"warn\");\n}\nnode.status({ fill: 'yellow', shape: 'ring', text: `HELIOS not installed: Full stop (${new Date().toLocaleTimeString()})` });\nmsg.target = \"Full stop\";\nRED.util.setMessageProperty(msg, \"strategy.display\", \"Helios (not installed)\", true);\nreturn msg;\n",
+        "func": "// Helios placeholder (HBC+ v1.0)\n// HBC+ keeps 'Helios' in the strategy list for a future HELIOS integration, but the HELIOS\n// flow itself is not part of HBC+. Without this tab, selecting 'Helios' would make\n// Home Battery Start fail on a link call with no target, and the batteries would keep their\n// last setpoint. This placeholder runs Full stop instead and warns (at most every 10 min).\n// Delete this tab before you import a real HELIOS flow: two 'Helios' link-in nodes make\n// the dynamic link call ambiguous.\nconst log = (global.get('logger') || (() => {}));\nconst now = Date.now();\nif (now - (context.get('lastWarn') || 0) > 600000) {\n    context.set('lastWarn', now);\n    if (log) log(this, \"**Helios** selected, but the HELIOS flow is not installed - running Full stop\", \"warn\");\n}\nnode.status({ fill: 'yellow', shape: 'ring', text: `HELIOS not installed: Full stop (${new Date().toLocaleTimeString()})` });\nmsg.target = \"Full stop\";\nRED.util.setMessageProperty(msg, \"strategy.display\", \"Helios (not installed)\", true);\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -188,8 +188,8 @@
         "id": "hbcp0helios0cmt1",
         "type": "comment",
         "z": "hbcp0helios0tab01",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# Strategy Helios (placeholder) - HBC+ v1.0\n\n**What it is.** HBC+ keeps *Helios* in `input_select.house_battery_strategy` so a HELIOS integration can be added later. The HELIOS flow itself is not part of HBC+ v1.0; this tab only makes the option safe to select.\n\n**How it runs.**\n1. **Helios** (link in) is called by *Home Battery Start* when the strategy is *Helios*.\n2. **Trace** adds this flow to `msg.strategy.trace`.\n3. **Fall back to Full stop** sets `msg.target = \"Full stop\"`, shows *Helios (not installed)* on the strategy display, and logs a warning at most every 10 minutes.\n4. **Run Full stop** (dynamic link call) runs *Full stop*: every battery on stop, 0 W.\n5. **Return** hands the message back to *Home Battery Start*.\n\nErrors are caught by the tab's catch node and returned to the caller, as in the other strategy tabs.\n\n**Installing a real HELIOS flow.** Delete this tab first. The real flow needs a link-in node named exactly *Helios* with a return at the end; two link-in nodes with that name make the dynamic link call from *Home Battery Start* fail.\n",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# Strategy Helios (placeholder) - HBC+ v1.1\n\n**What it is.** HBC+ keeps *Helios* in `input_select.house_battery_strategy` so a HELIOS integration can be added later. The HELIOS flow itself is not part of HBC+; this tab only makes the option safe to select.\n\n**How it runs.**\n1. **Helios** (link in) is called by *Home Battery Start* when the strategy is *Helios*.\n2. **Trace** adds this flow to `msg.strategy.trace`.\n3. **Fall back to Full stop** sets `msg.target = \"Full stop\"`, shows *Helios (not installed)* on the strategy display, and logs a warning at most every 10 minutes.\n4. **Run Full stop** (dynamic link call) runs *Full stop*: every battery on stop, 0 W.\n5. **Return** hands the message back to *Home Battery Start*.\n\nErrors are caught by the tab's catch node and returned to the caller, as in the other strategy tabs.\n\n**Installing a real HELIOS flow.** Delete this tab first. The real flow needs a link-in node named exactly *Helios* with a return at the end; two link-in nodes with that name make the dynamic link call from *Home Battery Start* fail.\n",
         "x": 240,
         "y": 320,
         "wires": []

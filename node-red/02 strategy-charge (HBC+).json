@@ -2,7 +2,7 @@
     {
         "id": "e31b0cf1ca8100ca",
         "type": "tab",
-        "label": "HBC+ Strategy Charge v1.0",
+        "label": "HBC+ Strategy Charge v1.1",
         "disabled": false,
         "info": "",
         "env": []
@@ -62,9 +62,9 @@
             "bde1838450a9953a"
         ],
         "x": 254,
-        "y": 461,
-        "w": 832,
-        "h": 182
+        "y": 459,
+        "w": 852,
+        "h": 202
     },
     {
         "id": "75c1fbefaf9d8881",
@@ -92,7 +92,6 @@
             "08f7ceb5e2233915",
             "60a7d0aa340576c0",
             "264725bec6c9a03d",
-            "a39830206fe3b76d",
             "6f6e3a320921fa2f",
             "9d5057cbad7e839b",
             "7d0e1bd43bfddc13",
@@ -163,22 +162,9 @@
             "6853c6681b0b0951"
         ],
         "x": 1574,
-        "y": 201,
+        "y": 179,
         "w": 552,
-        "h": 122
-    },
-    {
-        "id": "a39830206fe3b76d",
-        "type": "junction",
-        "z": "e31b0cf1ca8100ca",
-        "g": "75c1fbefaf9d8881",
-        "x": 1480,
-        "y": 382,
-        "wires": [
-            [
-                "04c2c20dc4f04488"
-            ]
-        ]
+        "h": 144
     },
     {
         "id": "fef3566e23244cda",
@@ -311,7 +297,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 780,
-        "y": 542,
+        "y": 560,
         "wires": [
             [
                 "4a50a083469c139a",
@@ -363,8 +349,8 @@
         "targetType": "msg",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 970,
-        "y": 542,
+        "x": 990,
+        "y": 560,
         "wires": []
     },
     {
@@ -381,8 +367,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "counter",
-        "x": 960,
-        "y": 502,
+        "x": 1000,
+        "y": 500,
         "wires": []
     },
     {
@@ -399,7 +385,7 @@
         "finalize": "",
         "libs": [],
         "x": 610,
-        "y": 542,
+        "y": 560,
         "wires": [
             [
                 "5be38d81d73680ae"
@@ -445,8 +431,8 @@
         "links": [
             "ea1d9270a17929ef"
         ],
-        "x": 960,
-        "y": 602,
+        "x": 1000,
+        "y": 620,
         "wires": [],
         "l": true
     },
@@ -464,7 +450,7 @@
         "finalize": "",
         "libs": [],
         "x": 820,
-        "y": 282,
+        "y": 380,
         "wires": [
             [
                 "331961726a3ff305"
@@ -481,7 +467,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1020,
-        "y": 282,
+        "y": 380,
         "wires": [
             [
                 "21bdd7b0b1e5c9eb"
@@ -532,7 +518,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 810,
-        "y": 202,
+        "y": 260,
         "wires": [
             [
                 "482af4657b054a0c"
@@ -549,8 +535,8 @@
         "links": [
             "ea1d9270a17929ef"
         ],
-        "x": 1220,
-        "y": 282,
+        "x": 1240,
+        "y": 380,
         "wires": [],
         "l": true
     },
@@ -598,7 +584,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 790,
-        "y": 162,
+        "y": 200,
         "wires": [
             [
                 "0a98e1b1c90c7eaa"
@@ -619,7 +605,7 @@
         "finalize": "",
         "libs": [],
         "x": 1030,
-        "y": 202,
+        "y": 260,
         "wires": [
             [
                 "f0e07c564cb08a59",
@@ -641,7 +627,7 @@
         "finalize": "",
         "libs": [],
         "x": 1030,
-        "y": 162,
+        "y": 200,
         "wires": [
             [
                 "f0e07c564cb08a59"
@@ -669,7 +655,7 @@
         "to": "",
         "reg": false,
         "x": 800,
-        "y": 122,
+        "y": 140,
         "wires": [
             [
                 "40a7d1494bdaa026"
@@ -690,7 +676,7 @@
         "finalize": "",
         "libs": [],
         "x": 1030,
-        "y": 122,
+        "y": 140,
         "wires": [
             [
                 "f0e07c564cb08a59"
@@ -723,7 +709,7 @@
                 "e1729c98ebfc4e78"
             ],
             [
-                "a39830206fe3b76d"
+                "04c2c20dc4f04488"
             ]
         ]
     },
@@ -839,7 +825,7 @@
         "repair": false,
         "outputs": 5,
         "x": 590,
-        "y": 202,
+        "y": 240,
         "wires": [
             [
                 "e774a84dc4c9beec"
@@ -902,7 +888,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 450,
-        "y": 202,
+        "y": 240,
         "wires": [
             [
                 "08f7ceb5e2233915"
@@ -1019,8 +1005,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "counter",
-        "x": 410,
-        "y": 142,
+        "x": 580,
+        "y": 140,
         "wires": []
     },
     {
@@ -1118,7 +1104,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 800,
-        "y": 242,
+        "y": 320,
         "wires": [
             [
                 "761c2d1574664007"
@@ -1163,7 +1149,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 915,
-        "y": 242,
+        "y": 320,
         "wires": [
             [
                 "f0d1e7bc13fed412"
@@ -1185,7 +1171,7 @@
         "finalize": "",
         "libs": [],
         "x": 1040,
-        "y": 242,
+        "y": 320,
         "wires": [
             [
                 "f0e07c564cb08a59",
@@ -1220,7 +1206,7 @@
         "domain": "input_boolean",
         "service": "turn_on",
         "x": 2020,
-        "y": 242,
+        "y": 220,
         "wires": [
             []
         ]
@@ -1363,8 +1349,8 @@
         "id": "hbcpdoc7f6e898b1",
         "type": "comment",
         "z": "e31b0cf1ca8100ca",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Charge v1.0 - how this flow works\n\nPart of **HBC+ v1.0** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nCharges the batteries from the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_charge_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are full | every battery is at its max SoC, or the energy is at about 99.9 % of the max |\n| state of charge | the average SoC reaches `input_number.house_battery_strategy_charge_target_soc` |\n| energy reserve | usable energy reaches `input_number.house_battery_strategy_charge_target_energy` |\n| solar forecast | usable energy reaches the max energy minus today's expected PV surplus (`sensor.solar_forecast_today` minus `input_number.house_battery_solar_reserved_for_house`) |\n| anything else | not recognised -> Full stop |\n\n`input_boolean.house_battery_strategy_charge_goal_reached` shows whether the goal is reached; once it is, the strategy in `input_select.house_battery_strategy_charge_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Import limit on** (`input_boolean.house_battery_control_has_power_limit_import`): *Regulated power* - Self-consumption is driven to grid import = the import limit, with discharging disabled. A feed-forward start jumps straight to the expected power for 10 s, then the PID trims the rest.\n- **No import limit**: *Max power solution* - every battery at its max charge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the lowest SoC) charges, at min(its max, the phase's fuse room). Its partner idles at 1 W. A battery alone on its phase is still capped at the fuse room, which takes the house load on that phase into account.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Charge v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nCharges the batteries from the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_charge_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are full | every battery is at its max SoC, or the energy is at about 99.9 % of the max |\n| state of charge | the average SoC reaches `input_number.house_battery_strategy_charge_target_soc` |\n| energy reserve | usable energy reaches `input_number.house_battery_strategy_charge_target_energy` |\n| solar forecast | usable energy reaches the max energy minus today's expected PV surplus (`sensor.solar_forecast_today` minus `input_number.house_battery_solar_reserved_for_house`) |\n| anything else | not recognised -> Full stop |\n\n`input_boolean.house_battery_strategy_charge_goal_reached` shows whether the goal is reached; once it is, the strategy in `input_select.house_battery_strategy_charge_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Import limit on** (`input_boolean.house_battery_control_has_power_limit_import`): *Regulated power* - Self-consumption is driven to grid import = the import limit, with discharging disabled. A feed-forward start jumps straight to the expected power for 10 s, then the PID trims the rest.\n- **No import limit**: *Max power solution* - every battery at its max charge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the lowest SoC) charges, at min(its max, the phase's fuse room). Its partner idles at 1 W. A battery alone on its phase is still capped at the fuse room, which takes the house load on that phase into account.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n",
         "x": 250,
         "y": 40,
         "wires": []
@@ -1384,11 +1370,11 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "a2bddd152b35dd35",
+        "id": "4a7cf3147414ff05",
         "type": "global-config",
         "env": [],
         "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.82.0"
+            "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
     }
 ]

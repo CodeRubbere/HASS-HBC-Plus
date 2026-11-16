@@ -2,7 +2,7 @@
     {
         "id": "9006458c06964b58",
         "type": "tab",
-        "label": "HBC+ Strategy Dynamic v1.0",
+        "label": "HBC+ Strategy Dynamic v1.1",
         "disabled": false,
         "info": "Dynamic contract automated management",
         "env": []
@@ -132,7 +132,7 @@
         ],
         "x": 254,
         "y": 713,
-        "w": 742,
+        "w": 762,
         "h": 282
     },
     {
@@ -168,7 +168,7 @@
         "x": 254,
         "y": 339,
         "w": 1412,
-        "h": 359
+        "h": 302
     },
     {
         "id": "d1bfaebe9c7c874b",
@@ -275,8 +275,8 @@
         "id": "8b01f832209a4317",
         "type": "comment",
         "z": "9006458c06964b58",
-        "name": "📖 How this flow works - HBC+ v1.0 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Dynamic v1.0 - how this flow works\n\nThe Start flow calls this tab on **every P1 update** (link in `Dynamic` / `Dynamic 2`).\nThat fast path does **not** read the period selectors: it runs whatever strategy is cached\nin `flow.dynamic_strategy` (via *Has strategy* -> *Set strategy* -> *Sub-strategy*).\nAn empty cache means **Full stop** (*Set Full stop*).\n\n`flow.dynamic_strategy` is recalculated only by the **Update when** group:\n\n| Trigger | When |\n|---|---|\n| *Update strat* | every 15 min (and once, 3 s after deploy) |\n| *Clear cache* / *Midnight* | 00:01, 13:15 and 15:00 - also re-fetches the prices |\n| *User input* | any change of the entities below |\n\n*User input* watches:\n\n- `input_select.house_battery_strategy` (master strategy)\n- `input_select.house_battery_strategy_dynamic_data_source`\n- `input_number.house_battery_strategy_dynamic_threshold_delta`\n- `input_number.house_battery_strategy_dynamic_cheapest_hrs`\n- `input_number.house_battery_strategy_dynamic_expensive_hrs`\n- `input_select.house_battery_strategy_dynamic_default` - **Baseline / regular period** *(local)*\n- `input_select.house_battery_strategy_dynamic_cheapest` - **cheapest period** *(local)*\n- `input_select.house_battery_strategy_dynamic_expensive` - **expensive period** *(local)*\n\n## Period selectors in *User input* (HBC+)\n\nThe three period selectors marked *(local)* are part of *User input*, so a change to the\nregular, cheapest or expensive period recalculates the strategy within a second or two\n(prices come from the cache, so no extra API call). Without this, such a change would only take\neffect at the next quarter-hour tick.\n## Still forces Full stop\n\n`flow.dynamic_strategy` is empty - and the batteries go to **Full stop** whatever the\nselectors say - when:\n\n- the tariff data source is *None* (*Set dynamic strategy to null*),\n- Node-RED just restarted and no recalculation has run yet,\n- no price data came back (*Determine dynamic strategy* shows *No price data*).\n\n## API call to Data Source = link-call section (HBC+ v1.0, 2026-11-14)\n\n*API call to Data Source* is a subroutine. *Cache check* calls it on a cache miss with the\n**link call** node *Fetch from Data Source* (static, timeout 30 s). The section fetches and\nconverts the prices, caches them (*Cache data source*) and ends in **Return to caller**\n(link out, mode *return*). The link call then passes the msg, with `msg.dynamic` filled, to\n*to Determine Strategy*, exactly like a cache hit.\n\nReplaces the earlier hand-off by plain link out and the *Called via Link Call?* switch\n(`msg._linkSource`) with *link out 12*. Other tabs can call the section the same way\n(see below). If a fetch fails, the link call times out\nafter 30 s and the error goes to *Catch group* (Plan) -> *Strategy errors*.\n\n### Calling it from another flow\n\nAdd a **link call** node (static: pick *Dynamic Fetch from Data Source*; timeout >= 30 s).\n*Prepare request* (first node of the section) fills in what the caller leaves out:\n\n| msg property | In / out | Meaning |\n|---|---|---|\n| `dynamic.data_source` | in, optional | price source; default = `input_select.house_battery_strategy_dynamic_data_source` (read from global HA states) |\n| `dynamic_use_cache` | in, optional | `true` = return this tab's cached prices if still valid (same rule as *Cache check*), else fetch |\n| `dynamic` | out | `{data_source, data_all: {list, list_marked, average, min, max, start, ...}, no_data?}` |\n| `dynamic_from_cache` | out | `true` when the cache answered |\n\nSource *None* or unreadable returns at once with `dynamic.no_data = true` and an empty list,\nso the caller never waits for the timeout. A successful fetch also refreshes this tab's cache.\nThe rest of the caller's msg comes back unchanged (`msg.template` is used and removed).\n\n### When the price source fails (HBC+ v1.0)\n\n- **Last valid prices kept.** *Cache data source* keeps the cached list when a fetch fails, as long as\n  it is from the same source and still covers the current interval; it goes on with `dynamic.stale = true`\n  and the next run tries the source again.\n- **Fallback.** With no valid prices at all, *Determine dynamic strategy* runs the baseline strategy\n  (*Default to*) instead of the last one, and publishes `status: no_data`.\n- **Alert.** `sensor.hbc_energy_prices_data` carries `status` (ok / stale / no_data);\n  `binary_sensor.hbc_price_data_missing` turns on, the dashboard shows a warning, and after 30 min\n  HA sends a notification (`hbc_control.yaml`).\n- **Pinned sensor.** `input_text.house_battery_strategy_dynamic_price_sensor` names the price sensor for\n  sources that otherwise rely on auto-detection; *Data source settings* shows in its status which sensor is used.\n",
+        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Dynamic v1.1 - how this flow works\n\nThe Start flow calls this tab on **every P1 update** (link in `Dynamic` / `Dynamic 2`).\nThat fast path does **not** read the period selectors: it runs whatever strategy is cached\nin `flow.dynamic_strategy` (via *Has strategy* -> *Set strategy* -> *Sub-strategy*).\nAn empty cache means **Full stop** (*Set Full stop*).\n\n`flow.dynamic_strategy` is recalculated only by the **Update when** group:\n\n| Trigger | When |\n|---|---|\n| *Update strat* | every 15 min (and once, 3 s after deploy) |\n| *Clear cache* / *Midnight* | 00:01, 13:15 and 15:00 - also re-fetches the prices |\n| *User input* | any change of the entities below |\n\n*User input* watches:\n\n- `input_select.house_battery_strategy` (master strategy)\n- `input_select.house_battery_strategy_dynamic_data_source`\n- `input_number.house_battery_strategy_dynamic_threshold_delta`\n- `input_number.house_battery_strategy_dynamic_cheapest_hrs`\n- `input_number.house_battery_strategy_dynamic_expensive_hrs`\n- `input_select.house_battery_strategy_dynamic_default` - **Baseline / regular period** *(local)*\n- `input_select.house_battery_strategy_dynamic_cheapest` - **cheapest period** *(local)*\n- `input_select.house_battery_strategy_dynamic_expensive` - **expensive period** *(local)*\n\n## Period selectors in *User input* (HBC+)\n\nThe three period selectors marked *(local)* are part of *User input*, so a change to the\nregular, cheapest or expensive period recalculates the strategy within a second or two\n(prices come from the cache, so no extra API call). Without this, such a change would only take\neffect at the next quarter-hour tick.\n## Still forces Full stop\n\n`flow.dynamic_strategy` is empty - and the batteries go to **Full stop** whatever the\nselectors say - when:\n\n- the tariff data source is *None* (*Set dynamic strategy to null*),\n- Node-RED just restarted and no recalculation has run yet.\n\nNo price data is **not** a reason for Full stop: *Determine dynamic strategy* then runs the baseline\nstrategy and shows *No price data* (see *When the price source fails*).\n\n## API call to Data Source = link-call section (HBC+ v1.0, 2026-11-14)\n\n*API call to Data Source* is a subroutine. *Cache check* calls it on a cache miss with the\n**link call** node *Fetch from Data Source* (static, timeout 30 s). The section fetches and\nconverts the prices, caches them (*Cache data source*) and ends in **Return to caller**\n(link out, mode *return*). The link call then passes the msg, with `msg.dynamic` filled, to\n*to Determine Strategy*, exactly like a cache hit.\n\nReplaces the earlier hand-off by plain link out and the *Called via Link Call?* switch\n(`msg._linkSource`) with *link out 12*. Other tabs can call the section the same way\n(see below). A failed fetch, or an error inside the section, still ends in *Return to caller*\n(see *When the price source fails*), so the link call does not wait for its timeout.\n\n### Calling it from another flow\n\nAdd a **link call** node with a timeout >= 30 s, in one of two ways:\n\n- *static*: pick *Dynamic Fetch from Data Source*; pick it again after a re-import of this tab with new node ids;\n- *dynamic*: set `msg.target = \"Dynamic Fetch from Data Source\"`; keeps working after a re-import. Not on a msg\n  HBC+ uses for control (inside a strategy tab), because there `msg.target` names the strategy.\n\nThe tab *HBC+ Example: price fetch* (`node-red/examples/price-fetch-example.json`) shows the dynamic way.\n\n*Prepare request* (first node of the section) fills in what the caller leaves out:\n\n| msg property | In / out | Meaning |\n|---|---|---|\n| `dynamic.data_source` | in, optional | price source; default = `input_select.house_battery_strategy_dynamic_data_source` (read from global HA states) |\n| `dynamic_use_cache` | in, optional | `true` = return this tab's cached prices if still valid (same rule as *Cache check*), else fetch |\n| `dynamic` | out | `{data_source, data_all: {list, list_marked, average, min, max, start, ...}, no_data?}` |\n| `dynamic_from_cache` | out | `true` when the cache answered |\n| `dynamic.stale` | out | `true` when the source failed and the last valid prices of that source came back |\n| `target` | in, optional | only for a dynamic link call: `\"Dynamic Fetch from Data Source\"` |\n\nSource *None* or unreadable returns at once with `dynamic.no_data = true` and an empty list,\nso the caller never waits for the timeout. A successful fetch also refreshes this tab's cache.\nThe rest of the caller's msg comes back unchanged (`msg.template` is used and removed).\n\n### When the price source fails (HBC+ v1.0)\n\n- **Last valid prices kept.** *Cache data source* keeps the cached list when a fetch fails, as long as\n  it is from the same source and still covers the current interval; it goes on with `dynamic.stale = true`\n  and the next run tries the source again.\n- **Errors caught.** An error inside *API call to Data Source* (for example the template render while\n  HA is disconnected, or a macro error) goes through *Catch fetch errors* and *Fetch error* to *Cache data source*\n  and is handled like a fetch without prices. *Fetch error* logs it as a warning and shows it in its status; an\n  error inside *Cache data source* itself goes straight back to the caller.\n- **Fallback.** With no valid prices at all, *Determine dynamic strategy* runs the baseline strategy\n  (*Default to*) instead of the last one, and publishes `status: no_data`.\n- **Alert.** `sensor.hbc_energy_prices_data` carries `status` (ok / stale / no_data);\n  `binary_sensor.hbc_price_data_missing` turns on, the dashboard shows a warning, and after 30 min\n  HA sends a notification (`hbc_control.yaml`).\n- **Pinned sensor.** `input_text.house_battery_strategy_dynamic_price_sensor` names the price sensor for\n  sources that otherwise rely on auto-detection; *Data source settings* shows in its status which sensor is used.\n",
         "x": 230,
         "y": 30,
         "wires": []
@@ -1104,7 +1104,7 @@
         "name": "Catch fetch errors",
         "scope": "group",
         "uncaught": false,
-        "x": 680,
+        "x": 720,
         "y": 754,
         "wires": [
             [
@@ -1125,7 +1125,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 840,
+        "x": 920,
         "y": 754,
         "wires": [
             [
@@ -1165,7 +1165,7 @@
         "name": "Catch group",
         "scope": "group",
         "uncaught": false,
-        "x": 1090,
+        "x": 1210,
         "y": 774,
         "wires": [
             [
@@ -1187,7 +1187,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1320,
+        "x": 1440,
         "y": 774,
         "wires": []
     },
@@ -1198,7 +1198,7 @@
         "g": "978c14f123dfcc7a",
         "name": "Cheapest Energy Hours - errors",
         "info": "\"No valid sensor found\" if price_data is none and not valid_sensor,\n\"No valid data in {}\".format(sensor) if price_data is none and data == [] and valid_sensor,\n\"No valid data in provided price_data\" if price_data is not none and not valid_price_data,\n\"Time key '{}' not found in data\".format(time_key) if data and time_key not in data[0],\n\"Value key '{}' not found in data\".format(value_key) if data and value_key not in data[0],\n\"Invalid mode '{}' selected\".format(mode) if mode not in modes,\n\"Boolean input expected for include_today, '{}' can not be processed as a boolean\".format(include_today) if include_today | bool(\"\") is not boolean,\n\"Boolean input expected for include_tomorrow, '{}' can not be processed as a boolean\".format(include_tomorrow) if include_tomorrow | bool(\"\") is not boolean,\n\"Boolean input expected for look_ahead, '{}' can not be processed as a boolean\".format(look_ahead) if look_ahead | bool(\"\") is not boolean,\n\"Boolean input expected for lowest, '{}' can not be processed as a boolean\".format(lowest) if lowest | bool(\"\") is not boolean,\n\"Boolean input expected for latest_possible, '{}' can not be processed as a boolean\".format(latest_possible) if latest_possible | bool(\"\") is not boolean,\n\"Numeric input or percentage expected for price_tolerance, '{}' can not be processed as a float or percentage\".format(price_tolerance) if not valid_pt,\n\"Numeric input expected for kwh, '{}' can not be processed as a float\".format(kwh) if kwh is not none and not kwh | is_number,\n\"Selected program '{}' is not available or has no data\".format(program) if program is not none and w is none,\n\"Selected start parameter is after the end parameter\" if start_end and data,\n\"{} hours between start and end, where {} hours are required\".format(end_start, h | round(3)) if not start_end and end_start < h | round(3) and data,\n\"Invalid combination of source data points per hour '{}' and number of weight points '{}'\".format(dp, dph) if all_keys and not wp_check",
-        "x": 1150,
+        "x": 1270,
         "y": 734,
         "wires": []
     },
@@ -1215,7 +1215,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1195,
+        "x": 1315,
         "y": 774,
         "wires": [
             [
@@ -1263,7 +1263,7 @@
             "5a1ab71e948e0b9c"
         ],
         "x": 1625,
-        "y": 497,
+        "y": 509,
         "wires": []
     },
     {
@@ -1826,11 +1826,11 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "79b9ca0235dc90bf",
+        "id": "3c34e7604d2ee6e1",
         "type": "global-config",
         "env": [],
         "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.82.0"
+            "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
     }
 ]
