@@ -47,7 +47,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 | Path | Contents |
 | --- | --- |
-| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, and `hbc_phase_guard.yaml` (HBC+) |
+| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml` the battery calibration `hbc_calibration.yaml` and savings `hbc_savings.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard, including the **Phases** view |
 | `node-red/hbc-plus-all-flows.json` | All 15 HBC+ Node-RED tabs in one import file |
 | `node-red/*.json` | The same tabs as separate files |
@@ -73,10 +73,8 @@ Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues
 
 ## Before you use it
 
-- The Battery Oscillation Guard sends phone notifications through `notify.notify`. Set your own notify action (e.g. `notify.mobile_app_<phone>`) in its *Notify phone* node.
+- All HBC+ notifications (Battery Oscillation Guard, heartbeat fallback, error alert, missing prices, phase guard) go through `script.hbc_notify` in `packages/hbc_notify.yaml`. Set where they go once, in *Notify targets* on the *Advanced settings* view (e.g. `notify.mobile_app_<phone>`; empty = `notify.notify`), and press *Send a test notification*.
 - A Marstek over Modbus TCP works as well, as long as its entities follow the `marstek_mN_*` pattern.
-- `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops or no longer works, and the alert when HBC+ keeps logging errors) sends two notifications through `notify.notify`; set your own notify action in both.
-- `packages/hbc_control.yaml` sends a notification through `notify.notify` when the tariff source delivers no prices for 30 minutes; set your own notify action there too.
 - Requirements: Home Assistant with packages, Node-RED with `node-red-contrib-home-assistant-websocket` (0.80 or newer), `node-red-contrib-time-range-switch`, MQTT, Marstek Venus E batteries (`marstek_mN_*` entities), a P1 meter with per-phase power, `apexcharts-card` (HACS), and for Dynamic and Charge Deadline the Cheapest Energy Hours macro (HACS) with a price integration.
 - Always consult a qualified electrician about your installation and fuse ratings.
 

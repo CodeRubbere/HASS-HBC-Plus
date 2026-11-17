@@ -1,0 +1,382 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ v1.3 - savings (F1) and measured round-trip efficiency (F2)
+#
+# F1: every quarter HBC+ works out two bills: what your energy cost WITH the batteries, and what it would
+# have cost WITHOUT them. Savings = without - with, per day, month and year in EUR.
+#   with    = E_import * p_buy - E_export * p_sell
+#   N       = (E_import - E_export) - (E_charge - E_discharge)        net grid energy without batteries
+#   without = max(N, 0) * p_buy - max(-N, 0) * p_sell
+#   stored PV = min(E_charge, max(-N, 0)); the rest of E_charge is charged from the grid.
+# Prices (ct/kWh) are those of the quarter, taken from sensor.hbc_energy_prices_data (marks) when the quarter
+# STARTS, so the quarter 23:45-00:00 is valued right even when the price list is refreshed at midnight.
+# A quarter with a gap (HA down for more than 20 minutes, no price, counter reset) is skipped and counted
+# in quarters_missing. Fixed costs are left out: they are the same with and without batteries.
+#
+# F2: once a day (00:05) the battery energy counters and the stored energy are snapshotted (8 days kept).
+#   efficiency = (dE_discharge + dE_stored) / dE_charge over 7 days, measured on the AC side.
+#   suggested Minimum spread = (1 - efficiency) * p_high + wear cost, rounded up to whole cents.
+# The suggestion is never applied automatically: use the button on the Savings view.
+#
+# Optional (off by default): input_boolean.house_battery_dynamic_use_efficiency makes Dynamic pair on
+# efficiency x high - low >= Minimum spread (Determine dynamic strategy, Node-RED). The losses are then already
+# taken out, so the suggestion becomes just the wear cost (no double counting). Off, or efficiency unknown:
+# Dynamic pairs exactly as in v1.2.
+#
+# Signs as everywhere in HBC+: sensor.p1_meter_power positive on import, sensor.marstek_mN_battery_power
+# positive while charging.
+###########################################################################################################
+
+input_boolean:
+  # No 'initial': off on first install, and your choice is kept across restarts.
+  house_battery_dynamic_use_efficiency:
+    name: Dynamic uses measured efficiency
+    icon: mdi:battery-sync
+
+input_number:
+  house_battery_wear_cost:
+    name: Battery wear cost
+    icon: mdi:battery-heart-variant
+    min: 0
+    max: 10
+    step: 0.5
+    unit_of_measurement: "ct/kWh"
+    mode: box
+
+template:
+  # --- Power, split by sign (W) ----------------------------------------------------------------------------
+  - sensor:
+      - name: "HBC grid import power"
+        unique_id: hbc_grid_import_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.p1_meter_power') }}"
+        state: "{{ [states('sensor.p1_meter_power') | float(0), 0] | max | round(0) }}"
+      - name: "HBC grid export power"
+        unique_id: hbc_grid_export_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.p1_meter_power') }}"
+        state: "{{ [-(states('sensor.p1_meter_power') | float(0)), 0] | max | round(0) }}"
+      # Per battery, so one battery charging while another discharges does not cancel out.
+      - name: "HBC battery charge power"
+        unique_id: hbc_battery_charge_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set n = [states('input_number.house_battery_count') | int(0), 6] | min -%}
+          {%- set ns = namespace(w=0) -%}
+          {%- for i in range(1, n + 1) -%}
+            {%- set ns.w = ns.w + [states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0), 0] | max -%}
+          {%- endfor -%}
+          {{ ns.w | round(0) }}
+      - name: "HBC battery discharge power"
+        unique_id: hbc_battery_discharge_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set n = [states('input_number.house_battery_count') | int(0), 6] | min -%}
+          {%- set ns = namespace(w=0) -%}
+          {%- for i in range(1, n + 1) -%}
+            {%- set ns.w = ns.w + [-(states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0)), 0] | max -%}
+          {%- endfor -%}
+          {{ ns.w | round(0) }}
+
+  # --- F1: settle the quarter that just ended ---------------------------------------------------------------
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/15"
+    action:
+      - variables:
+          counters: >-
+            {{ {'imp': states('sensor.hbc_grid_import_energy'), 'exp': states('sensor.hbc_grid_export_energy'),
+                'ch': states('sensor.hbc_battery_charge_energy'), 'dis': states('sensor.hbc_battery_discharge_energy')} }}
+          ok_counters: "{{ counters.values() | select('is_number') | list | count == 4 }}"
+          price: >-
+            {%- set ts = as_timestamp(now()) -%}
+            {%- set ns = namespace(p=none, s=none) -%}
+            {%- for m in state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+              {%- if as_timestamp(m.start, 0) <= ts < as_timestamp(m.end, 0) and m.price is number -%}
+                {%- set ns.p = m.price -%}
+                {%- set ns.s = m.sell if m.sell is defined and m.sell is number else m.price -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ {'in': ns.p, 'out': ns.s} }}
+          snap: "{{ state_attr('sensor.hbc_savings_total', 'snap') or {} }}"
+          cur: >-
+            {{ {'ts': as_timestamp(now()) | round(0),
+                'imp': counters.imp | float(0), 'exp': counters.exp | float(0),
+                'ch': counters.ch | float(0), 'dis': counters.dis | float(0),
+                'pin': price['in'], 'pout': price['out']} if ok_counters else {} }}
+          q: >-
+            {%- set ok = ok_counters and snap.get('ts') is number and snap.get('pin') is number
+                         and 0 < cur.ts - snap.ts <= 1200 -%}
+            {%- if ok -%}
+              {%- set di = cur.imp - snap.imp -%}{%- set de = cur.exp - snap.exp -%}
+              {%- set dc = cur.ch - snap.ch -%}{%- set dd = cur.dis - snap.dis -%}
+              {%- set ok = di >= 0 and de >= 0 and dc >= 0 and dd >= 0 -%}
+            {%- endif -%}
+            {%- if ok -%}
+              {%- set pin = snap.pin -%}{%- set pout = snap.pout if snap.pout is number else snap.pin -%}
+              {%- set c_with = (di * pin - de * pout) / 100 -%}
+              {%- set n = (di - de) - (dc - dd) -%}
+              {%- set c_without = ([n, 0] | max * pin - [-n, 0] | max * pout) / 100 -%}
+              {%- set pv = [dc, [-n, 0] | max] | min -%}
+              {{ {'ok': true, 'cost_with': c_with | round(5), 'cost_without': c_without | round(5),
+                  'saving': (c_without - c_with) | round(5), 'pv_kwh': pv | round(4), 'grid_kwh': (dc - pv) | round(4),
+                  'import_kwh': di | round(4), 'export_kwh': de | round(4), 'charge_kwh': dc | round(4),
+                  'discharge_kwh': dd | round(4), 'buy': pin, 'sell': pout} }}
+            {%- else -%}
+              {{ {'ok': false} }}
+            {%- endif -%}
+          first: "{{ snap | count == 0 }}"
+    sensor:
+      - name: "HBC savings total"
+        unique_id: hbc_savings_total
+        icon: mdi:piggy-bank-outline
+        unit_of_measurement: EUR
+        device_class: monetary
+        state_class: total
+        state: >-
+          {{ ((states('sensor.hbc_savings_total') | float(0)) + (q.saving if q.ok else 0)) | round(4) }}
+        attributes:
+          cost_with: "{{ ((state_attr('sensor.hbc_savings_total', 'cost_with') or 0) + (q.cost_with if q.ok else 0)) | round(4) }}"
+          cost_without: "{{ ((state_attr('sensor.hbc_savings_total', 'cost_without') or 0) + (q.cost_without if q.ok else 0)) | round(4) }}"
+          pv_stored_kwh: "{{ ((state_attr('sensor.hbc_savings_total', 'pv_stored_kwh') or 0) + (q.pv_kwh if q.ok else 0)) | round(3) }}"
+          grid_charged_kwh: "{{ ((state_attr('sensor.hbc_savings_total', 'grid_charged_kwh') or 0) + (q.grid_kwh if q.ok else 0)) | round(3) }}"
+          quarters_ok: "{{ (state_attr('sensor.hbc_savings_total', 'quarters_ok') or 0) + (1 if q.ok else 0) }}"
+          quarters_missing: "{{ (state_attr('sensor.hbc_savings_total', 'quarters_missing') or 0) + (0 if q.ok or first else 1) }}"
+          last_quarter: "{{ q }}"
+          snap: "{{ cur }}"
+
+  # Running totals as their own sensors, for the long-term statistics and the utility meters.
+  - sensor:
+      - name: "HBC cost with battery total"
+        unique_id: hbc_cost_with_battery_total
+        unit_of_measurement: EUR
+        device_class: monetary
+        state_class: total
+        availability: "{{ has_value('sensor.hbc_savings_total') }}"
+        state: "{{ state_attr('sensor.hbc_savings_total', 'cost_with') | float(0) }}"
+      - name: "HBC cost without battery total"
+        unique_id: hbc_cost_without_battery_total
+        unit_of_measurement: EUR
+        device_class: monetary
+        state_class: total
+        availability: "{{ has_value('sensor.hbc_savings_total') }}"
+        state: "{{ state_attr('sensor.hbc_savings_total', 'cost_without') | float(0) }}"
+      - name: "HBC PV stored energy total"
+        unique_id: hbc_pv_stored_energy_total
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.hbc_savings_total') }}"
+        state: "{{ state_attr('sensor.hbc_savings_total', 'pv_stored_kwh') | float(0) }}"
+      - name: "HBC grid charged energy total"
+        unique_id: hbc_grid_charged_energy_total
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.hbc_savings_total') }}"
+        state: "{{ state_attr('sensor.hbc_savings_total', 'grid_charged_kwh') | float(0) }}"
+
+  # --- F2: round-trip efficiency over 7 days ----------------------------------------------------------------
+  - triggers:
+      - trigger: time
+        at: "00:05:00"
+        id: daily
+      - trigger: homeassistant
+        event: start
+        id: start
+    action:
+      - variables:
+          prev: "{{ state_attr('sensor.hbc_round_trip_efficiency', 'days') or [] }}"
+          today: >-
+            {{ {'d': now().date() | string,
+                'ch': states('sensor.hbc_battery_charge_energy') | float(none),
+                'dis': states('sensor.hbc_battery_discharge_energy') | float(none),
+                'st': states('input_number.house_battery_total_available_energy') | float(none)} }}
+          have_today: "{{ prev | selectattr('d', 'eq', today.d) | list | count > 0 }}"
+          valid: "{{ today.ch is number and today.dis is number and today.st is number }}"
+          days: "{{ (prev if have_today or not valid else prev + [today])[-8:] }}"
+          calc: >-
+            {%- if days | count >= 8 -%}
+              {%- set a = days[0] -%}{%- set b = days[-1] -%}
+              {%- set dc = b.ch - a.ch -%}{%- set dd = b.dis - a.dis -%}{%- set ds = b.st - a.st -%}
+              {%- if dc >= 5 and dd >= 0 -%}
+                {%- set eta = (dd + ds) / dc * 100 -%}
+                {{ {'eta': eta | round(1), 'ch': dc | round(2), 'dis': dd | round(2), 'st': ds | round(2),
+                    'warning': ('efficiency above 100 % or below 50 %: check the sign of the P1 and battery power sensors'
+                                if eta > 100 or eta < 50 else none)} }}
+              {%- else -%}
+                {{ {'eta': none, 'ch': dc | round(2), 'dis': dd | round(2), 'st': ds | round(2),
+                    'warning': ('less than 5 kWh charged in 7 days' if dc < 5 else 'counter reset')} }}
+              {%- endif -%}
+            {%- else -%}
+              {{ {'eta': none, 'warning': 'collecting data: ' ~ (days | count) ~ ' of 8 daily snapshots'} }}
+            {%- endif -%}
+    sensor:
+      - name: "HBC round trip efficiency"
+        unique_id: hbc_round_trip_efficiency
+        icon: mdi:battery-sync
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: "{{ calc.eta if calc.eta is not none else 'unknown' }}"
+        attributes:
+          charged_kwh: "{{ calc.get('ch') }}"
+          discharged_kwh: "{{ calc.get('dis') }}"
+          stored_delta_kwh: "{{ calc.get('st') }}"
+          window_days: 7
+          warning: "{{ calc.get('warning') }}"
+          days: "{{ days }}"
+
+  - sensor:
+      - name: "HBC suggested minimum spread"
+        unique_id: hbc_suggested_minimum_spread
+        icon: mdi:cash-check
+        unit_of_measurement: "cents"
+        availability: "{{ has_value('sensor.hbc_round_trip_efficiency') }}"
+        state: >-
+          {%- set eta = states('sensor.hbc_round_trip_efficiency') | float(0) / 100 -%}
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {%- set high = marks | selectattr('mark', 'defined') | selectattr('mark', 'eq', 'high')
+                         | map(attribute='price') | select('is_number') | list -%}
+          {%- if high | count == 0 -%}
+            {%- set allp = marks | map(attribute='price') | select('is_number') | sort(reverse=true) | list -%}
+            {%- set high = allp[:[(allp | count / 4) | round(0, 'ceil') | int, 1] | max] -%}
+          {%- endif -%}
+          {%- set p_high = (high | sum / high | count) if high | count > 0 else 0 -%}
+          {%- set wear = states('input_number.house_battery_wear_cost') | float(0) -%}
+          {%- set loss = 0 if is_state('input_boolean.house_battery_dynamic_use_efficiency', 'on') else (1 - eta) * p_high -%}
+          {{ [[(loss + wear) | round(0, 'ceil') | int, 0] | max, 20] | min }}
+        attributes:
+          p_high: >-
+            {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+            {%- set high = marks | selectattr('mark', 'defined') | selectattr('mark', 'eq', 'high')
+                           | map(attribute='price') | select('is_number') | list -%}
+            {%- if high | count == 0 -%}
+              {%- set allp = marks | map(attribute='price') | select('is_number') | sort(reverse=true) | list -%}
+              {%- set high = allp[:[(allp | count / 4) | round(0, 'ceil') | int, 1] | max] -%}
+            {%- endif -%}
+            {{ ((high | sum / high | count) | round(1)) if high | count > 0 else none }}
+          efficiency: "{{ states('sensor.hbc_round_trip_efficiency') }}"
+          wear_cost: "{{ states('input_number.house_battery_wear_cost') | float(0) }}"
+          # loss_in_spread: the loss is part of the suggestion; wear_only: Dynamic already takes the loss out
+          basis: "{{ 'wear_only' if is_state('input_boolean.house_battery_dynamic_use_efficiency', 'on') else 'loss_in_spread' }}"
+
+sensor:
+  - platform: integration
+    source: sensor.hbc_grid_import_power
+    name: HBC grid import energy
+    unique_id: hbc_grid_import_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 4
+    max_sub_interval:
+      minutes: 1
+  - platform: integration
+    source: sensor.hbc_grid_export_power
+    name: HBC grid export energy
+    unique_id: hbc_grid_export_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 4
+    max_sub_interval:
+      minutes: 1
+  - platform: integration
+    source: sensor.hbc_battery_charge_power
+    name: HBC battery charge energy
+    unique_id: hbc_battery_charge_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 4
+    max_sub_interval:
+      minutes: 1
+  - platform: integration
+    source: sensor.hbc_battery_discharge_power
+    name: HBC battery discharge energy
+    unique_id: hbc_battery_discharge_energy
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 4
+    max_sub_interval:
+      minutes: 1
+
+utility_meter:
+  hbc_savings_today:
+    name: HBC savings today
+    source: sensor.hbc_savings_total
+    cycle: daily
+    net_consumption: true
+  hbc_savings_month:
+    name: HBC savings month
+    source: sensor.hbc_savings_total
+    cycle: monthly
+    net_consumption: true
+  hbc_savings_year:
+    name: HBC savings year
+    source: sensor.hbc_savings_total
+    cycle: yearly
+    net_consumption: true
+  hbc_cost_with_battery_today:
+    name: HBC cost with battery today
+    source: sensor.hbc_cost_with_battery_total
+    cycle: daily
+    net_consumption: true
+  hbc_cost_without_battery_today:
+    name: HBC cost without battery today
+    source: sensor.hbc_cost_without_battery_total
+    cycle: daily
+    net_consumption: true
+  hbc_cost_with_battery_month:
+    name: HBC cost with battery month
+    source: sensor.hbc_cost_with_battery_total
+    cycle: monthly
+    net_consumption: true
+  hbc_cost_without_battery_month:
+    name: HBC cost without battery month
+    source: sensor.hbc_cost_without_battery_total
+    cycle: monthly
+    net_consumption: true
+  hbc_pv_stored_energy_month:
+    name: HBC PV stored energy month
+    source: sensor.hbc_pv_stored_energy_total
+    cycle: monthly
+  hbc_grid_charged_energy_month:
+    name: HBC grid charged energy month
+    source: sensor.hbc_grid_charged_energy_total
+    cycle: monthly
+
+script:
+  hbc_apply_suggested_spread:
+    alias: "HBC+: use the suggested Minimum spread"
+    icon: mdi:cash-check
+    mode: single
+    sequence:
+      - if: "{{ not has_value('sensor.hbc_suggested_minimum_spread') }}"
+        then:
+          - stop: "No suggestion yet: the round-trip efficiency is still unknown"
+            error: true
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_strategy_dynamic_threshold_delta
+        data:
+          value: "{{ states('sensor.hbc_suggested_minimum_spread') | int(0) }}"
+
+# The split power sensors change every few seconds: keep them out of the database (the energy counters
+# built from them are recorded).
+recorder:
+  exclude:
+    entities:
+      - sensor.hbc_grid_import_power
+      - sensor.hbc_grid_export_power
+      - sensor.hbc_battery_charge_power
+      - sensor.hbc_battery_discharge_power

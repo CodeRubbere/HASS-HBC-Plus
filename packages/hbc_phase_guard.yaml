@@ -464,9 +464,9 @@ script:
 
 # Safety settings changed (HBC+ 2026-11-15). Home Assistant has no per-entity permissions: every user, also a
 # non-admin, and every automation can change these helpers. This cannot block that, but it makes every change
-# visible: a persistent notification and notify.notify, naming who made the change. A burst of changes (for
+# visible: a persistent notification and a phone notification (script.hbc_notify), naming who made the change. A burst of changes (for
 # example the defaults script) gives one notification, 10 s after the last change.
-# Set your own notify action below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
 automation:
   - id: hbc_phase_guard_settings_changed
     alias: "HBC+: notify when a phase guard safety setting changes"
@@ -508,8 +508,7 @@ automation:
             battery circuit {{ states('input_number.house_battery_phase_circuit_limit_w') | int(0) }} W,
             margin {{ states('input_number.house_battery_phase_margin_w') | int(0) }} W,
             phases {% for i in range(1, (states('input_number.house_battery_count') | int(0)) + 1) %}M{{ i }} {{ states('input_select.marstek_m' ~ i ~ '_phase') }}{{ ', ' if not loop.last }}{% endfor %}.
-      # set your own notify action here, e.g. notify.mobile_app_<phone>
-      - action: notify.notify
+      - action: script.hbc_notify
         continue_on_error: true
         data:
           title: "HBC+: phase guard setting changed"
@@ -611,8 +610,7 @@ automation:
           message: >-
             Phase {{ bad_phases | join(', ') }} stayed above its limit for 10 s, with the batteries part of the
             cause. HBC+ switched from {{ before }} to Full stop. Check the Phases view, then choose your strategy again.
-      # set your own notify action here, e.g. notify.mobile_app_<phone>
-      - action: notify.notify
+      - action: script.hbc_notify
         continue_on_error: true
         data:
           title: "HBC+: phase overload - Full stop"

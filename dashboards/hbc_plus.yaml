@@ -300,6 +300,25 @@ views:
                 state: Full control
           - type: markdown
             content: >-
+              **✋ Held by:** {% for h in state_attr('sensor.hbc_strategy_holds',
+              'holds') or [] if h.active %}{{ h.requester }} ({{ h.strategy }}{{
+              ', until ' ~ h.expires if h.expires }}){{ ', ' if not loop.last
+              }}{% endfor %}. Your choice: {{
+              state_attr('sensor.hbc_strategy_holds', 'base') }}.
+            visibility:
+              - condition: numeric_state
+                entity: sensor.hbc_strategy_holds
+                above: 0
+          - type: tile
+            entity: sensor.hbc_savings_today
+            name: Savings today
+            icon: mdi:piggy-bank-outline
+            vertical: false
+            tap_action:
+              action: navigate
+              navigation_path: /home-battery-control-plus/savings
+          - type: markdown
+            content: >-
               **⚡ Price guard:** {{ state_attr('sensor.hbc_price_guard',
               'action') }} {%- set u = state_attr('sensor.hbc_price_state',
               'until') -%} {%- if u %} until {{ as_timestamp(u) |
@@ -1932,6 +1951,11 @@ views:
                 .value { font-size: 18px !important; }
                 .measurement { font-size: 13px !important; }
           - type: heading
+            heading: Dynamic strategy selection
+            heading_style: title
+            grid_options:
+              rows: 1
+          - type: heading
             icon: mdi:information
             heading_style: subtitle
             heading: Tips for strategy selection
@@ -2174,6 +2198,8 @@ views:
           - type: heading
             heading: Pricing Data source
             heading_style: title
+            grid_options:
+              rows: 1
           - type: heading
             icon: mdi:information
             heading: Using the Grid Clock feed
@@ -2534,6 +2560,134 @@ views:
     max_columns: 4
   - type: sections
     max_columns: 3
+    title: Savings
+    path: savings
+    icon: mdi:piggy-bank-outline
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Savings
+            heading_style: title
+            icon: mdi:piggy-bank-outline
+          - type: tile
+            entity: sensor.hbc_savings_today
+            name: Today
+            icon: mdi:calendar-today
+            vertical: true
+            grid_options:
+              columns: 4
+          - type: tile
+            entity: sensor.hbc_savings_month
+            name: This month
+            icon: mdi:calendar-month
+            vertical: true
+            grid_options:
+              columns: 4
+          - type: tile
+            entity: sensor.hbc_savings_year
+            name: This year
+            icon: mdi:calendar
+            vertical: true
+            grid_options:
+              columns: 4
+          - type: markdown
+            content: >-
+              <font color=grey>What your energy cost with the batteries,
+              compared with what it would have cost without them, quarter by
+              quarter at that quarter's buy and sell price. Fixed costs are left
+              out. Today with batteries €{{
+              states('sensor.hbc_cost_with_battery_today') | float(0) | round(2)
+              }}, without €{{ states('sensor.hbc_cost_without_battery_today') |
+              float(0) | round(2) }}. {%- set m =
+              state_attr('sensor.hbc_savings_total', 'quarters_missing') |
+              int(0) -%} {%- if m > 0 %} {{ m }} quarters could not be valued
+              (HA down or no price).{% endif %}</font>
+            text_only: true
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Cost per day, last 30 days
+            heading_style: title
+            icon: mdi:chart-bar
+          - type: statistics-graph
+            entities:
+              - entity: sensor.hbc_cost_without_battery_total
+                name: Without batteries
+              - entity: sensor.hbc_cost_with_battery_total
+                name: With batteries
+            stat_types:
+              - change
+            period: day
+            days_to_show: 30
+            chart_type: bar
+            grid_options:
+              columns: full
+      - type: grid
+        cards:
+          - type: heading
+            heading: Round-trip efficiency
+            heading_style: title
+            icon: mdi:battery-sync
+          - type: entities
+            entities:
+              - entity: sensor.hbc_round_trip_efficiency
+                name: Measured over 7 days
+              - entity: sensor.hbc_suggested_minimum_spread
+                name: Suggested Minimum spread
+              - entity: input_number.house_battery_strategy_dynamic_threshold_delta
+                name: Current Minimum spread
+              - entity: input_number.house_battery_wear_cost
+                name: Wear cost
+              - entity: input_boolean.house_battery_dynamic_use_efficiency
+                name: Dynamic uses measured efficiency
+              - type: button
+                name: Use the suggestion
+                icon: mdi:cash-check
+                action_name: Apply
+                tap_action:
+                  action: perform-action
+                  perform_action: script.hbc_apply_suggested_spread
+          - type: markdown
+            content: >-
+              {%- set w = state_attr('sensor.hbc_round_trip_efficiency',
+              'warning') -%} <font color=grey>Energy out plus the change in
+              stored energy, divided by energy in, measured at the battery's AC
+              side.
+
+
+              The suggestion is the spread at which a charge/discharge cycle
+              still pays: the loss on the expensive quarters plus the wear cost,
+              rounded up. 
+
+
+              With *Dynamic uses measured efficiency* on, Dynamic takes the loss
+              out itself (efficiency × high − low) and the suggestion is the
+              wear cost only.{% if w %} ⚠️ {{ w }}.{% endif %}</font>
+            text_only: true
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Stored PV and grid charging per month
+            heading_style: title
+            icon: mdi:solar-power-variant
+          - type: statistics-graph
+            entities:
+              - entity: sensor.hbc_pv_stored_energy_total
+                name: Stored PV
+              - entity: sensor.hbc_grid_charged_energy_total
+                name: Charged from the grid
+            stat_types:
+              - change
+            period: month
+            days_to_show: 365
+            chart_type: bar
+            grid_options:
+              columns: full
+  - type: sections
+    max_columns: 3
     title: Phases
     path: phases
     icon: mdi:sine-wave
@@ -2574,6 +2728,13 @@ views:
             heading: Phase guard
             heading_style: title
             icon: mdi:sine-wave
+          - type: heading
+            heading: Phase guard settings
+            heading_style: subtitle
+            icon: mdi:cog-outline
+            tap_action:
+              action: navigate
+              navigation_path: /home-battery-control-plus/advanced-settings
           - type: markdown
             text_only: true
             visibility:
@@ -2618,30 +2779,6 @@ views:
             entity: input_select.house_battery_phase_guard_mode
             name: Guard
             icon: mdi:shield-sync-outline
-            grid_options:
-              columns: 3
-          - type: tile
-            entity: input_select.house_battery_phase_sharing
-            name: Sharing
-            icon: mdi:call-split
-            grid_options:
-              columns: 3
-          - type: tile
-            entity: input_number.house_battery_phase_limit_w
-            name: Grid fuse
-            icon: mdi:fuse
-            grid_options:
-              columns: 3
-          - type: tile
-            entity: input_number.house_battery_phase_circuit_limit_w
-            name: Battery circuit
-            icon: mdi:home-lightning-bolt-outline
-            grid_options:
-              columns: 3
-          - type: tile
-            entity: input_number.house_battery_phase_margin_w
-            name: Limit margin
-            icon: mdi:arrow-collapse-vertical
             grid_options:
               columns: 3
           - type: tile
@@ -3034,31 +3171,6 @@ views:
                 entity: sensor.hbc_phase_l3_active
                 attribute: would
                 name: What HBC+ would do
-      - type: grid
-        column_span: 3
-        cards:
-          - type: heading
-            heading: Settings
-            heading_style: title
-            icon: mdi:cog-outline
-          - type: entities
-            title: Phase guard
-            entities:
-              - entity: input_select.house_battery_phase_guard_mode
-              - entity: input_select.house_battery_phase_sharing
-              - entity: input_number.house_battery_phase_limit_w
-              - entity: input_number.house_battery_phase_circuit_limit_w
-              - entity: input_number.house_battery_phase_margin_w
-              - entity: input_select.house_battery_phase_selection
-              - entity: input_number.house_battery_phase_switch_soc_delta
-              - entity: input_number.house_battery_phase_min_dwell
-              - entity: sensor.house_battery_installed_max_charge_power
-                name: Installed max charge (all batteries)
-              - entity: input_number.house_battery_total_max_charge_power
-                name: Max charge HBC+ reports to planners
-            grid_options:
-              columns: 12
-              rows: auto
   - type: sections
     max_columns: 3
     icon: mdi:spider-outline
@@ -3247,6 +3359,32 @@ views:
             features_position: bottom
             grid_options:
               columns: full
+          - type: heading
+            heading: Notifications
+            heading_style: title
+            icon: mdi:cellphone-message
+          - type: markdown
+            content: >-
+              <font color=grey>Every HBC+ notification goes to the notify
+              actions below, comma-separated (e.g. `notify.mobile_app_<phone>`).
+              Empty = `notify.notify`. Send a test after changing the field: a
+              typo in the name gives no notification, only an error in the HA
+              log.</font>
+            text_only: true
+          - type: entities
+            entities:
+              - entity: input_text.house_battery_notify_targets
+                name: Notify targets
+              - type: button
+                name: Send a test notification
+                icon: mdi:send
+                action_name: Test
+                tap_action:
+                  action: perform-action
+                  perform_action: script.hbc_notify
+                  data:
+                    title: 'HBC+: test'
+                    message: Test notification from the Advanced settings view.
       - type: grid
         cards:
           - type: heading
@@ -3326,15 +3464,100 @@ views:
             text_only: true
       - type: grid
         cards:
-          - type: heading
-            icon: mdi:transmission-tower
-            heading: Grid power limits & peak shaving
-            heading_style: title
           - type: markdown
             content: ---
             grid_options:
               columns: full
             text_only: true
+        column_span: 3
+      - type: grid
+        cards:
+          - type: heading
+            heading: Phase guard
+            heading_style: title
+            icon: mdi:sine-wave
+            grid_options:
+              rows: 1
+              columns: 12
+          - type: heading
+            icon: mdi:information
+            heading: Limits and battery selection per phase
+            heading_style: subtitle
+            tap_action:
+              action: url
+              url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#configuration-reference
+          - type: entities
+            entities:
+              - entity: input_select.house_battery_phase_guard_mode
+              - entity: input_select.house_battery_phase_sharing
+              - entity: input_number.house_battery_phase_limit_w
+              - entity: input_number.house_battery_phase_circuit_limit_w
+              - entity: input_number.house_battery_phase_margin_w
+              - entity: input_select.house_battery_phase_selection
+              - entity: input_number.house_battery_phase_switch_soc_delta
+              - entity: input_number.house_battery_phase_min_dwell
+              - entity: sensor.house_battery_installed_max_charge_power
+                name: Installed max charge (all batteries)
+              - entity: input_number.house_battery_total_max_charge_power
+                name: Max charge HBC+ reports to planners
+            grid_options:
+              columns: 12
+              rows: auto
+      - type: grid
+        cards:
+          - type: heading
+            heading: Battery calibration
+            heading_style: title
+            icon: mdi:battery-sync
+            grid_options:
+              rows: 1
+          - type: markdown
+            content: >-
+              <font color=grey>When a battery has not reached its charge cutoff
+              for the set number of days, HBC+ charges it to 100 % once in the
+              cheapest block after midnight (Charge Deadline). The charge cutoff
+              goes to 100 % for that night and back afterwards. Notify only
+              sends a notification.</font>
+            text_only: true
+          - type: entities
+            entities:
+              - entity: input_select.house_battery_calibration_mode
+                name: Mode
+              - entity: input_number.house_battery_calibration_days
+                name: Calibrate after
+              - entity: input_datetime.house_battery_calibration_deadline
+                name: Full by
+              - entity: sensor.hbc_calibration_status
+                name: Status
+          - type: markdown
+            content: >
+              {% set n = [states('input_number.house_battery_count') | int(0),
+              6] | min %}
+
+              {% set lim = states('input_number.house_battery_calibration_days')
+              | float(14) %}
+
+              {% set days = state_attr('sensor.hbc_calibration_due', 'days') or
+              {} %}
+
+              | Battery | Days since full |
+
+              | :--- | ---: |
+
+              {% for i in range(1, n + 1) %}{% set d = days.get('M' ~ i) %}| M{{
+              i }} | {{ '–' if d is none else (d | round(0) | int) }}{{ ' ⚠️' if
+              d is not none and d >= lim }} |
+
+              {% endfor %}
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:transmission-tower
+            heading: Grid power limits & peak shaving
+            heading_style: title
+            grid_options:
+              rows: 1
+              columns: 12
           - type: heading
             icon: mdi:information
             heading: Peak shaving
@@ -3342,6 +3565,9 @@ views:
             tap_action:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#advanced-settings
+            grid_options:
+              rows: auto
+              columns: 12
           - type: markdown
             content: >-
               <font color=grey><i>Use your batteries to reduce peak loads and
@@ -3354,14 +3580,21 @@ views:
               </font>
             text_only: true
             grid_options:
-              columns: full
-        column_span: 3
-      - type: grid
-        cards:
+              columns: 12
+              rows: auto
           - type: heading
             icon: mdi:transmission-tower-import
             heading: Grid power limit during import from grid (CAPTAR)
             heading_style: subtitle
+          - type: markdown
+            content: >-
+              <font color=grey><i>This also determines **Charge strategy**
+              speed</i>
+
+              </font>
+            text_only: true
+            grid_options:
+              columns: full
           - type: entities
             entities:
               - entity: input_boolean.house_battery_control_has_power_limit_import
@@ -3373,38 +3606,19 @@ views:
                   type: input-number-entity
                   entity: input_number.house_battery_control_power_limit_import
                   icon: mdi:home-import-outline
+          - type: heading
+            icon: mdi:transmission-tower-export
+            heading: Grid power limit during export to grid
+            heading_style: subtitle
           - type: markdown
             content: >-
-              <font color=grey><i>This also determines **Charge strategy**
-              speed</i>
+              <font color=grey><i>This also determines **Sell strategy**
+              discharge speed.</i>
 
               </font>
             text_only: true
             grid_options:
               columns: full
-          - type: markdown
-            content: >-
-              {% set limit =
-              states('input_number.house_battery_control_power_limit_import') |
-              int(0) %} {% if
-              is_state('input_boolean.house_battery_control_has_power_limit_import',
-              'on') and limit > 0 and limit < 2500 %}
-
-              <ha-alert alert-type="warning">Import peak shave limit is very
-              low. Battery response and appliance step changes can cause
-              overshoot near this limit.</ha-alert>
-
-              {% endif %}
-            text_only: true
-            grid_options:
-              columns: full
-        column_span: 1
-      - type: grid
-        cards:
-          - type: heading
-            icon: mdi:transmission-tower-export
-            heading: Grid power limit during export to grid
-            heading_style: subtitle
           - type: entities
             entities:
               - entity: input_boolean.house_battery_control_has_power_limit_export
@@ -3415,24 +3629,21 @@ views:
                 row:
                   type: input-number-entity
                   entity: input_number.house_battery_control_power_limit_export
-          - type: markdown
-            content: >-
-              <font color=grey><i>This also determines **Sell strategy**
-              discharge speed.</i>
-
-              </font>
-            text_only: true
-            grid_options:
-              columns: full
-      - type: grid
-        cards:
           - type: heading
             icon: mdi:car-electric
             heading: Home Energy Control
             heading_style: subtitle
+            visibility:
+              - condition: state
+                entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
+                state_not: unknown
           - type: entities
             entities:
               - entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
+            visibility:
+              - condition: state
+                entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
+                state_not: unknown
           - type: markdown
             content: >-
               <font color=grey><i>Keep batteries available for peak shaving even
@@ -3446,10 +3657,10 @@ views:
             text_only: true
             grid_options:
               columns: full
-        visibility:
-          - condition: state
-            entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
-            state_not: unknown
+            visibility:
+              - condition: state
+                entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
+                state_not: unknown
       - type: grid
         cards:
           - type: markdown

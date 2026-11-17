@@ -1,0 +1,653 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ v1.3 - battery calibration (F4)
+#
+# In winter a battery may not reach its charge cutoff for weeks, and the SoC its BMS reports drifts. When a
+# battery has not been full for "Calibrate after" days, HBC+ charges it full once in the cheapest block after
+# midnight, with Charge Deadline:
+#   15:05      the prices of tomorrow are in: which batteries are due? Notify: only a notification.
+#              Auto: enough forecast PV surplus tomorrow -> wait for the sun; otherwise plan the cheapest
+#              block between 00:00 and "Full by", long enough at 60 % of the charge power.
+#   block      save the Charge Deadline settings and charge cutoffs, cutoff -> 100 %, window = the block,
+#              goal "batteries are full", then hold "Charge Deadline" through the Strategy arbiter
+#              (script.hbc_strategy_hold, requester "calibration", priority 40).
+#   finish     every battery full for 5 min, 15 min past the block, a manual strategy choice, or an HA
+#              restart: release the hold, put the settings and cutoffs back, notify.
+#   give up    three nights in a row without success -> stop and notify; reset once the battery was full.
+# Needs hbc_notify.yaml (notifications), hbc_strategy_arbiter.yaml (hold/release scripts) and
+# hbc_deadline_charge.yaml (Charge Deadline).
+###########################################################################################################
+
+input_select:
+  house_battery_calibration_mode:
+    name: Battery calibration
+    icon: mdi:battery-sync
+    options:
+      - "Off"
+      - Notify
+      - Auto
+
+input_number:
+  house_battery_calibration_days:
+    name: Calibrate after
+    icon: mdi:calendar-refresh
+    min: 3
+    max: 60
+    step: 1
+    unit_of_measurement: d
+    mode: box
+
+input_datetime:
+  house_battery_calibration_deadline:
+    name: Calibration full by
+    icon: mdi:clock-end
+    has_date: false
+    has_time: true
+
+input_text:
+  # {"p": idle|planned|running|gave_up, "b": [batteries], "d": date, "s": "HH:MM", "e": "HH:MM", "t": tries}
+  # Written by the automations below - do not edit by hand (clear it to reset).
+  hbc_calibration_state:
+    name: HBC calibration state
+    icon: mdi:battery-sync-outline
+    max: 255
+  # The Charge Deadline settings and charge cutoffs saved at the start of a calibration, put back at the end.
+  hbc_calibration_saved:
+    name: HBC calibration saved settings
+    icon: mdi:content-save-outline
+    max: 255
+
+template:
+  # When each battery last reached its charge cutoff (cutoff - 1 %). Starts counting on a new installation,
+  # so there is no calibration straight away. Kept across restarts (trigger-based).
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m1_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m1_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M1 last full"
+        unique_id: hbc_m1_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m1_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m1_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m2_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m2_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M2 last full"
+        unique_id: hbc_m2_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m2_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m2_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m3_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m3_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M3 last full"
+        unique_id: hbc_m3_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m3_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m3_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m4_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m4_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M4 last full"
+        unique_id: hbc_m4_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m4_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m4_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m5_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m5_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M5 last full"
+        unique_id: hbc_m5_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m5_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m5_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - trigger:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.marstek_m6_battery_state_of_charge') | float(-1)
+             >= states('input_number.marstek_m6_charging_cutoff_capacity') | float(101) - 1 }}
+        id: full
+      - trigger: time_pattern
+        minutes: "/30"
+        id: tick
+      - trigger: homeassistant
+        event: start
+        id: start
+    sensor:
+      - name: "HBC M6 last full"
+        unique_id: hbc_m6_last_full
+        device_class: timestamp
+        icon: mdi:battery-check
+        state: >-
+          {%- set full = states('sensor.marstek_m6_battery_state_of_charge') | float(-1)
+                          >= states('input_number.marstek_m6_charging_cutoff_capacity') | float(101) - 1 -%}
+          {%- if full or this.state in ['unknown', 'unavailable', '', none] -%}{{ now().isoformat() }}
+          {%- else -%}{{ this.state }}{%- endif -%}
+
+  - sensor:
+      # Number of batteries due for a calibration; attributes: which ones, and days since full per battery.
+      - name: "HBC calibration due"
+        unique_id: hbc_calibration_due
+        icon: mdi:battery-alert-variant-outline
+        state: >-
+          {%- set n = [states('input_number.house_battery_count') | int(0), 6] | min -%}
+          {%- set lim = states('input_number.house_battery_calibration_days') | float(14) -%}
+          {%- set ns = namespace(c=0) -%}
+          {%- for i in range(1, n + 1) -%}
+            {%- set t = as_timestamp(states('sensor.hbc_m' ~ i ~ '_last_full'), none) -%}
+            {%- if t is not none and (as_timestamp(now()) - t) / 86400 >= lim -%}{%- set ns.c = ns.c + 1 -%}{%- endif -%}
+          {%- endfor -%}
+          {{ ns.c }}
+        attributes:
+          days: >-
+            {%- set n = [states('input_number.house_battery_count') | int(0), 6] | min -%}
+            {%- set ns = namespace(d={}) -%}
+            {%- for i in range(1, n + 1) -%}
+              {%- set t = as_timestamp(states('sensor.hbc_m' ~ i ~ '_last_full'), none) -%}
+              {%- if t is not none -%}
+                {%- set ns.d = dict(ns.d, **{('M' ~ i): ((as_timestamp(now()) - t) / 86400) | round(1)}) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.d }}
+          batteries: >-
+            {%- set n = [states('input_number.house_battery_count') | int(0), 6] | min -%}
+            {%- set lim = states('input_number.house_battery_calibration_days') | float(14) -%}
+            {%- set ns = namespace(b=[]) -%}
+            {%- for i in range(1, n + 1) -%}
+              {%- set t = as_timestamp(states('sensor.hbc_m' ~ i ~ '_last_full'), none) -%}
+              {%- if t is not none and (as_timestamp(now()) - t) / 86400 >= lim -%}
+                {%- set ns.b = ns.b + [i] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.b }}
+
+      # Readable status for the dashboard.
+      - name: "HBC calibration status"
+        unique_id: hbc_calibration_status
+        icon: mdi:battery-sync
+        state: >-
+          {%- set s = states('input_text.hbc_calibration_state') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {%- set b = j.get('b', []) | map('string') | map('regex_replace', '^', 'M') | join(', ') -%}
+          {%- set p = j.get('p', 'idle') -%}
+          {%- if is_state('input_select.house_battery_calibration_mode', 'Off') -%}off
+          {%- elif p == 'planned' -%}{{ b }} planned {{ j.get('s') }}-{{ j.get('e') }}
+          {%- elif p == 'running' -%}{{ b }} charging until {{ j.get('e') }}
+          {%- elif p == 'gave_up' -%}{{ b }}: gave up after 3 nights
+          {%- elif p == 'waiting_pv' -%}{{ b }}: waiting for the sun
+          {%- else -%}idle{%- endif -%}
+
+script:
+  # Puts back the Charge Deadline settings and charge cutoffs saved at the start of a calibration.
+  hbc_calibration_restore:
+    alias: "HBC+ calibration: restore settings"
+    icon: mdi:backup-restore
+    mode: queued
+    sequence:
+      - variables:
+          raw: "{{ states('input_text.hbc_calibration_saved') }}"
+          sv: "{{ raw | from_json if raw.startswith('{') else {} }}"
+      - if: "{{ sv | count > 0 }}"
+        then:
+          - repeat:
+              for_each: "{{ sv.get('co', {}) | dictsort | list }}"
+              sequence:
+                - action: input_number.set_value
+                  continue_on_error: true
+                  target:
+                    entity_id: "input_number.marstek_m{{ repeat.item[0] }}_charging_cutoff_capacity"
+                  data:
+                    value: "{{ repeat.item[1] | float(100) }}"
+          - action: input_datetime.set_datetime
+            continue_on_error: true
+            target:
+              entity_id: input_datetime.house_battery_deadline_start
+            data:
+              time: "{{ sv.get('st', '00:00:00') }}"
+          - action: input_datetime.set_datetime
+            continue_on_error: true
+            target:
+              entity_id: input_datetime.house_battery_deadline_end
+            data:
+              time: "{{ sv.get('en', '07:00:00') }}"
+          - action: input_select.select_option
+            continue_on_error: true
+            target:
+              entity_id: input_select.house_battery_deadline_goal
+            data:
+              option: "{{ sv.get('g', 'batteries are full') }}"
+          - action: "input_boolean.turn_{{ 'on' if sv.get('h') == 'on' else 'off' }}"
+            continue_on_error: true
+            target:
+              entity_id: input_boolean.house_battery_deadline_hold_after_target
+          - action: "input_boolean.turn_{{ 'on' if sv.get('pv') == 'on' else 'off' }}"
+            continue_on_error: true
+            target:
+              entity_id: input_boolean.house_battery_deadline_reserve_pv
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.hbc_calibration_saved
+            data:
+              value: ""
+
+automation:
+  # Defaults on first install (helpers without 'initial' keep the user's choice after a restart).
+  - id: hbc_calibration_defaults
+    alias: "HBC+ calibration: defaults on first start"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: template
+        value_template: "{{ states('input_text.hbc_calibration_state') in ['', 'unknown', 'unavailable'] }}"
+    actions:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_calibration_mode
+        data:
+          option: Auto
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_calibration_days
+        data:
+          value: 14
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.house_battery_calibration_deadline
+        data:
+          time: "07:00:00"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hbc_calibration_state
+        data:
+          value: '{"p":"idle","t":0}'
+
+  # 15:05: the prices of tomorrow are in. Notify, wait for the sun, or plan the cheapest block after midnight.
+  - id: hbc_calibration_plan
+    alias: "HBC+ calibration: plan"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "15:05:00"
+    variables:
+      mode: "{{ states('input_select.house_battery_calibration_mode') }}"
+      due: "{{ state_attr('sensor.hbc_calibration_due', 'batteries') or [] }}"
+      days: "{{ state_attr('sensor.hbc_calibration_due', 'days') or {} }}"
+      raw: "{{ states('input_text.hbc_calibration_state') }}"
+      st: "{{ raw | from_json if raw.startswith('{') else {'p': 'idle', 't': 0} }}"
+      tries: "{{ st.get('t', 0) | int(0) }}"
+      names: "{{ due | map('string') | map('regex_replace', '^', 'M') | join(', ') }}"
+      tomorrow: "{{ (now() + timedelta(days=1)).date() | string }}"
+      deadline: "{{ states('input_datetime.house_battery_calibration_deadline')[:5] if has_value('input_datetime.house_battery_calibration_deadline') else '07:00' }}"
+      needed_kwh: >-
+        {%- set ns = namespace(e=0) -%}
+        {%- for i in due -%}
+          {%- set soc = states('sensor.marstek_m' ~ i ~ '_battery_state_of_charge') | float(50) -%}
+          {%- set cap = states('sensor.marstek_m' ~ i ~ '_battery_total_energy') | float(5.12) -%}
+          {%- set ns.e = ns.e + (100 - soc) / 100 * cap -%}
+        {%- endfor -%}
+        {{ ns.e | round(2) }}
+      pv_surplus: "{{ states('sensor.solar_forecast_surplus_tomorrow') | float(0) }}"
+      plan: >-
+        {%- set p_kw = (states('input_number.house_battery_total_max_charge_power') | float(0) / 1000) -%}
+        {%- set p_kw = p_kw if p_kw > 0 else 2.5 -%}
+        {%- set ws = as_timestamp(today_at('00:00') + timedelta(days=1)) -%}
+        {%- set we = as_timestamp(today_at(deadline) + timedelta(days=1)) -%}
+        {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+        {%- set ns = namespace(q=[]) -%}
+        {%- for m in marks -%}
+          {%- set a = as_timestamp(m.start, 0) -%}{%- set z = as_timestamp(m.end, 0) -%}
+          {%- if a >= ws and z <= we and m.price is number -%}
+            {%- set ns.q = ns.q + [{'a': a, 'z': z, 'p': m.price}] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set q = ns.q | sort(attribute='a') -%}
+        {%- set slot = ((q[0].z - q[0].a) / 60) if q | count > 0 else 15 -%}
+        {%- set need_min = [60, (needed_kwh / (0.6 * p_kw) * 60) | round(0, 'ceil')] | max -%}
+        {%- set n = (need_min / slot) | round(0, 'ceil') | int -%}
+        {%- if q | count == 0 -%}
+          {%- set s = we - need_min * 60 -%}
+          {{ {'s': (s | timestamp_custom('%H:%M')), 'e': deadline, 'avg': none} }}
+        {%- else -%}
+          {%- set n = [n, q | count] | min -%}
+          {%- set best = namespace(i=0, v=none) -%}
+          {%- for i in range(0, q | count - n + 1) -%}
+            {%- set v = (q[i:i + n] | sum(attribute='p')) / n -%}
+            {%- if best.v is none or v < best.v -%}{%- set best.i = i -%}{%- set best.v = v -%}{%- endif -%}
+          {%- endfor -%}
+          {{ {'s': (q[best.i].a | timestamp_custom('%H:%M')), 'e': (q[best.i + n - 1].z | timestamp_custom('%H:%M')), 'avg': best.v | round(1)} }}
+        {%- endif -%}
+    conditions:
+      - condition: template
+        value_template: "{{ mode != 'Off' and due | count > 0 and st.get('p') != 'running' }}"
+    actions:
+      - choose:
+          - conditions: "{{ mode == 'Notify' }}"
+            sequence:
+              - action: script.hbc_notify
+                continue_on_error: true
+                data:
+                  title: "HBC+: battery calibration due"
+                  message: >-
+                    {{ names }} not full for {% for i in due %}{{ days.get('M' ~ i, '?') }}{{ ', ' if not loop.last }}{% endfor %} days.
+                    Set Battery calibration to Auto, or charge to 100 % once.
+          - conditions: "{{ tries >= 3 }}"
+            sequence:
+              - if: "{{ st.get('p') != 'gave_up' }}"
+                then:
+                  - action: input_text.set_value
+                    target:
+                      entity_id: input_text.hbc_calibration_state
+                    data:
+                      value: "{{ {'p': 'gave_up', 'b': due, 't': tries} | to_json }}"
+                  - action: script.hbc_notify
+                    continue_on_error: true
+                    data:
+                      title: "HBC+: battery calibration stopped"
+                      message: >-
+                        {{ names }} did not get full in 3 nights. Calibration stops until the battery has been full
+                        once. Check the charge cutoff, the battery's connection and the Charge Deadline settings.
+          - conditions: "{{ pv_surplus >= needed_kwh and needed_kwh > 0 }}"
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.hbc_calibration_state
+                data:
+                  value: "{{ {'p': 'waiting_pv', 'b': due, 'd': tomorrow, 't': tries} | to_json }}"
+              - action: script.hbc_notify
+                continue_on_error: true
+                data:
+                  title: "HBC+: battery calibration waits for the sun"
+                  message: >-
+                    {{ names }} need about {{ needed_kwh }} kWh; tomorrow's forecast surplus is {{ pv_surplus | round(1) }} kWh.
+                    No night charge planned.
+        default:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.hbc_calibration_state
+            data:
+              value: "{{ {'p': 'planned', 'b': due, 'd': tomorrow, 's': plan.s, 'e': plan.e, 't': tries} | to_json }}"
+          - action: script.hbc_notify
+            continue_on_error: true
+            data:
+              title: "HBC+: battery calibration planned"
+              message: >-
+                {{ names }} will be charged to 100 % tonight {{ plan.s }}-{{ plan.e }}
+                ({{ needed_kwh }} kWh{{ ', average ' ~ plan.avg ~ ' ct/kWh' if plan.avg is not none }}).
+
+  # Start of the planned block: save, cutoff to 100 %, window = block, then hold Charge Deadline.
+  - id: hbc_calibration_start
+    alias: "HBC+ calibration: start"
+    mode: single
+    triggers:
+      - trigger: template
+        value_template: >-
+          {%- set s = states('input_text.hbc_calibration_state') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {{ j.get('p') == 'planned' and now().date() | string == j.get('d')
+             and now() >= today_at(j.get('s', '23:59')) and now() < today_at(j.get('e', '00:00')) }}
+    variables:
+      raw: "{{ states('input_text.hbc_calibration_state') }}"
+      st: "{{ raw | from_json if raw.startswith('{') else {} }}"
+      bats: "{{ st.get('b', []) }}"
+      names: "{{ bats | map('string') | map('regex_replace', '^', 'M') | join(', ') }}"
+      minutes: "{{ ((as_timestamp(today_at(st.get('e', '07:00'))) - as_timestamp(now())) / 60) | round(0) | int }}"
+    conditions:
+      - condition: template
+        value_template: "{{ not is_state('input_select.house_battery_calibration_mode', 'Off') and bats | count > 0 }}"
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hbc_calibration_saved
+        data:
+          value: >-
+            {%- set ns = namespace(co={}) -%}
+            {%- for i in bats -%}
+              {%- set ns.co = dict(ns.co, **{(i | string): states('input_number.marstek_m' ~ i ~ '_charging_cutoff_capacity') | float(100) | int}) -%}
+            {%- endfor -%}
+            {{ {'st': states('input_datetime.house_battery_deadline_start'),
+                'en': states('input_datetime.house_battery_deadline_end'),
+                'g': states('input_select.house_battery_deadline_goal'),
+                'h': states('input_boolean.house_battery_deadline_hold_after_target'),
+                'pv': states('input_boolean.house_battery_deadline_reserve_pv'),
+                'co': ns.co} | to_json }}
+      - repeat:
+          for_each: "{{ bats }}"
+          sequence:
+            - action: input_number.set_value
+              continue_on_error: true
+              target:
+                entity_id: "input_number.marstek_m{{ repeat.item }}_charging_cutoff_capacity"
+              data:
+                value: 100
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.house_battery_deadline_start
+        data:
+          time: "{{ st.s }}:00"
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.house_battery_deadline_end
+        data:
+          time: "{{ st.e }}:00"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_deadline_goal
+        data:
+          option: batteries are full
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.house_battery_deadline_hold_after_target
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.house_battery_deadline_reserve_pv
+      - action: script.hbc_strategy_hold
+        continue_on_error: true
+        data:
+          requester: calibration
+          strategy: Charge Deadline
+          reason: "Battery calibration {{ names }}"
+          timeout_min: "{{ minutes + 30 }}"
+        response_variable: res
+      - if: "{{ res is defined and res.ok | default(false) }}"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.hbc_calibration_state
+            data:
+              value: "{{ dict(st, p='running') | to_json }}"
+          - action: script.hbc_notify
+            continue_on_error: true
+            data:
+              title: "HBC+: battery calibration started"
+              message: "{{ names }}: charging to 100 % until {{ st.e }}."
+        else:
+          - action: script.hbc_calibration_restore
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.hbc_calibration_state
+            data:
+              value: "{{ {'p': 'idle', 't': st.get('t', 0) | int(0) + 1} | to_json }}"
+          - action: script.hbc_notify
+            continue_on_error: true
+            data:
+              title: "HBC+: battery calibration not started"
+              message: >-
+                The Strategy arbiter did not accept Charge Deadline: {{ res.result if res is defined and res.result is defined else 'HBC+ not running' }}.
+
+  # End of a calibration: full, past the block, a manual strategy choice, or an HA restart.
+  - id: hbc_calibration_finish
+    alias: "HBC+ calibration: finish"
+    mode: single
+    triggers:
+      - trigger: template
+        id: full
+        value_template: >-
+          {%- set s = states('input_text.hbc_calibration_state') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {%- set ns = namespace(ok=j.get('b', []) | count > 0) -%}
+          {%- for i in j.get('b', []) -%}
+            {%- if states('sensor.marstek_m' ~ i ~ '_battery_state_of_charge') | float(0) < 99 -%}{%- set ns.ok = false -%}{%- endif -%}
+          {%- endfor -%}
+          {{ j.get('p') == 'running' and ns.ok }}
+        for: "00:05:00"
+      - trigger: template
+        id: late
+        value_template: >-
+          {%- set s = states('input_text.hbc_calibration_state') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {{ j.get('p') == 'running' and (now().date() | string > j.get('d', '')
+             or now() >= today_at(j.get('e', '07:00')) + timedelta(minutes=15)) }}
+      - trigger: template
+        id: override
+        value_template: >-
+          {%- set s = states('input_text.hbc_calibration_state') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {%- set a = states('input_text.hbc_strategy_arbiter') -%}
+          {%- set h = (a | from_json).get('h', {}) if a.startswith('{') else {} -%}
+          {{ j.get('p') == 'running' and 'calibration' in h and not h.calibration.a }}
+      - trigger: homeassistant
+        event: start
+        id: restart
+    variables:
+      raw: "{{ states('input_text.hbc_calibration_state') }}"
+      st: "{{ raw | from_json if raw.startswith('{') else {} }}"
+      bats: "{{ st.get('b', []) }}"
+      names: "{{ bats | map('string') | map('regex_replace', '^', 'M') | join(', ') }}"
+    conditions:
+      - condition: template
+        value_template: "{{ st.get('p') == 'running' }}"
+    actions:
+      - if: "{{ trigger.id == 'restart' }}"
+        then:
+          - delay: "00:05:00"
+      - action: script.hbc_strategy_release
+        continue_on_error: true
+        data:
+          requester: calibration
+          reason: "calibration {{ trigger.id }}"
+      - action: script.hbc_calibration_restore
+      - variables:
+          full: >-
+            {%- set ns = namespace(ok=bats | count > 0) -%}
+            {%- for i in bats -%}
+              {%- if states('sensor.marstek_m' ~ i ~ '_battery_state_of_charge') | float(0) < 99 -%}{%- set ns.ok = false -%}{%- endif -%}
+            {%- endfor -%}
+            {{ ns.ok }}
+          tries: "{{ 0 if full else st.get('t', 0) | int(0) + 1 }}"
+          why: "{{ {'full': 'full', 'late': 'block ended', 'override': 'you chose another strategy', 'restart': 'Home Assistant restarted'}[trigger.id] }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hbc_calibration_state
+        data:
+          value: "{{ {'p': 'idle', 't': tries} | to_json }}"
+      - action: script.hbc_notify
+        continue_on_error: true
+        data:
+          title: "HBC+: battery calibration {{ 'done' if full else 'not finished' }}"
+          message: >-
+            {{ names }}: {{ 'charged to 100 %' if full else 'not full (' ~ why ~ '), attempt ' ~ tries ~ ' of 3' }}.
+            Charge Deadline settings and charge cutoffs are back.
+
+  # A waiting-for-PV or given-up calibration ends once every battery has been full again.
+  - id: hbc_calibration_reset
+    alias: "HBC+ calibration: reset when no battery is due"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: sensor.hbc_calibration_due
+        to: "0"
+    variables:
+      raw: "{{ states('input_text.hbc_calibration_state') }}"
+      st: "{{ raw | from_json if raw.startswith('{') else {} }}"
+    conditions:
+      - condition: template
+        value_template: "{{ st.get('p') in ['gave_up', 'waiting_pv', 'planned'] or st.get('t', 0) | int(0) > 0 }}"
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hbc_calibration_state
+        data:
+          value: '{"p":"idle","t":0}'
+
+# Display-only: keep the minute-by-minute status out of the database.
+recorder:
+  exclude:
+    entities:
+      - sensor.hbc_calibration_status

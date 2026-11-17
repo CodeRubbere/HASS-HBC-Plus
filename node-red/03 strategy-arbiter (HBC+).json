@@ -62,7 +62,7 @@
         "type": "function",
         "z": "230212c14defbe4a",
         "name": "Arbitrate",
-        "func": "// Strategy arbiter - the ONLY writer of input_select.house_battery_strategy.\n// Requesters (via link call) send msg.arbiter = {requester, action: 'hold'|'release', strategy, reason}.\n// State (flow 'arb', mirrored to input_text.hbc_strategy_arbiter so it survives restarts):\n//   b = base strategy (the user's own choice), h = {requester: {s: strategy, a: active?}}\n// Effective strategy = highest-priority ACTIVE hold, else the base.\n// A manual change (see 'Detect manual change') becomes the new base and marks every hold\n// as overridden: an overridden hold is ignored (and not re-applied by repeated 'hold'\n// requests) until its requester releases it.\n// Priority per requester, higher wins. Any other requester name (a flow of your own) gets\n// DEFAULT_PRIO; on equal priority the hold that came first wins. Add a name here to give it\n// another priority.\nconst PRIO = { guard: 100 };\nconst DEFAULT_PRIO = 50;\nconst prio = (name) => Object.prototype.hasOwnProperty.call(PRIO, name) ? PRIO[name] : DEFAULT_PRIO;\nconst BAD = ['', 'unknown', 'unavailable', 'None', null, undefined];\ntry {\n    const r = msg.arbiter || {};\n    const who = r.requester;\n    const cur = msg.current_strategy;\n    const ent = msg.strategy_entity || {};\n    const options = (ent.attributes && Array.isArray(ent.attributes.options)) ? ent.attributes.options : [];\n    const fail = (why) => {\n        msg.arbiter_result = 'rejected: ' + why;\n        msg.strategy_action = msg.arbiter_result;\n        node.warn(`${who}: ${msg.arbiter_result}`);\n        node.status({ fill: 'red', shape: 'ring', text: msg.arbiter_result });\n        return [null, msg, null, null];\n    };\n    if (typeof who !== 'string' || !who.trim()) return fail('requester missing');\n    if (!['hold', 'release'].includes(r.action)) return fail(`unknown action '${r.action}'`);\n    if (r.action === 'hold' && (BAD.includes(r.strategy) || (options.length && !options.includes(r.strategy))))\n        return fail(`invalid strategy '${r.strategy}'`);\n\n    const st = flow.get('arb') || { b: null, h: {} };\n    if (!st.h || typeof st.h !== 'object') st.h = {};\n    const active = () => Object.entries(st.h).filter(([, v]) => v && v.a);\n    // While nobody holds, the base simply follows reality.\n    if (active().length === 0 && !BAD.includes(cur)) st.b = cur;\n    const before = JSON.stringify(st);\n\n    let note;\n    const ex = st.h[who];\n    if (r.action === 'hold') {\n        if (ex && ex.a && ex.s === r.strategy) note = `already holding ${r.strategy}`;\n        else if (ex && !ex.a) note = `hold ${ex.s} was overridden manually - ignored until released`;\n        else { st.h[who] = { s: r.strategy, a: true }; note = `hold ${r.strategy}`; }\n    } else {\n        if (!ex) note = 'nothing to release';\n        else { delete st.h[who]; note = ex.a ? `released ${ex.s}` : `released ${ex.s} (was overridden)`; }\n    }\n\n    const act = active().sort((x, y) => prio(y[0]) - prio(x[0]));\n    const target = act.length ? act[0][1].s : st.b;\n    const changed = JSON.stringify(st) !== before;\n    flow.set('arb', st);\n\n    let write = null, action;\n    if (changed && !BAD.includes(target) && target !== cur && (!options.length || options.includes(target))) {\n        msg.arbiter_target = target;\n        flow.set('arb_last_write', { v: target, ts: Date.now() });\n        action = `${cur} -> ${target}`;\n        write = msg;\n    } else {\n        action = `unchanged (${cur})`;\n    }\n    msg.arbiter_result = `${note}; ${action}`;\n    msg.strategy_action = msg.arbiter_result;\n    node.status({ fill: write ? 'green' : 'grey', shape: 'dot', text: `${who}: ${msg.arbiter_result}`.slice(0, 80) });\n    const persist = changed ? { arbiter_state_json: JSON.stringify(st) } : null;\n    const log = (changed || write) ? { arbiter_log: `${who}${r.reason ? ' (' + r.reason + ')' : ''}: ${msg.arbiter_result}` } : null;\n    return [write, write ? null : msg, persist, log];\n} catch (e) {\n    node.error('Arbiter failed: ' + e.message, msg);\n    msg.arbiter_result = 'error: ' + e.message;\n    msg.strategy_action = msg.arbiter_result;\n    return [null, msg, null, null];\n}\n",
+        "func": "// Strategy arbiter - the ONLY writer of input_select.house_battery_strategy.\n// Requesters (via link call) send msg.arbiter = {requester, action: 'hold'|'release', strategy, reason, expires?}.\n// expires (ms, HBC+ v1.3): the hold is released by 'Hold timeouts' after that moment (requests from HA).\n// State (flow 'arb', mirrored to input_text.hbc_strategy_arbiter so it survives restarts):\n//   b = base strategy (the user's own choice), h = {requester: {s: strategy, a: active?, x?: expires ms}}\n// Effective strategy = highest-priority ACTIVE hold, else the base.\n// A manual change (see 'Detect manual change') becomes the new base and marks every hold\n// as overridden: an overridden hold is ignored (and not re-applied by repeated 'hold'\n// requests) until its requester releases it.\n// Priority per requester, higher wins. Any other requester name (a flow of your own) gets\n// DEFAULT_PRIO; on equal priority the hold that came first wins. Add a name here to give it\n// another priority.\nconst PRIO = { guard: 100, calibration: 40 };   // calibration: HBC+ v1.3 battery calibration (F4)\nconst DEFAULT_PRIO = 50;\nconst prio = (name) => Object.prototype.hasOwnProperty.call(PRIO, name) ? PRIO[name] : DEFAULT_PRIO;\nconst BAD = ['', 'unknown', 'unavailable', 'None', null, undefined];\ntry {\n    const r = msg.arbiter || {};\n    const who = r.requester;\n    const cur = msg.current_strategy;\n    const ent = msg.strategy_entity || {};\n    const options = (ent.attributes && Array.isArray(ent.attributes.options)) ? ent.attributes.options : [];\n    const fail = (why) => {\n        msg.arbiter_result = 'rejected: ' + why;\n        msg.strategy_action = msg.arbiter_result;\n        node.warn(`${who}: ${msg.arbiter_result}`);\n        node.status({ fill: 'red', shape: 'ring', text: msg.arbiter_result });\n        return [null, msg, null, null];\n    };\n    if (typeof who !== 'string' || !who.trim()) return fail('requester missing');\n    if (!['hold', 'release'].includes(r.action)) return fail(`unknown action '${r.action}'`);\n    if (r.action === 'hold' && (BAD.includes(r.strategy) || (options.length && !options.includes(r.strategy))))\n        return fail(`invalid strategy '${r.strategy}'`);\n\n    const st = flow.get('arb') || { b: null, h: {} };\n    if (!st.h || typeof st.h !== 'object') st.h = {};\n    const active = () => Object.entries(st.h).filter(([, v]) => v && v.a);\n    // While nobody holds, the base simply follows reality.\n    if (active().length === 0 && !BAD.includes(cur)) st.b = cur;\n    const before = JSON.stringify(st);\n\n    let note;\n    const ex = st.h[who];\n    if (r.action === 'hold') {\n        if (ex && ex.a && ex.s === r.strategy) {\n            note = `already holding ${r.strategy}`;\n            if (Number.isFinite(r.expires)) ex.x = r.expires; else delete ex.x;\n        }\n        else if (ex && !ex.a) note = `hold ${ex.s} was overridden manually - ignored until released`;\n        else {\n            st.h[who] = { s: r.strategy, a: true };\n            if (Number.isFinite(r.expires)) st.h[who].x = Math.round(r.expires);\n            note = `hold ${r.strategy}`;\n        }\n    } else {\n        if (!ex) note = 'nothing to release';\n        else { delete st.h[who]; note = ex.a ? `released ${ex.s}` : `released ${ex.s} (was overridden)`; }\n    }\n\n    const act = active().sort((x, y) => prio(y[0]) - prio(x[0]));\n    const target = act.length ? act[0][1].s : st.b;\n    const changed = JSON.stringify(st) !== before;\n    flow.set('arb', st);\n\n    let write = null, action;\n    if (changed && !BAD.includes(target) && target !== cur && (!options.length || options.includes(target))) {\n        msg.arbiter_target = target;\n        flow.set('arb_last_write', { v: target, ts: Date.now() });\n        action = `${cur} -> ${target}`;\n        write = msg;\n    } else {\n        action = `unchanged (${cur})`;\n    }\n    msg.arbiter_result = `${note}; ${action}`;\n    msg.strategy_action = msg.arbiter_result;\n    node.status({ fill: write ? 'green' : 'grey', shape: 'dot', text: `${who}: ${msg.arbiter_result}`.slice(0, 80) });\n    const persist = changed ? { arbiter_state_json: JSON.stringify(st) } : null;\n    const log = (changed || write) ? { arbiter_log: `${who}${r.reason ? ' (' + r.reason + ')' : ''}: ${msg.arbiter_result}` } : null;\n    return [write, write ? null : msg, persist, log];\n} catch (e) {\n    node.error('Arbiter failed: ' + e.message, msg);\n    msg.arbiter_result = 'error: ' + e.message;\n    msg.strategy_action = msg.arbiter_result;\n    return [null, msg, null, null];\n}\n",
         "outputs": 4,
         "timeout": 0,
         "noerr": 0,
@@ -375,6 +375,188 @@
         "x": 530,
         "y": 480,
         "wires": []
+    },
+    {
+        "id": "hbcp13a000000001",
+        "type": "group",
+        "z": "230212c14defbe4a",
+        "name": "Requests from Home Assistant (HBC+ v1.3)",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp13a000000002",
+            "hbcp13a000000003",
+            "hbcp13a000000004",
+            "hbcp13a000000005",
+            "hbcp13a000000006",
+            "hbcp13a000000007",
+            "hbcp13a000000008"
+        ],
+        "x": 64,
+        "y": 579,
+        "w": 1012,
+        "h": 162
+    },
+    {
+        "id": "hbcp13a000000002",
+        "type": "server-events",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "HA request",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "exposeAsEntityConfig": "",
+        "eventType": "hbc_arbiter_request",
+        "eventData": "",
+        "waitForRunning": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "$outputData(\"eventData\").event_type",
+                "valueType": "jsonata"
+            }
+        ],
+        "x": 170,
+        "y": 620,
+        "wires": [
+            [
+                "hbcp13a000000003"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13a000000003",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "From HA",
+        "func": "// HBC+ v1.3: a strategy request from Home Assistant (script.hbc_strategy_hold / _release, which\n// fire the HA event hbc_arbiter_request). Checked here, then handed to 'Strategy request' like any\n// flow of your own. Output 1 -> the arbiter, output 2 -> straight back to HA (rejected).\nconst d = (msg.payload && typeof msg.payload.data === 'object' && msg.payload.data) ? msg.payload.data : (msg.payload || {});\nconst RESERVED = ['guard', 'manual'];\nconst who = String(d.requester || '').trim();\nconst action = String(d.action || '').trim();\nconst reject = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: `${who || '?'}: ${why}`.slice(0, 80) });\n    node.warn(`HA request ${who || '?'}: ${why}`);\n    return [null, { payload: { requester: who, action, ok: false, result: 'rejected: ' + why } }];\n};\nif (!/^[a-z0-9_]{1,32}$/.test(who)) return reject('requester must be 1-32 characters a-z, 0-9 or _');\nif (RESERVED.includes(who)) return reject(`requester '${who}' is reserved`);\nif (!['hold', 'release'].includes(action)) return reject(`unknown action '${action}'`);\nlet tmo = Number(d.timeout_min);\nif (!Number.isFinite(tmo) || tmo <= 0) tmo = 120;\ntmo = Math.min(1440, Math.max(1, Math.round(tmo)));\nmsg.arbiter = { requester: who, action, reason: d.reason ? String(d.reason).slice(0, 80) : 'Home Assistant' };\nif (action === 'hold') {\n    msg.arbiter.strategy = String(d.strategy || '');\n    msg.arbiter.expires = Date.now() + tmo * 60000;   // the arbiter keeps it with the hold ('x')\n}\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nmsg.ha_reply = true;\nnode.status({ fill: 'blue', shape: 'dot', text: `${who}: ${action} ${msg.arbiter.strategy || ''}`.trim().slice(0, 80) });\ndelete msg.payload;\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 620,
+        "wires": [
+            [
+                "hbcp13a000000004"
+            ],
+            [
+                "hbcp13a000000006"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13a000000004",
+        "type": "link call",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "Strategy request",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 580,
+        "y": 620,
+        "wires": [
+            [
+                "hbcp13a000000005"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13a000000005",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "Answer HA",
+        "func": "// HBC+ v1.3: the arbiter's answer to a request from HA -> HA event hbc_arbiter_result.\n// Releases sent by 'Hold timeouts' carry no ha_reply: they only go to the logbook.\nif (!msg.ha_reply) return null;\nconst r = String(msg.arbiter_result || 'no answer');\nmsg.payload = { requester: msg.arbiter.requester, action: msg.arbiter.action, ok: !/^(rejected|error)/.test(r), result: r };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 620,
+        "wires": [
+            [
+                "hbcp13a000000006"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13a000000006",
+        "type": "ha-fire-event",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "Result to HA",
+        "server": "176d29a.6f648d6",
+        "version": 0,
+        "event": "hbc_arbiter_result",
+        "data": "payload",
+        "dataType": "jsonata",
+        "x": 990,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "hbcp13a000000007",
+        "type": "inject",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "Every minute",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "30",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 700,
+        "wires": [
+            [
+                "hbcp13a000000008"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13a000000008",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "g": "hbcp13a000000001",
+        "name": "Hold timeouts",
+        "func": "// HBC+ v1.3: every minute, release holds whose time-out has passed. The expiry ('x', ms) is stored\n// with the hold in the arbiter state, so it survives a restart (input_text.hbc_strategy_arbiter).\n// Holds without an expiry (the Oscillation Guard, flows of your own) are never touched here.\nconst st = flow.get('arb');\nif (!st || !st.h || typeof st.h !== 'object') return null;\nconst now = Date.now();\nlet n = 0;\nfor (const [who, h] of Object.entries(st.h)) {\n    if (h && Number.isFinite(h.x) && h.x <= now) {\n        node.send({ arbiter: { requester: who, action: 'release', reason: 'time-out' }, target: 'Strategy request' });\n        n++;\n    }\n}\nnode.status(n ? { fill: 'yellow', shape: 'dot', text: `released ${n} hold(s) after time-out` } : {});\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 700,
+        "wires": [
+            [
+                "hbcp13a000000004"
+            ]
+        ]
     },
     {
         "id": "f242736a4bf91925",

@@ -28,7 +28,7 @@
 #
 # Replaces the earlier nodered_heartbeat.yaml (same sensor and automation ids). DELETE that file from your
 # HA packages folder: with both files present HA sees duplicate ids and drops the fallback.
-# Set your own notify actions below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
 ###########################################################################################################
 
 mqtt:
@@ -161,8 +161,7 @@ automation:
             HBC heartbeat stale since {{ states('sensor.hbc_last_run') }}.
             Firmware anti-feed (forcible stop, RS485 off): {{ plan.firmware | join(', ') | upper or 'none' }}.
             Kept on RS485 + stop: {{ plan.hold | join(', ') | upper or 'none' }}.
-      # set your own notify action here, e.g. notify.mobile_app_<phone>
-      - action: notify.notify
+      - action: script.hbc_notify
         continue_on_error: true
         data:
           title: "HBC stopped - batteries on firmware"
@@ -201,8 +200,7 @@ automation:
                     Last error ({{ as_timestamp(state_attr('sensor.hbc_health', 'last_error_at'), 0) | timestamp_custom('%H:%M') }}):
                     {{ state_attr('sensor.hbc_health', 'last_error') }}
                     Details are in the Node-RED log.
-              # set your own notify action here, e.g. notify.mobile_app_<phone>
-              - action: notify.notify
+              - action: script.hbc_notify
                 continue_on_error: true
                 data:
                   title: "HBC+: errors in the control loop"
