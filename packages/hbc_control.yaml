@@ -1214,7 +1214,7 @@ template:
 ###########################################################################################################
 # Raised when the selected tariff source has delivered no valid prices for 30 minutes. Dynamic then runs its
 # baseline strategy and Charge Deadline has no cheap windows. Cleared again as soon as prices are back.
-# Set your own notify action below (e.g. notify.mobile_app_<phone>); the default is notify.notify.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
 automation:
   - id: hbc_price_data_alert
     alias: "HBC+: alert when the tariff source delivers no prices"
@@ -1244,8 +1244,7 @@ automation:
                     has delivered no valid prices for 30 minutes. Dynamic runs its baseline strategy
                     ({{ states('input_select.house_battery_strategy_dynamic_default') }}) until prices are back.
                     Check the price integration, or pin the sensor in input_text.house_battery_strategy_dynamic_price_sensor.
-              # set your own notify action here, e.g. notify.mobile_app_<phone>
-              - action: notify.notify
+              - action: script.hbc_notify
                 continue_on_error: true
                 data:
                   title: "HBC+: no energy prices"

@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ v1.3 - notifications
+#
+# Every HBC+ notification goes through script.hbc_notify: the automations in hbc_heartbeat.yaml,
+# hbc_control.yaml and hbc_phase_guard.yaml, and the "Notify phone" node of the Battery Oscillation Guard.
+# Where they go is set in one place: input_text.house_battery_notify_targets (Advanced settings view).
+#   - one or more notify actions, comma-separated, e.g. "notify.mobile_app_robs_iphone, notify.mobile_app_ipad"
+#   - empty = notify.notify
+#   - an entry that does not look like notify.<name> is skipped, with a warning in the HA log
+#   - a well-formed name that does not exist (a typo in the phone name) gives an error in the HA log and no
+#     notification: use the test button on the Advanced settings view after changing the field
+# Required: without this file HBC+ sends no notifications at all.
+###########################################################################################################
+
+input_text:
+  house_battery_notify_targets:
+    name: HBC+ notify targets
+    icon: mdi:cellphone-message
+    max: 255
+
+script:
+  hbc_notify:
+    alias: "HBC+: send a notification"
+    description: "Sends an HBC+ notification to every target in input_text.house_battery_notify_targets (empty = notify.notify)."
+    icon: mdi:message-alert-outline
+    mode: queued
+    max: 20
+    fields:
+      title:
+        name: Title
+        required: true
+        selector:
+          text:
+      message:
+        name: Message
+        required: true
+        selector:
+          text:
+            multiline: true
+    variables:
+      raw: "{{ states('input_text.house_battery_notify_targets') }}"
+      parts: >-
+        {{ ('' if raw in ['unknown', 'unavailable'] else raw).split(',')
+           | map('trim') | map('lower') | reject('eq', '') | list }}
+      valid: "{{ parts | select('match', '^notify\\.[a-z0-9_]+$') | list }}"
+      dropped: "{{ parts | reject('in', valid) | list }}"
+      targets: "{{ valid if valid else ['notify.notify'] }}"
+    sequence:
+      - if: "{{ dropped | count > 0 }}"
+        then:
+          - action: system_log.write
+            data:
+              level: warning
+              logger: hbc.notify
+              message: "HBC+ notify: ignored invalid targets {{ dropped | join(', ') }}"
+      - repeat:
+          for_each: "{{ targets }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              continue_on_error: true
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"

@@ -1,10 +1,202 @@
 # Strategy arbiter state (2026-10-21)
 # Node-RED tab '05 Strategy arbiter' is the only writer of input_select.house_battery_strategy.
 # It mirrors its state here as compact JSON so it survives Node-RED and HA restarts:
-#   {"b": <your own strategy>, "h": {<requester>: {"s": <held strategy>, "a": <active?>}}}
+#   {"b": <your own strategy>, "h": {<requester>: {"s": <held strategy>, "a": <active?>, "x": <expires, ms>}}}
 # Written by Node-RED only - do not edit by hand (clear it to reset the arbiter).
 input_text:
   hbc_strategy_arbiter:
     name: "HBC strategy arbiter state"
     icon: mdi:scale-balance
     max: 255
+
+###########################################################################################################
+# HBC+ v1.3 - strategy requests from Home Assistant
+#
+# Automations and other projects (a PV limiter, an EV charger, the battery calibration) can hold a strategy
+# for a while and release it again, without Node-RED:
+#   - action: script.hbc_strategy_hold
+#     data: {requester: hpvc, strategy: Charge PV, reason: "Negative export price", timeout_min: 60}
+#   - action: script.hbc_strategy_release
+#     data: {requester: hpvc}
+# The scripts fire the HA event hbc_arbiter_request; the Strategy arbiter tab answers with hbc_arbiter_result,
+# which the scripts return as their response ({requester, action, ok, result}).
+# Rules (checked in Node-RED): requester 1-32 characters a-z, 0-9 or _ ('guard' and 'manual' are reserved);
+# the strategy must be an option of input_select.house_battery_strategy; every hold expires after timeout_min
+# (default 120, max 1440) so a crashed automation never keeps a strategy forever. Priority 50 (calibration 40,
+# Oscillation Guard 100); a manual choice always wins and overrides the hold until it is released.
+###########################################################################################################
+script:
+  hbc_strategy_hold:
+    alias: "HBC+: hold a strategy"
+    icon: mdi:hand-back-right
+    mode: parallel
+    fields:
+      requester:
+        name: Requester
+        description: Who asks (1-32 characters a-z, 0-9 or _), e.g. hpvc
+        required: true
+        selector:
+          text:
+      strategy:
+        name: Strategy
+        required: true
+        selector:
+          text:
+      reason:
+        name: Reason
+        selector:
+          text:
+      timeout_min:
+        name: Time-out (minutes)
+        default: 120
+        selector:
+          number:
+            min: 1
+            max: 1440
+            unit_of_measurement: min
+    sequence:
+      - if: "{{ is_state('binary_sensor.hbc_heartbeat_stale', 'on') }}"
+        then:
+          - stop: "HBC+ is not running (no heartbeat for 5 minutes); the request was not sent"
+            error: true
+      - event: hbc_arbiter_request
+        event_data:
+          requester: "{{ requester }}"
+          action: hold
+          strategy: "{{ strategy }}"
+          reason: "{{ reason | default('') }}"
+          timeout_min: "{{ timeout_min | default(120) | int(120) }}"
+      - wait_for_trigger:
+          - trigger: event
+            event_type: hbc_arbiter_result
+            event_data:
+              requester: "{{ requester }}"
+        timeout: "00:00:20"
+        continue_on_timeout: true
+      - variables:
+          result: >-
+            {{ wait.trigger.event.data if wait.trigger
+               else {'requester': requester, 'action': 'hold', 'ok': false, 'result': 'no answer from Node-RED within 20 s'} }}
+      - if: "{{ not result.ok }}"
+        then:
+          - action: system_log.write
+            data:
+              level: warning
+              logger: hbc.arbiter
+              message: "HBC+ hold {{ strategy }} for {{ requester }}: {{ result.result }}"
+      - stop: done
+        response_variable: result
+
+  hbc_strategy_release:
+    alias: "HBC+: release a strategy"
+    icon: mdi:hand-back-right-off
+    mode: parallel
+    fields:
+      requester:
+        name: Requester
+        required: true
+        selector:
+          text:
+      reason:
+        name: Reason
+        selector:
+          text:
+    sequence:
+      - if: "{{ is_state('binary_sensor.hbc_heartbeat_stale', 'on') }}"
+        then:
+          - stop: "HBC+ is not running (no heartbeat for 5 minutes); the release was not sent"
+            error: true
+      - event: hbc_arbiter_request
+        event_data:
+          requester: "{{ requester }}"
+          action: release
+          reason: "{{ reason | default('') }}"
+      - wait_for_trigger:
+          - trigger: event
+            event_type: hbc_arbiter_result
+            event_data:
+              requester: "{{ requester }}"
+        timeout: "00:00:20"
+        continue_on_timeout: true
+      - variables:
+          result: >-
+            {{ wait.trigger.event.data if wait.trigger
+               else {'requester': requester, 'action': 'release', 'ok': false, 'result': 'no answer from Node-RED within 20 s'} }}
+      - stop: done
+        response_variable: result
+
+# MQTT entry (HBC+ v1.3): the same request as JSON on hbc/arbiter/request (not retained), e.g.
+#   {"requester": "hpvc", "action": "hold", "strategy": "Charge PV", "reason": "...", "timeout_min": 60}
+# Every answer of the arbiter to a request from HA or MQTT is published on hbc/arbiter/result.
+# Restrict who may publish on hbc/# in your MQTT broker (user guide, "Securing your setup").
+automation:
+  - id: hbc_arbiter_mqtt_request
+    alias: "HBC+: strategy request via MQTT"
+    mode: queued
+    max: 20
+    triggers:
+      - trigger: mqtt
+        topic: hbc/arbiter/request
+    variables:
+      req: "{{ trigger.payload_json if trigger.payload_json is defined and trigger.payload_json is mapping else {} }}"
+    actions:
+      - if: "{{ req | count == 0 }}"
+        then:
+          - action: system_log.write
+            data:
+              level: warning
+              logger: hbc.arbiter
+              message: "HBC+ MQTT request ignored: not a JSON object: {{ trigger.payload[:120] }}"
+          - action: mqtt.publish
+            data:
+              topic: hbc/arbiter/result
+              payload: '{"ok": false, "result": "rejected: payload is not a JSON object"}'
+          - stop: invalid payload
+      - event: hbc_arbiter_request
+        event_data:
+          requester: "{{ req.get('requester', '') }}"
+          action: "{{ req.get('action', '') }}"
+          strategy: "{{ req.get('strategy', '') }}"
+          reason: "{{ req.get('reason', 'MQTT') }}"
+          timeout_min: "{{ req.get('timeout_min', 120) }}"
+
+  - id: hbc_arbiter_mqtt_result
+    alias: "HBC+: strategy request result to MQTT"
+    mode: queued
+    max: 20
+    triggers:
+      - trigger: event
+        event_type: hbc_arbiter_result
+    actions:
+      - action: mqtt.publish
+        data:
+          topic: hbc/arbiter/result
+          payload: "{{ trigger.event.data | to_json }}"
+
+template:
+  # Active and overridden holds of the Strategy arbiter, readable (from input_text.hbc_strategy_arbiter).
+  # State: number of ACTIVE holds. Attributes: base (your own choice) and holds [{requester, strategy,
+  # active, expires}]; expires is local time HH:MM (date when not today), or none for holds without time-out.
+  - sensor:
+      - name: "HBC strategy holds"
+        unique_id: hbc_strategy_holds
+        icon: mdi:hand-back-right
+        state: >-
+          {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+          {%- set j = s | from_json if s.startswith('{') else {} -%}
+          {{ (j.get('h') or {}).values() | selectattr('a') | list | count }}
+        attributes:
+          base: >-
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {{ j.get('b') }}
+          holds: >-
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {%- set ns = namespace(l=[]) -%}
+            {%- for k, v in (j.get('h') or {}).items() -%}
+              {%- set x = v.get('x') -%}
+              {%- set exp = none if x is none else (x / 1000) | timestamp_custom('%H:%M' if (x / 1000) | timestamp_custom('%Y-%m-%d') == now().date() | string else '%d-%m %H:%M') -%}
+              {%- set ns.l = ns.l + [{'requester': k, 'strategy': v.get('s'), 'active': v.get('a', false), 'expires': exp}] -%}
+            {%- endfor -%}
+            {{ ns.l }}
