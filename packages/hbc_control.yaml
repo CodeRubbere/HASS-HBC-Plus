@@ -666,7 +666,7 @@ input_text:
 
   # Dynamic strategy | price sensor (HBC+ v1.0)
   # Optional. Pins the price sensor the Cheapest Energy Hours macro reads, e.g. sensor.nordpool_kwh_nl_eur_3_10_021.
-  # Leave empty to let the macro auto-detect it. Not used by sources that pass their own list (Zonneplan, Grid Clock).
+  # Leave empty to let the macro auto-detect it. Not used by sources that pass their own list (Zonneplan).
   house_battery_strategy_dynamic_price_sensor:
     name: "[entity_id] price sensor (optional)"
     icon: mdi:identifier
@@ -782,15 +782,17 @@ input_select:
   # Dynamic strategy | energy suppliers
   house_battery_strategy_dynamic_data_source:
     name: Tariff data source
+    # Default = the first option: a new install starts on "Grid Clock feed". No `initial:`
+    # on purpose - HA restores the user's choice after a restart.
     options:
+      # HBC+ v1.2: "Grid Clock" (the Grid Clock integration) was replaced by "Grid Clock feed".
+      - Grid Clock feed # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - None
       - Zonneplan
       - Amber Electric
       - EasyEnergy, EnergyZero (core)
       - ENTSO-E
       - Frank Energie
-      - Grid Clock
-      - Grid Clock feed # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - GE-Spot
       - Tibber (core)
       - Tibber (custom)

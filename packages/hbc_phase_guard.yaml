@@ -29,7 +29,7 @@ input_select:
   house_battery_phase_sharing:
     name: Phase sharing
     icon: mdi:call-split
-    options: ["One per phase", "Shared headroom"]
+    options: ["One battery per phase", "Shared headroom"]
   house_battery_phase_selection:
     name: Active battery selection
     icon: mdi:sort-variant
@@ -278,6 +278,86 @@ template:
             {% set ns.p = ns.p + states('number.marstek_m' ~ i ~ '_max_charge_power') | float(0) %}
           {% endfor %}
           {{ ns.p | round(0) }}
+      # Load per phase in % of the phase guard limits, for the gauges on the Phases view. A gauge
+      # card cannot read its range from a helper; in % the bands follow the settings by themselves.
+      # Grid load = P1 phase power / grid fuse (import +, export -).
+      # Circuit load = batteries on the phase / battery circuit (charge +, discharge -).
+      # No state_class and kept out of the recorder: they follow the P1 meter every second (see P5).
+      - name: "HBC+ phase L1 grid load"
+        unique_id: hbc_phase_l1_grid_load
+        unit_of_measurement: "%"
+        icon: mdi:fuse
+        availability: "{{ has_value('sensor.p1_meter_power_phase_1') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {{ (states('sensor.p1_meter_power_phase_1') | float(0) / [lim, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: "{{ states('input_number.house_battery_phase_limit_w') | float(3680) | round(0) | int }}"
+          guard_w: >-
+            {{ (states('input_number.house_battery_phase_limit_w') | float(3680)
+                - states('input_number.house_battery_phase_margin_w') | float(200)) | round(0) | int }}
+      - name: "HBC+ phase L1 circuit load"
+        unique_id: hbc_phase_l1_circuit_load
+        unit_of_measurement: "%"
+        icon: mdi:home-lightning-bolt-outline
+        state: >
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w')
+                        | float(states('input_number.house_battery_phase_limit_w') | float(3680)) %}
+          {{ (states('sensor.hbc_phase_l1_battery_power') | float(0) / [circ, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: >-
+            {{ states('input_number.house_battery_phase_circuit_limit_w')
+               | float(states('input_number.house_battery_phase_limit_w') | float(3680)) | round(0) | int }}
+      - name: "HBC+ phase L2 grid load"
+        unique_id: hbc_phase_l2_grid_load
+        unit_of_measurement: "%"
+        icon: mdi:fuse
+        availability: "{{ has_value('sensor.p1_meter_power_phase_2') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {{ (states('sensor.p1_meter_power_phase_2') | float(0) / [lim, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: "{{ states('input_number.house_battery_phase_limit_w') | float(3680) | round(0) | int }}"
+          guard_w: >-
+            {{ (states('input_number.house_battery_phase_limit_w') | float(3680)
+                - states('input_number.house_battery_phase_margin_w') | float(200)) | round(0) | int }}
+      - name: "HBC+ phase L2 circuit load"
+        unique_id: hbc_phase_l2_circuit_load
+        unit_of_measurement: "%"
+        icon: mdi:home-lightning-bolt-outline
+        state: >
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w')
+                        | float(states('input_number.house_battery_phase_limit_w') | float(3680)) %}
+          {{ (states('sensor.hbc_phase_l2_battery_power') | float(0) / [circ, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: >-
+            {{ states('input_number.house_battery_phase_circuit_limit_w')
+               | float(states('input_number.house_battery_phase_limit_w') | float(3680)) | round(0) | int }}
+      - name: "HBC+ phase L3 grid load"
+        unique_id: hbc_phase_l3_grid_load
+        unit_of_measurement: "%"
+        icon: mdi:fuse
+        availability: "{{ has_value('sensor.p1_meter_power_phase_3') }}"
+        state: >
+          {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %}
+          {{ (states('sensor.p1_meter_power_phase_3') | float(0) / [lim, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: "{{ states('input_number.house_battery_phase_limit_w') | float(3680) | round(0) | int }}"
+          guard_w: >-
+            {{ (states('input_number.house_battery_phase_limit_w') | float(3680)
+                - states('input_number.house_battery_phase_margin_w') | float(200)) | round(0) | int }}
+      - name: "HBC+ phase L3 circuit load"
+        unique_id: hbc_phase_l3_circuit_load
+        unit_of_measurement: "%"
+        icon: mdi:home-lightning-bolt-outline
+        state: >
+          {% set circ = states('input_number.house_battery_phase_circuit_limit_w')
+                        | float(states('input_number.house_battery_phase_limit_w') | float(3680)) %}
+          {{ (states('sensor.hbc_phase_l3_battery_power') | float(0) / [circ, 1] | max * 100) | round(0) | int }}
+        attributes:
+          limit_w: >-
+            {{ states('input_number.house_battery_phase_circuit_limit_w')
+               | float(states('input_number.house_battery_phase_limit_w') | float(3680)) | round(0) | int }}
 
   - binary_sensor:
       - name: "HBC+ phase limit exceeded"
@@ -319,7 +399,7 @@ script:
         target:
           entity_id: input_select.house_battery_phase_sharing
         data:
-          option: "One per phase"
+          option: "One battery per phase"
       - action: input_select.select_option
         target:
           entity_id: input_select.house_battery_phase_selection
@@ -558,3 +638,9 @@ recorder:
       - sensor.hbc_phase_l1_discharge_headroom
       - sensor.hbc_phase_l2_discharge_headroom
       - sensor.hbc_phase_l3_discharge_headroom
+      - sensor.hbc_phase_l1_grid_load
+      - sensor.hbc_phase_l2_grid_load
+      - sensor.hbc_phase_l3_grid_load
+      - sensor.hbc_phase_l1_circuit_load
+      - sensor.hbc_phase_l2_circuit_load
+      - sensor.hbc_phase_l3_circuit_load

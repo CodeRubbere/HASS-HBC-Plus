@@ -18,6 +18,8 @@ input_select:
   house_battery_price_guard_mode:
     name: Price guard
     icon: mdi:cash-lock
+    # Default = the first option: a new install starts "Off". No `initial:` on purpose -
+    # HA restores the user's choice after a restart.
     options: ["Off", "Monitor", "On"]
 
 input_number:
