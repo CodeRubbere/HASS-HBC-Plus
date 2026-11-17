@@ -12,6 +12,8 @@ This project is designed for hobbyists who want full control over their home bat
 
 **Current version: v1.1** (16 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.1](docs/user-guide.en.md#whats-new-in-hbc-v11)
 
+**Next: v1.2**, planned for 10 December 2026, ready for the end of Dutch net metering · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12) · [Changelog](CHANGELOG.md)
+
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
 ## Credits
