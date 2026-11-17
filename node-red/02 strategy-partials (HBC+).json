@@ -2,7 +2,7 @@
     {
         "id": "1ae53b821b8673a2",
         "type": "tab",
-        "label": "HBC+ Strategy Partials v1.1",
+        "label": "HBC+ Strategy Partials v1.2",
         "disabled": false,
         "info": "",
         "env": []
@@ -668,8 +668,8 @@
         "id": "hbcpdocd4b9c1638",
         "type": "comment",
         "z": "1ae53b821b8673a2",
-        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Partials v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nThree small strategies that all run **Self-consumption** with one direction switched off:\n\n| Strategy (link-in) | Self-consumption with | Effect |\n|---|---|---|\n| Charge PV | discharging disabled | charges only from PV surplus, never discharges |\n| Zero import | charging disabled | discharges to keep grid import at 0 W, never charges |\n| Standby / peak shave | charging and discharging disabled | batteries idle (soft stop, no relay clicks) |\n\n**Peak shaving**: when grid power exceeds the import or export limit set in HBC+, *Mode selection* switches to peak shaving and the batteries are used to stay below the limit. It persists while the batteries are still needed (*Peak check*) and ends by a time-out once they are not.\n\n## HBC+ v1.0\n\nNo change in this tab. Everything runs through Self-consumption, which applies the phase rules on Enforce.\n",
+        "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Partials v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nThree small strategies that all run **Self-consumption** with one direction switched off:\n\n| Strategy (link-in) | Self-consumption with | Effect |\n|---|---|---|\n| Charge PV | discharging disabled | charges only from PV surplus, never discharges |\n| Zero import | charging disabled | discharges to keep grid import at 0 W, never charges |\n| Standby / peak shave | charging and discharging disabled | batteries idle (soft stop, no relay clicks) |\n\n**Peak shaving**: when grid power exceeds the import or export limit set in HBC+, *Mode selection* switches to peak shaving and the batteries are used to stay below the limit. It persists while the batteries are still needed (*Peak check*) and ends by a time-out once they are not.\n\n## HBC+ v1.0\n\nNo change in this tab. Everything runs through Self-consumption, which applies the phase rules on Enforce.\n",
         "x": 230,
         "y": 40,
         "wires": []
