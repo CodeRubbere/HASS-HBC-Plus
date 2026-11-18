@@ -277,27 +277,16 @@
     },
     {
         "id": "96617e7703ebf29a",
-        "type": "api-current-state",
+        "type": "function",
         "z": "230212c14defbe4a",
         "name": "Saved state",
-        "server": "176d29a.6f648d6",
-        "version": 3,
+        "func": "// HBC+ (v1.3/v1.4): read the saved arbiter state from the HA states in global context\n// ('Expose to global context'), instead of an api-current-state node. Right after a deploy or an HA\n// restart that node often ran before Node-RED's entity cache was filled and raised\n// 'Entity could not be found in cache', which showed up as an error in sensor.hbc_health.\n// Polls every 5 s for up to 2 minutes; if the entity never appears, it warns once and the arbiter\n// starts with an empty state (as before when the saved copy was empty).\nconst ENTITY = 'input_text.hbc_strategy_arbiter';\nconst read = () => {\n    const ha = global.get('homeassistant');\n    if (!ha || typeof ha !== 'object') return undefined;\n    const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n    const srv = servers.find(s => s.isConnected !== false) || servers[0];\n    if (!srv || Object.keys(srv.states).length === 0) return undefined;\n    const e = srv.states[ENTITY];\n    return e ? String(e.state) : null;   // null = HA states loaded, entity missing\n};\nlet n = 0;\nconst poll = () => {\n    const v = read();\n    if (typeof v === 'string') {\n        msg.saved_json = v;\n        node.status({ fill: 'green', shape: 'dot', text: 'read' });\n        node.send(msg);\n        return;\n    }\n    n += 1;\n    if (n >= 24) {\n        node.warn(v === null\n            ? `${ENTITY} does not exist: is packages/hbc_strategy_arbiter.yaml loaded? The arbiter starts empty.`\n            : `no HA states in global context after 2 minutes ('Expose to global context' off?). The arbiter starts empty.`);\n        node.status({ fill: 'yellow', shape: 'ring', text: v === null ? 'entity missing' : 'no HA states' });\n        msg.saved_json = '';\n        node.send(msg);\n        return;\n    }\n    node.status({ fill: 'blue', shape: 'ring', text: `waiting for HA states (${n})` });\n    setTimeout(poll, 5000);\n};\npoll();\nreturn null;\n",
         "outputs": 1,
-        "halt_if": "",
-        "halt_if_type": "str",
-        "entity_id": "input_text.hbc_strategy_arbiter",
-        "state_type": "str",
-        "blockInputOverrides": false,
-        "outputProperties": [
-            {
-                "property": "saved_json",
-                "propertyType": "msg",
-                "value": "string",
-                "valueType": "entityState"
-            }
-        ],
-        "for": "",
-        "forType": "num",
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 360,
         "y": 400,
         "wires": [
@@ -438,7 +427,7 @@
         "z": "230212c14defbe4a",
         "g": "hbcp13a000000001",
         "name": "From HA",
-        "func": "// HBC+ v1.3: a strategy request from Home Assistant (script.hbc_strategy_hold / _release, which\n// fire the HA event hbc_arbiter_request). Checked here, then handed to 'Strategy request' like any\n// flow of your own. Output 1 -> the arbiter, output 2 -> straight back to HA (rejected).\nconst d = (msg.payload && typeof msg.payload.data === 'object' && msg.payload.data) ? msg.payload.data : (msg.payload || {});\nconst RESERVED = ['guard', 'manual'];\nconst who = String(d.requester || '').trim();\nconst action = String(d.action || '').trim();\nconst reject = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: `${who || '?'}: ${why}`.slice(0, 80) });\n    node.warn(`HA request ${who || '?'}: ${why}`);\n    return [null, { payload: { requester: who, action, ok: false, result: 'rejected: ' + why } }];\n};\nif (!/^[a-z0-9_]{1,32}$/.test(who)) return reject('requester must be 1-32 characters a-z, 0-9 or _');\nif (RESERVED.includes(who)) return reject(`requester '${who}' is reserved`);\nif (!['hold', 'release'].includes(action)) return reject(`unknown action '${action}'`);\nlet tmo = Number(d.timeout_min);\nif (!Number.isFinite(tmo) || tmo <= 0) tmo = 120;\ntmo = Math.min(1440, Math.max(1, Math.round(tmo)));\nmsg.arbiter = { requester: who, action, reason: d.reason ? String(d.reason).slice(0, 80) : 'Home Assistant' };\nif (action === 'hold') {\n    msg.arbiter.strategy = String(d.strategy || '');\n    msg.arbiter.expires = Date.now() + tmo * 60000;   // the arbiter keeps it with the hold ('x')\n}\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nmsg.ha_reply = true;\nnode.status({ fill: 'blue', shape: 'dot', text: `${who}: ${action} ${msg.arbiter.strategy || ''}`.trim().slice(0, 80) });\ndelete msg.payload;\nreturn [msg, null];\n",
+        "func": "// HBC+ v1.3: a strategy request from Home Assistant (script.hbc_strategy_hold / _release, which\n// fire the HA event hbc_arbiter_request). Checked here, then handed to 'Strategy request' like any\n// flow of your own. Output 1 -> the arbiter, output 2 -> straight back to HA (rejected).\n// The server-events node puts the event data in msg.payload.event (msg.payload.data in older versions).\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : {};\nconst d = (p.event && typeof p.event === 'object') ? p.event : ((p.data && typeof p.data === 'object') ? p.data : p);\nconst RESERVED = ['guard', 'manual'];\nconst who = String(d.requester || '').trim();\nconst action = String(d.action || '').trim();\nconst reject = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: `${who || '?'}: ${why}`.slice(0, 80) });\n    node.warn(`HA request ${who || '?'}: ${why}`);\n    return [null, { payload: { requester: who, action, ok: false, result: 'rejected: ' + why } }];\n};\nif (!/^[a-z0-9_]{1,32}$/.test(who)) return reject('requester must be 1-32 characters a-z, 0-9 or _');\nif (RESERVED.includes(who)) return reject(`requester '${who}' is reserved`);\nif (!['hold', 'release'].includes(action)) return reject(`unknown action '${action}'`);\nlet tmo = Number(d.timeout_min);\nif (!Number.isFinite(tmo) || tmo <= 0) tmo = 120;\ntmo = Math.min(1440, Math.max(1, Math.round(tmo)));\nmsg.arbiter = { requester: who, action, reason: d.reason ? String(d.reason).slice(0, 80) : 'Home Assistant' };\nif (action === 'hold') {\n    msg.arbiter.strategy = String(d.strategy || '');\n    msg.arbiter.expires = Date.now() + tmo * 60000;   // the arbiter keeps it with the hold ('x')\n}\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nmsg.ha_reply = true;\nnode.status({ fill: 'blue', shape: 'dot', text: `${who}: ${action} ${msg.arbiter.strategy || ''}`.trim().slice(0, 80) });\ndelete msg.payload;\nreturn [msg, null];\n",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,

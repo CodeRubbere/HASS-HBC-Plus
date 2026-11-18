@@ -56,8 +56,6 @@ script:
       - wait_for_trigger:
           - trigger: event
             event_type: hbc_selftest_flow_result
-            event_data:
-              run_id: "{{ run_id }}"
         timeout: "00:00:10"
         continue_on_timeout: true
       - variables:
@@ -147,6 +145,16 @@ script:
                           ~ ((' - for a phone use notify.mobile_app_' ~ (dropped | select('match', '^device_tracker\\.') | first).split('.')[1])
                              if dropped | select('match', '^device_tracker\\.') | list else ''))
                          if dropped else ((valid | join(', ')) if valid else 'notify.notify')}] -%}
+            {#- Strategy arbiter package (hold/release scripts and saved state) -#}
+            {%- set arb_miss = ['input_text.hbc_strategy_arbiter', 'script.hbc_strategy_hold', 'script.hbc_strategy_release']
+                               | select('is_state', 'unknown') | list -%}
+            {%- set ns.c = ns.c + [{'id': 'arbiter', 'label': 'Strategy arbiter', 'result': 'ok' if not arb_miss else 'error',
+                 'info': 'hold and release scripts available' if not arb_miss
+                         else 'missing ' ~ arb_miss | join(', ') ~ ': copy packages/hbc_strategy_arbiter.yaml (v1.3 or newer) and restart HA'}] -%}
+            {#- strategy option Self-test (hbc_control.yaml v1.4) -#}
+            {%- set opts = state_attr('input_select.house_battery_strategy', 'options') or [] -%}
+            {%- set ns.c = ns.c + [{'id': 'option', 'label': 'Strategy option Self-test', 'result': 'ok' if 'Self-test' in opts else 'error',
+                 'info': 'present' if 'Self-test' in opts else 'missing in input_select.house_battery_strategy: copy hbc_control.yaml v1.4 and restart HA'}] -%}
             {#- EV stop trigger -#}
             {%- set ev = states('input_text.house_battery_strategy_ev_sensor_entity_id') | trim -%}
             {%- set ev_on = ev not in bad and ev != '' and states(ev) in ['on', 'true', 'True', '1'] -%}
@@ -156,7 +164,7 @@ script:
           errors: "{{ checks | selectattr('result', 'eq', 'error') | list | count }}"
           warnings: "{{ checks | selectattr('result', 'eq', 'warning') | list | count }}"
           blockers: >-
-            {{ checks | selectattr('id', 'in', ['p1_phases', 'batteries', 'master', 'heartbeat', 'flow', 'ev'])
+            {{ checks | selectattr('id', 'in', ['p1_phases', 'batteries', 'master', 'heartbeat', 'flow', 'arbiter', 'option', 'ev'])
                       | rejectattr('result', 'eq', 'ok') | map(attribute='label') | list }}
       # --- phase detection
       - if: "{{ detect }}"
@@ -179,6 +187,7 @@ script:
                   checks: "{{ checks }}"
               - action: script.hbc_strategy_hold
                 continue_on_error: true
+                response_variable: hold
                 data:
                   requester: selftest
                   strategy: Self-test
@@ -194,8 +203,21 @@ script:
                       run_id: "{{ run_id }}"
                       status: not_started
                       reason: >-
-                        the strategy did not become Self-test (a manual choice or the Oscillation Guard holds it,
-                        or the strategy option Self-test is missing in hbc_control.yaml)
+                        {%- set arb = states('input_text.hbc_strategy_arbiter') -%}
+                        {%- set st = arb | from_json(default={}) if arb not in ['unknown', 'unavailable', ''] else {} -%}
+                        {%- set h = (st.h | default({})).get('selftest') if st is mapping else none -%}
+                        the strategy stayed {{ states('input_select.house_battery_strategy') }}:
+                        {% if hold is not defined or hold is none or hold.result is not defined -%}
+                          script.hbc_strategy_hold gave no answer (is hbc_strategy_arbiter.yaml v1.3 or newer loaded?)
+                        {%- elif not hold.ok -%}
+                          the Strategy arbiter answered '{{ hold.result }}'
+                        {%- elif h is mapping and not h.a | default(true) -%}
+                          the hold is overridden by a manual strategy choice; release it with script.hbc_strategy_release (requester selftest)
+                        {%- elif ((st.h | default({})).get('guard')) -%}
+                          the Oscillation Guard (priority 100) holds the strategy
+                        {%- else -%}
+                          the arbiter accepted the hold ('{{ hold.result }}') but did not switch; check the Strategy arbiter tab in Node-RED
+                        {%- endif %}
                       batteries: []
                       changes: 0
                       finished: "{{ now().isoformat() }}"

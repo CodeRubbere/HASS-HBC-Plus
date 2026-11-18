@@ -3640,7 +3640,7 @@ views:
             content: >
               {% set p = states('sensor.hbc_self_test_phases') %}
               {% set bs = state_attr('sensor.hbc_self_test_phases', 'batteries') or [] %}
-              {% if p in ['unknown', 'unavailable'] %}Phase detection not run yet.{% else %}**Phase detection: {{ p }}**{% if state_attr('sensor.hbc_self_test_phases', 'reason') %} – {{ state_attr('sensor.hbc_self_test_phases', 'reason') }}{% endif %}
+              {% if is_state('sensor.hbc_self_test_status', 'running') and is_state_attr('sensor.hbc_self_test_status', 'step', 'phase_detection') %}**Phase detection: running** – one battery at a time charges at 800 W, about 1 to 3 minutes per battery.{% elif p in ['unknown', 'unavailable'] %}Phase detection not run yet.{% else %}**Phase detection: {{ p }}**{% if state_attr('sensor.hbc_self_test_phases', 'reason') %} – {{ state_attr('sensor.hbc_self_test_phases', 'reason') }}{% endif %}
 
 
               {% if bs %}| Battery | Set | Measured | Rise L1 / L2 / L3 (W) | Note |

@@ -21,67 +21,10 @@
             "hbcp14st00000012",
             "hbcp14st00000013"
         ],
-        "x": 24,
+        "x": 34,
         "y": 79,
-        "w": 762,
+        "w": 792,
         "h": 142
-    },
-    {
-        "id": "hbcp14st00000002",
-        "type": "group",
-        "z": "hbcp14st00000000",
-        "name": "Flow check (HBC+ v1.4)",
-        "style": {
-            "label": true
-        },
-        "nodes": [
-            "hbcp14st00000020",
-            "hbcp14st00000021",
-            "hbcp14st00000022"
-        ],
-        "x": 54,
-        "y": 259,
-        "w": 732,
-        "h": 82
-    },
-    {
-        "id": "hbcp14st00000003",
-        "type": "group",
-        "z": "hbcp14st00000000",
-        "name": "Strategy Self-test",
-        "style": {
-            "label": true
-        },
-        "nodes": [
-            "hbcp14st00000030",
-            "hbcp14st00000031",
-            "hbcp14st00000032",
-            "hbcp14st00000033"
-        ],
-        "x": 44,
-        "y": 379,
-        "w": 732,
-        "h": 82
-    },
-    {
-        "id": "hbcp14st00000004",
-        "type": "group",
-        "z": "hbcp14st00000000",
-        "name": "Unhandled exceptions",
-        "style": {
-            "label": true,
-            "stroke": "#d88a8a",
-            "color": "#d88a8a"
-        },
-        "nodes": [
-            "hbcp14st00000040",
-            "hbcp14st00000041",
-            "hbcp14st00000042"
-        ],
-        "x": 49,
-        "y": 499,
-        "w": 327,
-        "h": 82
     },
     {
         "id": "hbcp14st00000010",
@@ -149,7 +92,7 @@
         "z": "hbcp14st00000000",
         "g": "hbcp14st00000001",
         "name": "Self-test controller",
-        "func": "// HBC+ v1.4 (F1) - Self-test: detect the phase of every battery.\n// Started by script.hbc_selftest_run (HA event hbc_selftest_request, action 'start'), after the script has\n// put the strategy on 'Self-test' through the Strategy arbiter (requester 'selftest', priority 90).\n// Per battery, up to 3 attempts of about 65 s:\n//   settle 20 s  all batteries stopped\n//   base   10 s  measure the P1 power per phase (baseline)\n//   ramp   20 s  only this battery charges at msg.power (default 800 W)\n//   meas   15 s  measure the P1 power per phase and the battery power\n// The phase whose import rose most is the battery's phase when that rise is at least 60 % of the measured\n// battery power and at least twice the second-largest rise. Otherwise: next attempt, after 3 'uncertain'.\n// The plan for the 'Self-test' strategy (link in on this tab) is global 'hbc_selftest_plan'\n// = {target: 'M2' | null, power, expires}. It expires after 2 minutes, so a stopped Node-RED or a\n// crashed test never leaves a battery charging: the strategy then stops every battery.\n// Output -> HA event hbc_selftest_phase_result {run_id, status, reason, batteries, changes, finished}.\n// Signs: sensor.p1_meter_power_phase_N > 0 = import, sensor.marstek_mN_battery_power > 0 = charging.\nconst SETTLE_S = 20, BASE_S = 10, RAMP_S = 20, MEAS_S = 15, ATTEMPTS = 3;\nconst MIN_SHARE = 0.6, MIN_RATIO = 2, MIN_BATT_W = 400, LOST_S = 30, PLAN_MS = 120000;\n\nconst ha = global.get('homeassistant');\nlet states = null;\nif (ha && typeof ha === 'object') {\n    const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n    const srv = servers.find(s => s.isConnected !== false) || servers[0];\n    if (srv) states = srv.states;\n}\nconst raw = (id) => (states && states[id] ? states[id].state : undefined);\nconst usable = (v) => v !== undefined && v !== null && v !== '' && v !== 'unknown' && v !== 'unavailable';\nconst num = (id, def) => { const v = raw(id); const n = Number(v); return usable(v) && Number.isFinite(n) ? n : def; };\nconst str = (id, def) => { const v = raw(id); return usable(v) ? String(v) : def; };\n\nconst now = Date.now();\nlet st = context.get('st') || null;\nconst setPlan = (target) => global.set('hbc_selftest_plan', { target, power: st.power, expires: now + PLAN_MS });\nconst go = (step) => { st.step = step; st.t = now; };\nconst round = (x) => Math.round(x);\nconst avg = (rows) => rows[0].map((_, k) => rows.reduce((s, r) => s + r[k], 0) / rows.length);\n\nconst finish = (status, reason) => {\n    global.set('hbc_selftest_plan', null);\n    const res = st ? st.results : [];\n    let overall = status;\n    if (status === 'done') {\n        if (res.some(r => !r.certain)) overall = 'uncertain';\n        else if (res.some(r => r.change)) overall = 'mismatch';\n        else overall = 'ok';\n    }\n    const payload = {\n        run_id: st ? st.run_id : '',\n        status: overall,\n        reason: reason || '',\n        batteries: res,\n        changes: res.filter(r => r.change).length,\n        finished: new Date(now).toISOString(),\n    };\n    context.set('st', null);\n    node.status({ fill: overall === 'ok' ? 'green' : 'yellow', shape: 'dot', text: `${overall}${reason ? ': ' + reason : ''}`.slice(0, 80) });\n    node.send({ payload });\n    return null;\n};\n\n// ---- requests from HA ----\nif (msg.topic === 'hbc_selftest_request') {\n    const d = (msg.payload && typeof msg.payload.data === 'object' && msg.payload.data) ? msg.payload.data : (msg.payload || {});\n    if (d.action === 'abort') {\n        if (!st) return null;\n        return finish('aborted', 'stopped from Home Assistant');\n    }\n    if (d.action !== 'start') return null;\n    if (st) { node.warn('Self-test already running, start ignored'); return null; }\n    if (!states) {\n        st = { run_id: String(d.run_id || ''), results: [] };\n        return finish('error', 'no HA states in global context (Expose to global context off?)');\n    }\n    let power = Number(d.power);\n    if (!Number.isFinite(power)) power = 800;\n    power = Math.min(1500, Math.max(300, Math.round(power)));\n    st = {\n        run_id: String(d.run_id || ''), power,\n        count: Math.max(0, Math.min(6, num('input_number.house_battery_count', 0))),\n        bi: 1, attempt: 1, step: 'settle', t: now, base: [], meas: [], batt: [], results: [], lost: null,\n    };\n    if (st.count < 1) return finish('error', 'no batteries (input_number.house_battery_count)');\n    context.set('st', st);\n    setPlan(null);\n    node.status({ fill: 'blue', shape: 'dot', text: `M1 attempt 1: settle` });\n    return null;\n}\n\n// ---- tick (every second) ----\nif (!st) return null;\nif (!states) return finish('aborted', 'HA states disappeared from global context');\n\n// The 'Self-test' strategy must really be active; another hold or a manual choice stops the test.\nif (str('input_select.house_battery_strategy', '') !== 'Self-test') {\n    if (!st.lost) st.lost = now;\n    if (now - st.lost > LOST_S * 1000) return finish('aborted', 'the strategy is no longer Self-test (manual choice or another hold)');\n} else st.lost = null;\n\nconst id = `M${st.bi}`;\nconst el = (now - st.t) / 1000;\nconst phases = [1, 2, 3].map(i => num(`sensor.p1_meter_power_phase_${i}`, NaN));\nconst phasesOk = phases.every(Number.isFinite);\n\nconst nextBattery = () => {\n    st.bi += 1; st.attempt = 1; st.base = []; st.meas = []; st.batt = []; st.socChecked = false;\n    if (st.bi > st.count) return finish('done', '');\n    go('settle');\n    return null;\n};\n\nif (st.step === 'settle') {\n    if (!st.socChecked) {\n        st.socChecked = true;\n        // a battery at its charge cutoff cannot charge: skip it\n        const soc = num(`sensor.marstek_m${st.bi}_battery_state_of_charge`, NaN);\n        const cut = num(`input_number.marstek_m${st.bi}_charging_cutoff_capacity`, 100);\n        if (Number.isFinite(soc) && soc >= Math.min(95, cut - 2)) {\n            st.results.push({ id, measured: null, current: str(`input_select.marstek_m${st.bi}_phase`, ''), certain: false, change: false,\n                battery_w: 0, delta: {}, attempts: 0, note: `battery full (${round(soc)} %), not tested` });\n            return nextBattery();\n        }\n    }\n    setPlan(null);\n    if (el >= SETTLE_S) go('base');\n} else if (st.step === 'base') {\n    setPlan(null);\n    if (phasesOk) st.base.push(phases);\n    if (el >= BASE_S) go('ramp');\n} else if (st.step === 'ramp') {\n    setPlan(id);\n    if (el >= RAMP_S) go('meas');\n} else if (st.step === 'meas') {\n    setPlan(id);\n    if (phasesOk) st.meas.push(phases);\n    const bp = num(`sensor.marstek_m${st.bi}_battery_power`, NaN);\n    if (Number.isFinite(bp)) st.batt.push(bp);\n    if (el >= MEAS_S) {\n        setPlan(null);\n        const current = str(`input_select.marstek_m${st.bi}_phase`, '');\n        let r;\n        if (st.base.length < 5 || st.meas.length < 5) {\n            r = { certain: false, measured: null, battery_w: 0, delta: {}, note: 'too few P1 phase readings' };\n        } else {\n            const b = avg(st.base), m = avg(st.meas);\n            const d = m.map((x, k) => x - b[k]);\n            const bw = st.batt.length ? st.batt.reduce((s, x) => s + x, 0) / st.batt.length : 0;\n            const order = [0, 1, 2].sort((a, c) => d[c] - d[a]);\n            const best = d[order[0]], second = d[order[1]];\n            const delta = { L1: round(d[0]), L2: round(d[1]), L3: round(d[2]) };\n            if (bw < MIN_BATT_W) {\n                r = { certain: false, measured: null, battery_w: round(bw), delta, note: `battery did not charge (${round(bw)} W)` };\n            } else {\n                const ok = best >= MIN_SHARE * bw && (second <= 0 || best >= MIN_RATIO * second);\n                r = { certain: ok, measured: ok ? `L${order[0] + 1}` : null, battery_w: round(bw), delta,\n                      note: ok ? '' : 'house load changed during the measurement' };\n            }\n        }\n        if (!r.certain && st.attempt < ATTEMPTS && !/did not charge/.test(r.note)) {\n            st.attempt += 1; st.base = []; st.meas = []; st.batt = [];\n            go('settle');\n        } else {\n            r.change = r.certain && ['L1', 'L2', 'L3'].includes(current) && r.measured !== current;\n            st.results.push(Object.assign({ id, current, attempts: st.attempt }, r));\n            return nextBattery();\n        }\n    }\n}\nnode.status({ fill: 'blue', shape: 'dot', text: `${id} attempt ${st.attempt}: ${st.step} ${Math.floor((now - st.t) / 1000)} s` });\nreturn null;\n",
+        "func": "// HBC+ v1.4 (F1) - Self-test: detect the phase of every battery.\n// Started by script.hbc_selftest_run (HA event hbc_selftest_request, action 'start'), after the script has\n// put the strategy on 'Self-test' through the Strategy arbiter (requester 'selftest', priority 90).\n// Per battery, up to 3 attempts of about 65 s:\n//   settle 20 s  all batteries stopped\n//   base   10 s  measure the P1 power per phase (baseline)\n//   ramp   20 s  only this battery charges at msg.power (default 800 W)\n//   meas   15 s  measure the P1 power per phase and the battery power\n// The phase whose import rose most is the battery's phase when that rise is at least 60 % of the measured\n// battery power and at least twice the second-largest rise. Otherwise: next attempt, after 3 'uncertain'.\n// The plan for the 'Self-test' strategy (link in on this tab) is global 'hbc_selftest_plan'\n// = {target: 'M2' | null, power, expires}. It expires after 2 minutes, so a stopped Node-RED or a\n// crashed test never leaves a battery charging: the strategy then stops every battery.\n// Output -> HA event hbc_selftest_phase_result {run_id, status, reason, batteries, changes, finished}.\n// Signs: sensor.p1_meter_power_phase_N > 0 = import, sensor.marstek_mN_battery_power > 0 = charging.\nconst SETTLE_S = 20, BASE_S = 10, RAMP_S = 20, MEAS_S = 15, ATTEMPTS = 3;\nconst MIN_SHARE = 0.6, MIN_RATIO = 2, MIN_BATT_W = 400, LOST_S = 30, PLAN_MS = 120000;\n\nconst ha = global.get('homeassistant');\nlet states = null;\nif (ha && typeof ha === 'object') {\n    const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n    const srv = servers.find(s => s.isConnected !== false) || servers[0];\n    if (srv) states = srv.states;\n}\nconst raw = (id) => (states && states[id] ? states[id].state : undefined);\nconst usable = (v) => v !== undefined && v !== null && v !== '' && v !== 'unknown' && v !== 'unavailable';\nconst num = (id, def) => { const v = raw(id); const n = Number(v); return usable(v) && Number.isFinite(n) ? n : def; };\nconst str = (id, def) => { const v = raw(id); return usable(v) ? String(v) : def; };\n\nconst now = Date.now();\nlet st = context.get('st') || null;\nconst setPlan = (target) => global.set('hbc_selftest_plan', { target, power: st.power, expires: now + PLAN_MS });\nconst go = (step) => { st.step = step; st.t = now; };\nconst round = (x) => Math.round(x);\nconst avg = (rows) => rows[0].map((_, k) => rows.reduce((s, r) => s + r[k], 0) / rows.length);\n\nconst finish = (status, reason) => {\n    global.set('hbc_selftest_plan', null);\n    const res = st ? st.results : [];\n    let overall = status;\n    if (status === 'done') {\n        if (res.some(r => !r.certain)) overall = 'uncertain';\n        else if (res.some(r => r.change)) overall = 'mismatch';\n        else overall = 'ok';\n    }\n    const payload = {\n        run_id: st ? st.run_id : '',\n        status: overall,\n        reason: reason || '',\n        batteries: res,\n        changes: res.filter(r => r.change).length,\n        finished: new Date(now).toISOString(),\n    };\n    context.set('st', null);\n    node.status({ fill: overall === 'ok' ? 'green' : 'yellow', shape: 'dot', text: `${overall}${reason ? ': ' + reason : ''}`.slice(0, 80) });\n    node.send({ payload });\n    return null;\n};\n\n// ---- requests from HA ----\nif (msg.topic === 'hbc_selftest_request') {\n    // The server-events node puts the event data in msg.payload.event (msg.payload.data in older versions).\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : {};\nconst d = (p.event && typeof p.event === 'object') ? p.event : ((p.data && typeof p.data === 'object') ? p.data : p);\n    if (d.action === 'abort') {\n        if (!st) return null;\n        return finish('aborted', 'stopped from Home Assistant');\n    }\n    if (d.action !== 'start') return null;\n    if (st) { node.warn('Self-test already running, start ignored'); return null; }\n    if (!states) {\n        st = { run_id: String(d.run_id || ''), results: [] };\n        return finish('error', 'no HA states in global context (Expose to global context off?)');\n    }\n    let power = Number(d.power);\n    if (!Number.isFinite(power)) power = 800;\n    power = Math.min(1500, Math.max(300, Math.round(power)));\n    st = {\n        run_id: String(d.run_id || ''), power,\n        count: Math.max(0, Math.min(6, num('input_number.house_battery_count', 0))),\n        bi: 1, attempt: 1, step: 'settle', t: now, base: [], meas: [], batt: [], results: [], lost: null,\n    };\n    if (st.count < 1) return finish('error', 'no batteries (input_number.house_battery_count)');\n    context.set('st', st);\n    setPlan(null);\n    node.status({ fill: 'blue', shape: 'dot', text: `M1 attempt 1: settle` });\n    return null;\n}\n\n// ---- tick (every second) ----\nif (!st) return null;\nif (!states) return finish('aborted', 'HA states disappeared from global context');\n\n// The 'Self-test' strategy must really be active; another hold or a manual choice stops the test.\nif (str('input_select.house_battery_strategy', '') !== 'Self-test') {\n    if (!st.lost) st.lost = now;\n    if (now - st.lost > LOST_S * 1000) return finish('aborted', 'the strategy is no longer Self-test (manual choice or another hold)');\n} else st.lost = null;\n\nconst id = `M${st.bi}`;\nconst el = (now - st.t) / 1000;\nconst phases = [1, 2, 3].map(i => num(`sensor.p1_meter_power_phase_${i}`, NaN));\nconst phasesOk = phases.every(Number.isFinite);\n\nconst nextBattery = () => {\n    st.bi += 1; st.attempt = 1; st.base = []; st.meas = []; st.batt = []; st.socChecked = false;\n    if (st.bi > st.count) return finish('done', '');\n    go('settle');\n    return null;\n};\n\nif (st.step === 'settle') {\n    if (!st.socChecked) {\n        st.socChecked = true;\n        // a battery at its charge cutoff cannot charge: skip it\n        const soc = num(`sensor.marstek_m${st.bi}_battery_state_of_charge`, NaN);\n        const cut = num(`input_number.marstek_m${st.bi}_charging_cutoff_capacity`, 100);\n        if (Number.isFinite(soc) && soc >= Math.min(95, cut - 2)) {\n            st.results.push({ id, measured: null, current: str(`input_select.marstek_m${st.bi}_phase`, ''), certain: false, change: false,\n                battery_w: 0, delta: {}, attempts: 0, note: `battery full (${round(soc)} %), not tested` });\n            return nextBattery();\n        }\n    }\n    setPlan(null);\n    if (el >= SETTLE_S) go('base');\n} else if (st.step === 'base') {\n    setPlan(null);\n    if (phasesOk) st.base.push(phases);\n    if (el >= BASE_S) go('ramp');\n} else if (st.step === 'ramp') {\n    setPlan(id);\n    if (el >= RAMP_S) go('meas');\n} else if (st.step === 'meas') {\n    setPlan(id);\n    if (phasesOk) st.meas.push(phases);\n    const bp = num(`sensor.marstek_m${st.bi}_battery_power`, NaN);\n    if (Number.isFinite(bp)) st.batt.push(bp);\n    if (el >= MEAS_S) {\n        setPlan(null);\n        const current = str(`input_select.marstek_m${st.bi}_phase`, '');\n        let r;\n        if (st.base.length < 5 || st.meas.length < 5) {\n            r = { certain: false, measured: null, battery_w: 0, delta: {}, note: 'too few P1 phase readings' };\n        } else {\n            const b = avg(st.base), m = avg(st.meas);\n            const d = m.map((x, k) => x - b[k]);\n            const bw = st.batt.length ? st.batt.reduce((s, x) => s + x, 0) / st.batt.length : 0;\n            const order = [0, 1, 2].sort((a, c) => d[c] - d[a]);\n            const best = d[order[0]], second = d[order[1]];\n            const delta = { L1: round(d[0]), L2: round(d[1]), L3: round(d[2]) };\n            if (bw < MIN_BATT_W) {\n                r = { certain: false, measured: null, battery_w: round(bw), delta, note: `battery did not charge (${round(bw)} W)` };\n            } else {\n                const ok = best >= MIN_SHARE * bw && (second <= 0 || best >= MIN_RATIO * second);\n                r = { certain: ok, measured: ok ? `L${order[0] + 1}` : null, battery_w: round(bw), delta,\n                      note: ok ? '' : 'house load changed during the measurement' };\n            }\n        }\n        if (!r.certain && st.attempt < ATTEMPTS && !/did not charge/.test(r.note)) {\n            st.attempt += 1; st.base = []; st.meas = []; st.batt = [];\n            go('settle');\n        } else {\n            r.change = r.certain && ['L1', 'L2', 'L3'].includes(current) && r.measured !== current;\n            st.results.push(Object.assign({ id, current, attempts: st.attempt }, r));\n            return nextBattery();\n        }\n    }\n}\nnode.status({ fill: 'blue', shape: 'dot', text: `${id} attempt ${st.attempt}: ${st.step} ${Math.floor((now - st.t) / 1000)} s` });\nreturn null;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -180,6 +123,24 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "hbcp14st00000002",
+        "type": "group",
+        "z": "hbcp14st00000000",
+        "name": "Flow check (HBC+ v1.4)",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp14st00000020",
+            "hbcp14st00000021",
+            "hbcp14st00000022"
+        ],
+        "x": 34,
+        "y": 259,
+        "w": 792,
+        "h": 82
     },
     {
         "id": "hbcp14st00000020",
@@ -221,7 +182,7 @@
         "z": "hbcp14st00000000",
         "g": "hbcp14st00000002",
         "name": "Flow check",
-        "func": "// HBC+ v1.4 (F1) - Self-test, part 1: what only Node-RED can see. Answers the HA event\n// hbc_selftest_flow_check (fired by script.hbc_selftest_run) with hbc_selftest_flow_result.\n//   global_states  the HA server node exposes its states to global context ('Expose to global context')\n//   entities       number of HA states Node-RED sees\n//   p1             sensor.p1_meter_power is among them\n//   connected      the HA server node is connected\nconst d = (msg.payload && typeof msg.payload.data === 'object' && msg.payload.data) ? msg.payload.data : (msg.payload || {});\nconst ha = global.get('homeassistant');\nlet srv = null;\nif (ha && typeof ha === 'object') {\n    const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n    srv = servers.find(s => s.isConnected !== false) || servers[0] || null;\n}\nconst states = srv ? srv.states : null;\nconst entities = states ? Object.keys(states).length : 0;\nmsg.payload = {\n    run_id: String(d.run_id || ''),\n    global_states: entities > 0,\n    entities,\n    p1: !!(states && states['sensor.p1_meter_power']),\n    connected: !!(srv && srv.isConnected !== false),\n    node_red: RED.version ? RED.version() : '',\n};\nnode.status({ fill: entities ? 'green' : 'red', shape: 'dot', text: entities ? `${entities} HA states` : 'no HA states in global context' });\nreturn msg;\n",
+        "func": "// HBC+ v1.4 (F1) - Self-test, part 1: what only Node-RED can see. Answers the HA event\n// hbc_selftest_flow_check (fired by script.hbc_selftest_run) with hbc_selftest_flow_result.\n//   global_states  the HA server node exposes its states to global context ('Expose to global context')\n//   entities       number of HA states Node-RED sees\n//   p1             sensor.p1_meter_power is among them\n//   connected      the HA server node is connected\n// The server-events node puts the event data in msg.payload.event (msg.payload.data in older versions).\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : {};\nconst d = (p.event && typeof p.event === 'object') ? p.event : ((p.data && typeof p.data === 'object') ? p.data : p);\nconst ha = global.get('homeassistant');\nlet srv = null;\nif (ha && typeof ha === 'object') {\n    const servers = Object.values(ha).filter(s => s && s.states && typeof s.states === 'object');\n    srv = servers.find(s => s.isConnected !== false) || servers[0] || null;\n}\nconst states = srv ? srv.states : null;\nconst entities = states ? Object.keys(states).length : 0;\nmsg.payload = {\n    run_id: String(d.run_id || ''),\n    global_states: entities > 0,\n    entities,\n    p1: !!(states && states['sensor.p1_meter_power']),\n    connected: !!(srv && srv.isConnected !== false),\n    node_red: RED.version ? RED.version() : '',\n};\nnode.status({ fill: entities ? 'green' : 'red', shape: 'dot', text: entities ? `${entities} HA states` : 'no HA states in global context' });\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -252,6 +213,25 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "hbcp14st00000003",
+        "type": "group",
+        "z": "hbcp14st00000000",
+        "name": "Strategy Self-test",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp14st00000030",
+            "hbcp14st00000031",
+            "hbcp14st00000032",
+            "hbcp14st00000033"
+        ],
+        "x": 34,
+        "y": 379,
+        "w": 792,
+        "h": 82
     },
     {
         "id": "hbcp14st00000030",
@@ -324,6 +304,27 @@
         "wires": []
     },
     {
+        "id": "hbcp14st00000004",
+        "type": "group",
+        "z": "hbcp14st00000000",
+        "name": "Unhandled exceptions",
+        "style": {
+            "label": true,
+            "stroke": "#d88a8a",
+            "color": "#d88a8a"
+        },
+        "nodes": [
+            "hbcp14st00000040",
+            "hbcp14st00000041",
+            "hbcp14st00000042"
+        ],
+        "x": 34,
+        "y": 499,
+        "w": 182,
+        "h": 82,
+        "l": false
+    },
+    {
         "id": "hbcp14st00000040",
         "type": "catch",
         "z": "hbcp14st00000000",
@@ -331,7 +332,7 @@
         "name": "",
         "scope": null,
         "uncaught": false,
-        "x": 125,
+        "x": 75,
         "y": 540,
         "wires": [
             [
@@ -353,7 +354,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 175,
+        "x": 125,
         "y": 540,
         "wires": [
             [
@@ -369,7 +370,7 @@
         "name": "link out selftest",
         "mode": "return",
         "links": [],
-        "x": 335,
+        "x": 175,
         "y": 540,
         "wires": []
     },
@@ -396,13 +397,5 @@
         "heartbeatInterval": "30",
         "statusSeparator": "",
         "enableGlobalContextStore": true
-    },
-    {
-        "id": "0c1dcf6eaade69ab",
-        "type": "global-config",
-        "env": [],
-        "modules": {
-            "node-red-contrib-home-assistant-websocket": "0.83.0"
-        }
     }
 ]
