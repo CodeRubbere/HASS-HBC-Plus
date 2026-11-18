@@ -475,7 +475,6 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 3. **Flows:** verwijder elk tabblad waarvan de naam met *HBC+* begint, importeer `node-red/hbc-plus-all-flows.json` en deploy, zoals in [HBC+ bijwerken](#hbc-bijwerken). Nieuw tabblad *HBC+ Self-test v1.4*; de Strategy arbiter kent de aanvrager `selftest` (prioriteit 90).
 4. **Dashboard:** plak `dashboards/hbc_plus.yaml` opnieuw in de raw-configuratie-editor.
 5. **Draai de zelftest** één keer: *Advanced settings* → *Self-test* → *Run self-test*.
-
 ## Nieuw in HBC+ v1.3
 
 *In ontwikkeling — release gepland op 21 januari 2027*

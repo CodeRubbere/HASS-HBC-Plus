@@ -3668,9 +3668,6 @@ views:
               - condition: numeric_state
                 entity: sensor.hbc_self_test_phase_changes
                 above: 0
-      - type: grid
-        cards:
-          - type: heading
             icon: mdi:transmission-tower
             heading: Grid power limits & peak shaving
             heading_style: title

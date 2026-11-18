@@ -472,10 +472,9 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 1. **Back up** as in [Step 1](#step-1--back-up).
 2. **Packages:** copy all files from `packages/`. `hbc_selftest.yaml` is new; `hbc_control.yaml` changed (strategy option *Self-test*). *Check configuration* and restart HA.
-3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc). New tab *HBC+ Self-test v1.4*; the Strategy arbiter knows the requester `selftest` (priority 90).
+3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in *Updating HBC+* (`#updating-hbc`). New tab *HBC+ Self-test v1.4*; the Strategy arbiter knows the requester `selftest` (priority 90).
 4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor.
 5. **Run the self-test** once: *Advanced settings* → *Self-test* → *Run self-test*.
-
 ## What's new in HBC+ v1.3
 
 *In development — release planned for 21 January 2027*
