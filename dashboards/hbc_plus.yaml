@@ -3552,6 +3552,125 @@ views:
       - type: grid
         cards:
           - type: heading
+            heading: Self-test
+            heading_style: title
+            icon: mdi:clipboard-check-outline
+            grid_options:
+              rows: 1
+          - type: heading
+            icon: mdi:information
+            heading: Check the setup and the phase map
+            heading_style: subtitle
+            tap_action:
+              action: url
+              url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#setup-self-test
+          - type: markdown
+            content: >-
+              <font color=grey>Checks that everything HBC+ needs is there and
+              working, then measures per battery which phase it is on: one
+              battery at a time charges at 800 W for about 35 s (1 to 3 minutes
+              per battery, your strategy takes over again afterwards). The test
+              never changes the phase map: apply it with the button below.</font>
+            text_only: true
+          - type: tile
+            entity: sensor.hbc_self_test_status
+            name: Self-test
+            grid_options:
+              columns: full
+          - type: button
+            name: Run self-test
+            icon: mdi:play-circle-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.hbc_selftest_run
+              confirmation:
+                text: >-
+                  Run the self-test? With phase detection on, the batteries leave
+                  your strategy for 1 to 3 minutes per battery.
+            visibility:
+              - condition: state
+                entity: sensor.hbc_self_test_status
+                state_not: running
+          - type: button
+            name: Checks only
+            icon: mdi:clipboard-list-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.hbc_selftest_run
+              data:
+                phase_detection: false
+            visibility:
+              - condition: state
+                entity: sensor.hbc_self_test_status
+                state_not: running
+          - type: button
+            name: Stop self-test
+            icon: mdi:stop-circle-outline
+            show_state: false
+            grid_options:
+              columns: full
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.hbc_selftest_abort
+            visibility:
+              - condition: state
+                entity: sensor.hbc_self_test_status
+                state: running
+          - type: markdown
+            content: >
+              {% set c = state_attr('sensor.hbc_self_test_status', 'checks') or [] %}
+              {% set icon = {'ok': '✅', 'warning': '⚠️', 'error': '❌'} %}
+              {% if c %}| Check | | Details |
+
+              | :--- | :---: | :--- |
+
+              {% for x in c %}| {{ x.label }} | {{ icon.get(x.result, x.result) }} | {{ x.info | replace('|', '/') }} |
+
+              {% endfor %}{% elif is_state('sensor.hbc_self_test_status', 'running') %}Running the checks...{% else %}Not run yet.{% endif %}
+          - type: markdown
+            content: >
+              {% set p = states('sensor.hbc_self_test_phases') %}
+              {% set bs = state_attr('sensor.hbc_self_test_phases', 'batteries') or [] %}
+              {% if p in ['unknown', 'unavailable'] %}Phase detection not run yet.{% else %}**Phase detection: {{ p }}**{% if state_attr('sensor.hbc_self_test_phases', 'reason') %} – {{ state_attr('sensor.hbc_self_test_phases', 'reason') }}{% endif %}
+
+
+              {% if bs %}| Battery | Set | Measured | Rise L1 / L2 / L3 (W) | Note |
+
+              | :--- | :---: | :---: | :--- | :--- |
+
+              {% for b in bs %}{% set cur = states('input_select.marstek_' ~ (b.id | lower) ~ '_phase') %}| {{ b.id }} | {{ cur }} | {{ b.measured or '–' }}{{ ' ⚠️' if b.measured and cur in ['L1', 'L2', 'L3'] and cur != b.measured }} | {{ b.delta.L1 | default('–') }} / {{ b.delta.L2 | default('–') }} / {{ b.delta.L3 | default('–') }} | {{ b.note }}{{ ' (' ~ b.attempts ~ ' attempts)' if b.attempts | default(0) > 1 }} |
+
+              {% endfor %}{% endif %}{% endif %}
+          - type: button
+            name: Apply phase map
+            icon: mdi:sine-wave
+            show_state: false
+            grid_options:
+              columns: full
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.hbc_selftest_apply_phase_map
+              confirmation:
+                text: >-
+                  Copy the measured phases into the phase map (Marstek MN
+                  phase)? Batteries on Own circuit are left alone.
+            visibility:
+              - condition: numeric_state
+                entity: sensor.hbc_self_test_phase_changes
+                above: 0
+      - type: grid
+        cards:
+          - type: heading
             icon: mdi:transmission-tower
             heading: Grid power limits & peak shaving
             heading_style: title

@@ -1,0 +1,363 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ v1.4 - setup self-test (F1)
+#
+# One button (Advanced settings view, Self-test) checks that everything HBC+ needs is there and working,
+# and measures per battery which phase it is connected to.
+#
+#   script.hbc_selftest_run             run the test (field phase_detection, default true)
+#   script.hbc_selftest_abort           stop a running test; the batteries go back to your strategy
+#   script.hbc_selftest_apply_phase_map copy the measured phases into input_select.marstek_mN_phase
+#   sensor.hbc_self_test_status         ok / warnings / errors / aborted / running, attribute checks
+#   sensor.hbc_self_test_phases         ok / mismatch / uncertain / skipped / not_started / timeout /
+#                                       aborted / error, attribute batteries (measured, current, delta per phase)
+#   sensor.hbc_self_test_phase_changes  number of batteries whose measured phase differs from the phase map now
+#
+# Part 1, the checks, runs in HA and does not move the batteries. Part 2, phase detection, needs Node-RED:
+# the tab 'HBC+ Self-test v1.4' (node-red/03 self-test (HBC+).json). The script holds the strategy
+# 'Self-test' through the Strategy arbiter (requester selftest, priority 90); Node-RED then lets one battery
+# at a time charge at 800 W for about 35 s and looks on which P1 phase the import rises. About 1 minute per
+# battery, up to 3 minutes when the house load changes during a measurement. Each battery takes about 9 Wh.
+# The hold is released at the end, and it expires by itself after (batteries x 4 + 5) minutes.
+#
+# The test NEVER changes the phase map itself: apply a measured phase with the button on the dashboard.
+# Signs as everywhere in HBC+: sensor.p1_meter_power_phase_N > 0 = import, battery power > 0 = charging.
+# Requires: hbc_strategy_arbiter.yaml, hbc_notify.yaml, hbc_heartbeat.yaml, hbc_phase_guard.yaml and the
+# strategy option 'Self-test' in input_select.house_battery_strategy (hbc_control.yaml, v1.4).
+###########################################################################################################
+
+script:
+  hbc_selftest_run:
+    alias: "HBC+: run the setup self-test"
+    description: "Checks the HBC+ setup and measures the phase of every battery."
+    icon: mdi:clipboard-check-outline
+    mode: single
+    max_exceeded: silent
+    fields:
+      phase_detection:
+        name: Phase detection
+        description: Also measure the phase of every battery (moves the batteries for 1-3 minutes each)
+        default: true
+        selector:
+          boolean:
+    sequence:
+      - variables:
+          run_id: "r{{ now().timestamp() | int }}"
+          n: "{{ [states('input_number.house_battery_count') | int(0), 6] | min }}"
+          detect: "{{ phase_detection | default(true) | bool(true) }}"
+      - event: hbc_selftest_progress
+        event_data:
+          run_id: "{{ run_id }}"
+          step: checks
+      # --- what only Node-RED can see (tab 'HBC+ Self-test v1.4', group Flow check)
+      - event: hbc_selftest_flow_check
+        event_data:
+          run_id: "{{ run_id }}"
+      - wait_for_trigger:
+          - trigger: event
+            event_type: hbc_selftest_flow_result
+            event_data:
+              run_id: "{{ run_id }}"
+        timeout: "00:00:10"
+        continue_on_timeout: true
+      - variables:
+          flow: "{{ wait.trigger.event.data if wait.trigger else {} }}"
+          checks: >-
+            {%- set ns = namespace(c=[], miss=[], ph=[]) -%}
+            {%- set bad = ['unknown', 'unavailable'] -%}
+            {#- P1 total -#}
+            {%- if has_value('sensor.p1_meter_power') -%}
+              {%- set ns.c = ns.c + [{'id': 'p1', 'label': 'P1 grid power', 'result': 'ok',
+                   'info': states('sensor.p1_meter_power') ~ ' W'}] -%}
+            {%- else -%}
+              {%- set ns.c = ns.c + [{'id': 'p1', 'label': 'P1 grid power', 'result': 'error',
+                   'info': 'sensor.p1_meter_power has no value: set your grid power sensor in packages/hbc_config.yaml'}] -%}
+            {%- endif -%}
+            {#- P1 per phase -#}
+            {%- for i in range(1, 4) -%}
+              {%- if not has_value('sensor.p1_meter_power_phase_' ~ i) -%}{%- set ns.ph = ns.ph + ['sensor.p1_meter_power_phase_' ~ i] -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if ns.ph | count == 0 -%}
+              {%- set ns.c = ns.c + [{'id': 'p1_phases', 'label': 'P1 power per phase', 'result': 'ok', 'info': 'L1, L2 and L3 available'}] -%}
+            {%- else -%}
+              {%- set ns.c = ns.c + [{'id': 'p1_phases', 'label': 'P1 power per phase', 'result': 'warning',
+                   'info': 'missing ' ~ ns.ph | join(', ') ~ ': the phase guard and phase detection need them (single-phase meter: ignore)'}] -%}
+            {%- endif -%}
+            {#- batteries -#}
+            {%- for i in range(1, n + 1) -%}
+              {%- for e in ['sensor.marstek_m' ~ i ~ '_battery_power', 'sensor.marstek_m' ~ i ~ '_battery_state_of_charge',
+                            'select.marstek_m' ~ i ~ '_rs485_control_mode', 'select.marstek_m' ~ i ~ '_forcible_charge_discharge',
+                            'input_select.marstek_m' ~ i ~ '_phase'] -%}
+                {%- if states(e) in bad -%}{%- set ns.miss = ns.miss + [e] -%}{%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {%- if n < 1 -%}
+              {%- set ns.c = ns.c + [{'id': 'batteries', 'label': 'Batteries', 'result': 'error',
+                   'info': 'input_number.house_battery_count is 0'}] -%}
+            {%- elif ns.miss | count == 0 -%}
+              {%- set ns.c = ns.c + [{'id': 'batteries', 'label': 'Batteries', 'result': 'ok', 'info': n ~ ' batteries, all entities available'}] -%}
+            {%- else -%}
+              {%- set ns.c = ns.c + [{'id': 'batteries', 'label': 'Batteries', 'result': 'error',
+                   'info': 'missing or unavailable: ' ~ ns.miss[:6] | join(', ') ~ (' (+' ~ (ns.miss | count - 6) ~ ' more)' if ns.miss | count > 6 else '')}] -%}
+            {%- endif -%}
+            {#- master mode -#}
+            {%- set mm = states('input_select.marstek_master_battery_mode') -%}
+            {%- set ns.c = ns.c + [{'id': 'master', 'label': 'Master battery mode', 'result': 'ok' if mm == 'Full control' else 'warning',
+                 'info': mm if mm == 'Full control' else mm ~ ': HBC+ only drives the batteries in Full control'}] -%}
+            {#- heartbeat and health -#}
+            {%- set hb = states('binary_sensor.hbc_heartbeat_stale') -%}
+            {%- set ns.c = ns.c + [{'id': 'heartbeat', 'label': 'Node-RED heartbeat', 'result': 'ok' if hb == 'off' else 'error',
+                 'info': 'fresh' if hb == 'off' else ('no heartbeat for 5 minutes: is Node-RED running with Master battery mode Full control?' if hb == 'on'
+                         else 'no heartbeat received: check MQTT and hbc_heartbeat.yaml')}] -%}
+            {%- set h = states('sensor.hbc_health') -%}
+            {%- set ns.c = ns.c + [{'id': 'health', 'label': 'HBC+ health', 'result': h if h in ['ok', 'warning', 'error'] else 'warning',
+                 'info': (h ~ (': ' ~ state_attr('sensor.hbc_health', 'last_error') if h == 'error' and state_attr('sensor.hbc_health', 'last_error') else '')
+                          ~ (' (errors stay counted for 10 minutes: right after an HA restart, run the test again later)' if h == 'error' else ''))
+                         if h in ['ok', 'warning', 'error'] else 'no hbc/health received over MQTT'}] -%}
+            {#- Node-RED flow check -#}
+            {%- if not flow -%}
+              {%- set ns.c = ns.c + [{'id': 'flow', 'label': 'Node-RED self-test flow', 'result': 'error',
+                   'info': ("Node-RED runs, but the tab 'HBC+ Self-test v1.4' did not answer within 10 s: import the v1.4 flows (node-red/hbc-plus-all-flows.json) and deploy"
+                            if is_state('binary_sensor.hbc_heartbeat_stale', 'off')
+                            else "no answer within 10 s: is Node-RED running, with the tab 'HBC+ Self-test v1.4' imported?")}] -%}
+            {%- elif not flow.global_states -%}
+              {%- set ns.c = ns.c + [{'id': 'flow', 'label': 'Node-RED self-test flow', 'result': 'error',
+                   'info': "no HA states in global context: turn on 'Expose to global context' on the HA server node"}] -%}
+            {%- else -%}
+              {%- set ns.c = ns.c + [{'id': 'flow', 'label': 'Node-RED self-test flow', 'result': 'ok' if flow.p1 else 'warning',
+                   'info': flow.entities ~ ' HA states in global context' ~ ('' if flow.p1 else ', but not sensor.p1_meter_power')}] -%}
+            {%- endif -%}
+            {#- price sensor pin (Dynamic) -#}
+            {%- set pin = states('input_text.house_battery_strategy_dynamic_price_sensor') | trim -%}
+            {%- if pin in bad or pin == '' -%}
+              {%- set ns.c = ns.c + [{'id': 'price', 'label': 'Price sensor', 'result': 'ok', 'info': 'not pinned: Dynamic finds the price sensor itself'}] -%}
+            {%- elif has_value(pin) -%}
+              {%- set ns.c = ns.c + [{'id': 'price', 'label': 'Price sensor', 'result': 'ok', 'info': pin}] -%}
+            {%- else -%}
+              {%- set ns.c = ns.c + [{'id': 'price', 'label': 'Price sensor', 'result': 'error',
+                   'info': pin ~ ' (pinned in input_text.house_battery_strategy_dynamic_price_sensor) has no value'}] -%}
+            {%- endif -%}
+            {#- notify targets, the same rules as script.hbc_notify -#}
+            {%- set raw = states('input_text.house_battery_notify_targets') -%}
+            {%- set parts = ('' if raw in bad else raw).split(',') | map('trim') | map('lower') | reject('eq', '') | list -%}
+            {%- set valid = parts | select('match', '^notify\\.[a-z0-9_]+$') | list -%}
+            {%- set dropped = parts | reject('in', valid) | list -%}
+            {%- set ns.c = ns.c + [{'id': 'notify', 'label': 'Notification targets', 'result': 'warning' if dropped else 'ok',
+                 'info': ('skipped (not notify.<name>): ' ~ dropped | join(', ')
+                          ~ ((' - for a phone use notify.mobile_app_' ~ (dropped | select('match', '^device_tracker\\.') | first).split('.')[1])
+                             if dropped | select('match', '^device_tracker\\.') | list else ''))
+                         if dropped else ((valid | join(', ')) if valid else 'notify.notify')}] -%}
+            {#- EV stop trigger -#}
+            {%- set ev = states('input_text.house_battery_strategy_ev_sensor_entity_id') | trim -%}
+            {%- set ev_on = ev not in bad and ev != '' and states(ev) in ['on', 'true', 'True', '1'] -%}
+            {%- set ns.c = ns.c + [{'id': 'ev', 'label': 'EV stop trigger', 'result': 'warning' if ev_on else 'ok',
+                 'info': 'active: it overrides every strategy, phase detection is skipped' if ev_on else ('not active' if ev not in bad and ev != '' else 'not set')}] -%}
+            {{ ns.c }}
+          errors: "{{ checks | selectattr('result', 'eq', 'error') | list | count }}"
+          warnings: "{{ checks | selectattr('result', 'eq', 'warning') | list | count }}"
+          blockers: >-
+            {{ checks | selectattr('id', 'in', ['p1_phases', 'batteries', 'master', 'heartbeat', 'flow', 'ev'])
+                      | rejectattr('result', 'eq', 'ok') | map(attribute='label') | list }}
+      # --- phase detection
+      - if: "{{ detect }}"
+        then:
+          - if: "{{ blockers | count > 0 }}"
+            then:
+              - event: hbc_selftest_phase_result
+                event_data:
+                  run_id: "{{ run_id }}"
+                  status: skipped
+                  reason: "not possible, see: {{ blockers | join(', ') }}"
+                  batteries: []
+                  changes: 0
+                  finished: "{{ now().isoformat() }}"
+            else:
+              - event: hbc_selftest_progress
+                event_data:
+                  run_id: "{{ run_id }}"
+                  step: phase_detection
+                  checks: "{{ checks }}"
+              - action: script.hbc_strategy_hold
+                continue_on_error: true
+                data:
+                  requester: selftest
+                  strategy: Self-test
+                  reason: Setup self-test
+                  timeout_min: "{{ n * 4 + 5 }}"
+              - wait_template: "{{ is_state('input_select.house_battery_strategy', 'Self-test') }}"
+                timeout: "00:00:45"
+                continue_on_timeout: true
+              - if: "{{ not wait.completed }}"
+                then:
+                  - event: hbc_selftest_phase_result
+                    event_data:
+                      run_id: "{{ run_id }}"
+                      status: not_started
+                      reason: >-
+                        the strategy did not become Self-test (a manual choice or the Oscillation Guard holds it,
+                        or the strategy option Self-test is missing in hbc_control.yaml)
+                      batteries: []
+                      changes: 0
+                      finished: "{{ now().isoformat() }}"
+                else:
+                  - event: hbc_selftest_request
+                    event_data:
+                      run_id: "{{ run_id }}"
+                      action: start
+                      power: 800
+                  - wait_for_trigger:
+                      - trigger: event
+                        event_type: hbc_selftest_phase_result
+                        event_data:
+                          run_id: "{{ run_id }}"
+                    timeout: "{{ n * 240 + 60 }}"
+                    continue_on_timeout: true
+                  - if: "{{ not wait.trigger }}"
+                    then:
+                      - event: hbc_selftest_request
+                        event_data:
+                          run_id: "{{ run_id }}"
+                          action: abort
+                      - event: hbc_selftest_phase_result
+                        event_data:
+                          run_id: "{{ run_id }}"
+                          status: timeout
+                          reason: no result from Node-RED in time
+                          batteries: []
+                          changes: 0
+                          finished: "{{ now().isoformat() }}"
+              - action: script.hbc_strategy_release
+                continue_on_error: true
+                data:
+                  requester: selftest
+      # --- result
+      - delay: "00:00:02"
+      - variables:
+          phases: >-
+            {{ states('sensor.hbc_self_test_phases')
+               if state_attr('sensor.hbc_self_test_phases', 'run_id') == run_id else 'not run' }}
+          status: >-
+            {{ 'errors' if errors | int > 0 else
+               ('warnings' if warnings | int > 0 or phases in ['mismatch', 'uncertain', 'skipped', 'not_started', 'timeout', 'aborted', 'error']
+                else 'ok') }}
+      - event: hbc_selftest_done
+        event_data:
+          run_id: "{{ run_id }}"
+          status: "{{ status }}"
+          phases: "{{ phases }}"
+          checks: "{{ checks }}"
+      - action: script.hbc_notify
+        continue_on_error: true
+        data:
+          title: "HBC+ self-test: {{ status }}"
+          message: >-
+            {{ checks | selectattr('result', 'eq', 'ok') | list | count }} OK, {{ warnings }} warnings, {{ errors }} errors.
+            {% if phases == 'ok' %}Phase map confirmed.
+            {%- elif phases == 'mismatch' %}{{ states('sensor.hbc_self_test_phase_changes') }} battery(ies) measured on another phase than set: check and apply on the dashboard.
+            {%- elif phases == 'uncertain' %}Not every phase could be measured; run the test again when the house load is steady.
+            {%- elif phases == 'not run' %}Phase detection not run.
+            {%- else %}Phase detection: {{ phases }}.{% endif %}
+            Details: Advanced settings → Self-test.
+
+  hbc_selftest_abort:
+    alias: "HBC+: stop the self-test"
+    icon: mdi:stop-circle-outline
+    mode: single
+    sequence:
+      - variables:
+          run_id: "{{ state_attr('sensor.hbc_self_test_status', 'run_id') or '' }}"
+      - action: script.turn_off
+        target:
+          entity_id: script.hbc_selftest_run
+      - event: hbc_selftest_request
+        event_data:
+          run_id: "{{ run_id }}"
+          action: abort
+      - action: script.hbc_strategy_release
+        continue_on_error: true
+        data:
+          requester: selftest
+      - event: hbc_selftest_done
+        event_data:
+          run_id: "{{ run_id }}"
+          status: aborted
+          phases: "{{ states('sensor.hbc_self_test_phases') }}"
+          checks: "{{ state_attr('sensor.hbc_self_test_status', 'checks') or [] }}"
+
+  hbc_selftest_apply_phase_map:
+    alias: "HBC+: apply the measured phase map"
+    description: "Copies every phase the self-test measured with certainty into input_select.marstek_mN_phase (batteries on Own circuit are left alone)."
+    icon: mdi:sine-wave
+    mode: single
+    sequence:
+      - repeat:
+          for_each: >-
+            {%- set ns = namespace(l=[]) -%}
+            {%- for b in state_attr('sensor.hbc_self_test_phases', 'batteries') or [] -%}
+              {%- set cur = states('input_select.marstek_' ~ (b.id | lower) ~ '_phase') -%}
+              {%- if b.certain and b.measured in ['L1', 'L2', 'L3'] and cur in ['L1', 'L2', 'L3'] and cur != b.measured -%}
+                {%- set ns.l = ns.l + [{'entity': 'input_select.marstek_' ~ (b.id | lower) ~ '_phase', 'phase': b.measured}] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.l }}
+          sequence:
+            - action: input_select.select_option
+              target:
+                entity_id: "{{ repeat.item.entity }}"
+              data:
+                option: "{{ repeat.item.phase }}"
+      - action: logbook.log
+        continue_on_error: true
+        data:
+          name: HBC+ self-test
+          message: phase map applied from the self-test
+          entity_id: sensor.hbc_self_test_phases
+
+template:
+  - trigger:
+      - trigger: event
+        event_type: hbc_selftest_progress
+        id: progress
+      - trigger: event
+        event_type: hbc_selftest_done
+        id: done
+    sensor:
+      - name: "HBC+ self-test status"
+        unique_id: hbc_self_test_status
+        icon: mdi:clipboard-check-outline
+        state: "{{ 'running' if trigger.id == 'progress' else (trigger.event.data.status | default('unknown')) }}"
+        attributes:
+          run_id: "{{ trigger.event.data.run_id | default('') }}"
+          step: "{{ trigger.event.data.step | default('') if trigger.id == 'progress' else '' }}"
+          checks: >-
+            {{ trigger.event.data.checks if trigger.event.data.checks is defined
+               else ([] if trigger.id == 'progress' else (this.attributes.checks | default([]))) }}
+          finished: "{{ now().isoformat() if trigger.id == 'done' else (this.attributes.finished | default(none)) }}"
+
+  - trigger:
+      - trigger: event
+        event_type: hbc_selftest_phase_result
+    sensor:
+      - name: "HBC+ self-test phases"
+        unique_id: hbc_self_test_phases
+        icon: mdi:sine-wave
+        state: "{{ trigger.event.data.status | default('unknown') }}"
+        attributes:
+          run_id: "{{ trigger.event.data.run_id | default('') }}"
+          reason: "{{ trigger.event.data.reason | default('') }}"
+          batteries: "{{ trigger.event.data.batteries | default([]) }}"
+          finished: "{{ trigger.event.data.finished | default(now().isoformat()) }}"
+
+  - sensor:
+      - name: "HBC+ self-test phase changes"
+        unique_id: hbc_self_test_phase_changes
+        icon: mdi:swap-horizontal
+        state: >-
+          {%- set ns = namespace(n=0) -%}
+          {%- for b in state_attr('sensor.hbc_self_test_phases', 'batteries') or [] -%}
+            {%- set cur = states('input_select.marstek_' ~ (b.id | lower) ~ '_phase') -%}
+            {%- if b.certain and b.measured in ['L1', 'L2', 'L3'] and cur in ['L1', 'L2', 'L3'] and cur != b.measured -%}
+              {%- set ns.n = ns.n + 1 -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.n }}

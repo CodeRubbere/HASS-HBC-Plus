@@ -3,7 +3,20 @@
 All notable changes to HBC+ (Home Battery Control Plus). The user guide has the details: *What's new* and
 *Updating from …* per version ([English](docs/user-guide.en.md), [Nederlands](docs/gebruikershandleiding.nl.md)).
 
-## [1.2.0] – planned 10 December 2026
+## [1.4.0] – in development
+
+### Added
+- **Setup self-test** (F1) — one button on the *Advanced settings* view checks the setup (P1, battery entities,
+  master mode, heartbeat, health, the Node-RED flow, price sensor pin, notify targets, EV stop trigger) and
+  measures per battery on which phase it is connected (800 W for about 35 s per battery, up to three attempts).
+  A phase that differs from the phase map is applied only with *Apply phase map*. New package `hbc_selftest.yaml`,
+  new tab *HBC+ Self-test v1.4*, results in `sensor.hbc_self_test_status` and `sensor.hbc_self_test_phases`.
+
+### Changed
+- Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
+  stops every battery). Strategy arbiter: requester `selftest` has priority 90.
+
+ – planned 10 December 2026
 
 Ready for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.

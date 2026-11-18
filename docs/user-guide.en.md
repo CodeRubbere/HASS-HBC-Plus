@@ -401,6 +401,33 @@ The guard acts on the strategy that actually runs: the sub-strategy of Dynamic o
 - **Cutoff capacities** (`input_number.marstek_mN_charging_cutoff_capacity` 80–100 %, `…_discharging_cutoff_capacity` 11–80 %): the SoC limits written to each Marstek. HBC+ treats a battery at its limit as full or empty.
 - **Phase** (`input_select.marstek_mN_phase`: L1 · L2 · L3 · Own circuit): the phase each battery is physically connected to, used by the phase guard (see [Step 5 — Set your phase map and fuse](#step-5--set-your-phase-map-and-fuse)).
 
+### Setup self-test
+
+*New in v1.4.* One button checks that everything HBC+ needs is there and working, and measures on which phase each battery is connected. *Advanced settings* view, section *Self-test* (`packages/hbc_selftest.yaml` and the Node-RED tab *HBC+ Self-test v1.4*).
+
+**Part 1 — checks** (the batteries do not move). Each check shows ✅, ⚠️ or ❌ with what to do:
+
+| Check | OK when |
+| --- | --- |
+| P1 grid power | `sensor.p1_meter_power` has a value |
+| P1 power per phase | `sensor.p1_meter_power_phase_1..3` have values (a single-phase meter: ignore the warning) |
+| Batteries | for M1 up to the number of batteries: battery power, SoC, RS485 control, forcible charge/discharge and phase exist and are available |
+| Master battery mode | *Full control* |
+| Node-RED heartbeat | `binary_sensor.hbc_heartbeat_stale` is off |
+| HBC+ health | `sensor.hbc_health` is `ok` |
+| Node-RED self-test flow | the tab answers within 10 s and sees the HA states (*Expose to global context* on) |
+| Price sensor | not pinned, or the pinned sensor has a value |
+| Notification targets | every entry looks like `notify.<name>` |
+| EV stop trigger | not active |
+
+**Part 2 — phase detection.** The test holds the strategy *Self-test* through the Strategy arbiter (requester `selftest`, priority 90: above automations and the battery calibration, below the Oscillation Guard). Then, one battery at a time: all batteries stop for 20 s, the P1 power per phase is measured, this battery charges at 800 W for 35 s, and the P1 power per phase is measured again. The phase whose import rises most is the battery's phase, when that rise is at least 60 % of the battery power and at least twice the next largest. When the house load changes during the measurement (a kettle, a washing machine) HBC+ tries again, up to three times; after that the battery is *uncertain*. A battery at its charge cutoff is skipped. About 1 minute per battery, up to 3 minutes; each battery takes about 9 Wh. Afterwards your own strategy takes over again.
+
+Phase detection needs: P1 power per phase, all battery entities, *Full control*, a fresh heartbeat, the Node-RED tab, and no active EV stop trigger. Otherwise it is skipped, with the reason. *Checks only* runs part 1 alone.
+
+**Never automatic.** The test never changes the phase map. When a measured phase differs from *Phase* (`input_select.marstek_mN_phase`), the table shows ⚠️ and the button **Apply phase map** appears (`script.hbc_selftest_apply_phase_map`). Batteries on *Own circuit* are never changed. *Stop self-test* (`script.hbc_selftest_abort`) stops a running test; choosing another strategy yourself also stops it within 30 s. You get a notification with the result.
+
+The strategy option *Self-test* is only for this test. Chosen by hand, it stops every battery, like *Full stop*.
+
 ## Design background and decisions
 
 ### Why a phase guard is needed
@@ -434,6 +461,20 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 - **Fail-safe on Enforce, fail-open elsewhere.** On *Off* and *Monitor* an error in a new step changes nothing; on *Enforce* it falls back to the strict one-battery-per-phase rule (R9). The HA alarm works independently of Node-RED and switches to *Full stop* when the batteries keep a phase overloaded (R10).
 - **Signs:** battery power is positive while charging, P1 phase power is positive on import.
 - **Monitor first.** The phase guard can run with one battery per phase; then nothing changes and you test the plumbing for free, before a second battery joins a phase.
+
+## What's new in HBC+ v1.4
+
+*In development*
+
+- **F1 — Setup self-test.** One button on the *Advanced settings* view checks the setup (P1, battery entities, master mode, heartbeat, Node-RED, price sensor, notify targets) and measures per battery on which phase it is connected. A measured phase that differs from the phase map is shown, and applied only when you press *Apply phase map* (see [Setup self-test](#setup-self-test)).
+
+### Updating from v1.3
+
+1. **Back up** as in [Step 1](#step-1--back-up).
+2. **Packages:** copy all files from `packages/`. `hbc_selftest.yaml` is new; `hbc_control.yaml` changed (strategy option *Self-test*). *Check configuration* and restart HA.
+3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc). New tab *HBC+ Self-test v1.4*; the Strategy arbiter knows the requester `selftest` (priority 90).
+4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor.
+5. **Run the self-test** once: *Advanced settings* → *Self-test* → *Run self-test*.
 
 ## What's new in HBC+ v1.3
 
@@ -760,7 +801,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `.gitattributes` | Git setting: normalises line endings of text files |
 | `.gitignore` | Keeps macOS and editor files out of the repository |
 
-**packages/** — Home Assistant packages; copy all eight into your HA `packages/` folder.
+**packages/** — Home Assistant packages; copy all twelve into your HA `packages/` folder.
 
 | File | Contents |
 | --- | --- |
@@ -775,6 +816,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `hbc_notify.yaml` | Notifications (v1.3): *Notify targets* and `script.hbc_notify`, used by every HBC+ notification. Required |
 | `hbc_calibration.yaml` | Battery calibration (v1.3): settings, last full per battery, plan, start and finish automations |
 | `hbc_savings.yaml` | Savings and round-trip efficiency (v1.3): split power, energy counters, quarterly settlement, utility meters, efficiency and suggested spread |
+| `hbc_selftest.yaml` | Setup self-test (v1.4): `script.hbc_selftest_run`, `_abort`, `_apply_phase_map` and the result sensors |
 
 **dashboards/**
 
@@ -786,7 +828,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 | File | Tab | What it does |
 | --- | --- | --- |
-| `hbc-plus-all-flows.json` | All 15 below | One import file with every tab and the HA server node |
+| `hbc-plus-all-flows.json` | All 16 below | One import file with every tab and the HA server node |
 | `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2 | Decides who controls the Marsteks (RS485, work mode); hands only one battery per shared phase back to the firmware |
 | `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2 | Applies a PID preset (Very safe, Safe, Regular) to the PID helpers |
 | `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2 | The control loop: reads the batteries, sums the totals, runs phase planner, strategy and phase guard, writes the setpoints and publishes the heartbeat |
@@ -801,6 +843,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | Runs a strategy per time slot (A to E) |
 | `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | Detects charge/discharge waves and holds Full stop through the arbiter |
 | `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | Read-only: publishes the phase status over MQTT for the dashboard |
+| `03 self-test (HBC+).json` | HBC+ Self-test v1.4 | Setup self-test (v1.4): answers the flow check, measures the phase of every battery, runs the strategy *Self-test* |
 | `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
 | `README.md` | — | Overview of the Node-RED files and installation |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Example of the shared price fetch; not part of the all-flows file |
@@ -820,7 +863,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
+1. Copy all twelve files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
 2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, add template aliases in `hbc_config.yaml`.
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
 4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
@@ -866,7 +909,7 @@ The scripts fire the HA event `hbc_arbiter_request`; the group *Requests from Ho
 
 ### Step 5 — Set your phase map and fuse
 
-On the Advanced settings view, under each *Marstek M1…M6*, set *Phase* to the phase the battery is physically connected to. In the same view, under *Phase guard*, set *Grid fuse per phase* to your main fuse and *Battery circuit per phase* to the group the batteries of one phase share (A × 230 V; 16 A → 3680 W, the default for both). No separate battery group? Set both to the main fuse. Then continue with commissioning below.
+On the Advanced settings view, under each *Marstek M1…M6*, set *Phase* to the phase the battery is physically connected to. In the same view, under *Phase guard*, set *Grid fuse per phase* to your main fuse and *Battery circuit per phase* to the group the batteries of one phase share (A × 230 V; 16 A → 3680 W, the default for both). No separate battery group? Set both to the main fuse. Not sure which phase a battery is on? Once HBC+ runs (Step 6), the [setup self-test](#setup-self-test) measures it. Then continue with commissioning below.
 
 ### Step 6 — First start
 
@@ -875,7 +918,7 @@ On the Advanced settings view, under each *Marstek M1…M6*, set *Phase* to the 
 3. **PID preset.** On the Self-consumption view, choose *Safe* (see *Self-consumption and PID tuning*).
 4. **Strategy.** Choose a first strategy; *Self-consumption* or *Charge PV* is a safe start.
 5. **Master mode.** Set *Master Battery Mode* to **Full control**. Only now does HBC+ steer the batteries. To hand them back to their own firmware, choose *Marstek control*.
-6. **Notifications.** On the *Advanced settings* view, put your notify action in *Notify targets* (e.g. `notify.mobile_app_<phone>`; several comma-separated; empty = `notify.notify`) and press *Send a test notification*. A typo in the name gives no notification, only an error in the HA log. All six places below send through `script.hbc_notify` (`packages/hbc_notify.yaml`).
+6. **Notifications.** On the *Advanced settings* view, put your notify action in *Notify targets* (e.g. `notify.mobile_app_<phone>`; several comma-separated; empty = `notify.notify`) and press *Send a test notification*. A typo in the name gives no notification, only an error in the HA log. All seven places below send through `script.hbc_notify` (`packages/hbc_notify.yaml`).
 
 | Where | Sends a notification when |
 | --- | --- |
@@ -885,6 +928,7 @@ On the Advanced settings view, under each *Marstek M1…M6*, set *Phase* to the 
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
 | `packages/hbc_phase_guard.yaml`, automation *notify when a phase guard safety setting changes* | Someone or something changed guard mode, sharing, a fuse limit, the margin or the phase map |
 | `packages/hbc_phase_guard.yaml`, automation *Full stop when a phase stays overloaded by the batteries* | A phase stayed overloaded for 10 s with the batteries part of the cause, and HBC+ switched to *Full stop* |
+| `packages/hbc_selftest.yaml`, script *HBC+: run the setup self-test* | The self-test is finished, with the result |
 
 ### Securing your setup
 
@@ -978,6 +1022,9 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | `input_text.hbc_strategy_arbiter` | `hbc_strategy_arbiter.yaml` | State of the Strategy arbiter, restored after a restart |
 | `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Turned on by the Start flow once it runs; used by the onboarding checklist |
 | `sensor.hbc_time` | `hbc_control.yaml` | Local time (HH:MM) for the *Time* badge on the dashboard views |
+| `sensor.hbc_self_test_status` | `hbc_selftest.yaml` | Self-test: `running`, `ok`, `warnings`, `errors` or `aborted`; attribute `checks` (id, label, result, info) |
+| `sensor.hbc_self_test_phases` | `hbc_selftest.yaml` | Phase detection: `ok`, `mismatch`, `uncertain`, `skipped`, `not_started`, `timeout`, `aborted`; attribute `batteries` (measured and set phase, rise per phase, note) |
+| `sensor.hbc_self_test_phase_changes` | `hbc_selftest.yaml` | Number of batteries whose measured phase differs from the phase map now; shows *Apply phase map* |
 
 ### Grid Clock feed and price guard (v1.2)
 
@@ -1107,6 +1154,9 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | Charge cutoff stays at 100 % | HA stopped during a calibration and `input_text.hbc_calibration_saved` was cleared | Set the cutoff back by hand; the next finish restores from the saved copy |
 | Savings stay at 0 | No prices (`marks` empty) or an energy counter unavailable | Check the tariff source and `sensor.hbc_grid_import_energy` / `sensor.hbc_battery_charge_energy`; `last_quarter` on `sensor.hbc_savings_total` shows why a quarter was skipped |
 | Efficiency above 100 % or below 50 % | Wrong sign on `sensor.p1_meter_power` or the battery power sensors | Make import and charging positive (Requirements) |
+| Self-test: phase detection *skipped* | A check it needs is not OK (see the reason) | Fix that check; a single-phase meter has no phase detection |
+| Self-test: *not_started* | The Oscillation Guard holds the strategy, or the option *Self-test* is missing | Wait for the guard; copy `hbc_control.yaml` v1.4 and restart HA |
+| Self-test: a battery *uncertain* | The house load changed in every attempt, the battery did not charge, or it was full | Run it again when the house is quiet; check the note in the table |
 
 To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*. Warnings and errors do not need *Insight mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
 

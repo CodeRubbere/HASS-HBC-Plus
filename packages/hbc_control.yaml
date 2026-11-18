@@ -699,6 +699,7 @@ input_select:
       - Sell # Discharge batteries
       - Zero import # Use battery to prevent grid import, surplus PV exports to grid
       - Standby / peak shave # Standby, peak shave only. Requires power limits to be set!
+      - Self-test # HBC+ v1.4: used only by the setup self-test (script.hbc_selftest_run); chosen by hand it stops every battery
       - Helios # Reserved for a future HELIOS integration (not part of HBC+)
     icon: mdi:home-battery
 

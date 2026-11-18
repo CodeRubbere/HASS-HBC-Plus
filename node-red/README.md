@@ -4,7 +4,7 @@ Everything Node-RED needs for HBC+ (Home Battery Control Plus), a standalone hom
 2 batteries per phase. All tabs are named `HBC+ ... v1.2`. Node-RED cannot replace a flow tab on import (it skips it or
 imports a copy), so delete the old HBC+ tabs before you import a new version (see *Install*).
 
-**Quickest install:** import `hbc-plus-all-flows.json` (all 15 tabs, HA server config node once).
+**Quickest install:** import `hbc-plus-all-flows.json` (all 16 tabs, HA server config node once).
 Or import the files one by one.
 
 ## Contents
@@ -24,7 +24,8 @@ Or import the files one by one.
 | `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2 | **changed** - *Max power solution*, as Charge (Enforce only); threshold checks fixed for unavailable helpers |
 | `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | **changed** - test inject *Test* removed; *Trace* in JavaScript |
 | `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*) |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*); test inject *TEST: simulate oscillation* removed |
+| `03 self-test (HBC+).json` | HBC+ Self-test v1.4 | **new (v1.4)** - setup self-test: *Flow check* answers `hbc_selftest_flow_check`; *Self-test controller* measures per battery on which P1 phase its charging power shows up; link in *Self-test* is the strategy used during the test (battery under test charges, the rest stops; a plan older than 2 min = all stop) |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*); test inject *TEST: simulate oscillation* removed; v1.4: requester `selftest` (setup self-test) gets priority 90 |
 | `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | **new** - read-only, publishes `hbc/phase/*` for the dashboard; caught errors go to the HBC+ logger |
 | `hbc-plus-all-flows.json` | all of the above | one import file |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
