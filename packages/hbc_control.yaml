@@ -782,11 +782,11 @@ input_select:
   # Dynamic strategy | energy suppliers
   house_battery_strategy_dynamic_data_source:
     name: Tariff data source
-    # Default = the first option: a new install starts on "Grid Clock feed". No `initial:`
+    # Default = the first option: a new install starts on "Grid Clock". No `initial:`
     # on purpose - HA restores the user's choice after a restart.
     options:
-      # HBC+ v1.2: "Grid Clock" (the Grid Clock integration) was replaced by "Grid Clock feed".
-      - Grid Clock feed # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
+      # HBC+ v1.2: "Grid Clock" reads the public Grid Clock feed (hbc_gridclock.yaml), no longer the Grid Clock integration.
+      - Grid Clock # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - None
       - Zonneplan
       - Amber Electric

@@ -955,7 +955,7 @@ views:
               - condition: state
                 entity_id: input_select.house_battery_strategy_dynamic_data_source
                 state:
-                  - Grid Clock feed
+                  - Grid Clock
           - type: distribution
             entities:
               - entity: sensor.charge_available_energy
@@ -1142,7 +1142,7 @@ views:
               - condition: state
                 entity_id: input_select.house_battery_strategy_dynamic_data_source
                 state:
-                  - Grid Clock feed
+                  - Grid Clock
           - type: heading
             icon: mdi:information-slab-circle
             heading: When done, switch to strategy
@@ -2194,7 +2194,7 @@ views:
             state_color: true
           - type: markdown
             content: >-
-              **On needs the Grid Clock feed.** With another tariff source the
+              **On needs the tariff source Grid Clock.** With another tariff source the
               price guard only shows what it would do (Monitor): only the feed
               has the real all-in buy and sell prices.
             visibility:
@@ -2203,7 +2203,7 @@ views:
                 state: 'On'
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_data_source
-                state_not: Grid Clock feed
+                state_not: Grid Clock
           - type: markdown
             content: >-
               **Import override stays in Monitor:** a phase carries two
@@ -2262,21 +2262,21 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: input_select.house_battery_gridclock_zone
                   name: Zone
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: input_select.house_battery_gridclock_provider
                   name: Supplier
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: input_select.house_battery_gridclock_zone
                     state: BE
                 row:
@@ -2285,7 +2285,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: sensor.hbc_grid_clock_feed
                   name: Grid Clock feed
@@ -2293,7 +2293,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: sensor.hbc_grid_clock_feed
                     state: error
                 row:
@@ -2305,7 +2305,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: sensor.hbc_grid_clock_feed
                     state_not: error
                 row:
@@ -2608,8 +2608,7 @@ views:
 
           **Dynamic** picks a strategy from the energy prices.
 
-          _Prices come from your tariff data source, by default the Grid Clock
-          feed..._
+          _Prices come from your tariff data source, by default Grid Clock..._
     max_columns: 4
   - type: sections
     max_columns: 3

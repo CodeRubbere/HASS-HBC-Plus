@@ -6,7 +6,7 @@
 #   export_negative (sell < export threshold): Sell -> Charge PV, Zero import -> Self-consumption,
 #                                              Standby / peak shave -> Charge PV
 #   import_negative (buy < import threshold):  every strategy except Full stop -> Charge, until full
-# Off by default. "On" only takes effect with Tariff data source = Grid Clock feed (all-in prices);
+# Off by default. "On" only takes effect with Tariff data source = Grid Clock (all-in prices);
 # otherwise it behaves as Monitor. The import override also stays in Monitor while a phase carries
 # two batteries and the phase guard is not on Enforce.
 #
