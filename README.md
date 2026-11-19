@@ -41,7 +41,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 **Coming in v1.2** (in development, planned for 10 December 2026, ready for the end of Dutch net metering on 1 January 2027):
 
-- **Grid Clock feed** — a new tariff source with all-in buy and sell prices per quarter for your own supplier, public and without a token.
+- **Grid Clock feed** — the tariff source *Grid Clock* now has all-in buy and sell prices per quarter for your own supplier, public and without a token.
 - **Buy and sell prices** — Dynamic values *Sell* at the real sell price; a sell price sensor and a sell line in the price chart.
 - **Price guard** — while prices are negative, stop exporting and charge instead; signals for a PV limiter. Off by default.
 

@@ -314,11 +314,11 @@ Prices are refreshed at midnight, at 13:15 and 15:00, after a change of source, 
 
 ### Grid Clock feed
 
-*Tariff data source* **Grid Clock feed** (new in v1.2) reads all-in buy and sell prices per quarter for your own supplier from the public files of [Grid Clock](https://gridclock.eu). Grid Clock computes them from the supplier's formula, VAT and the country's energy tax. In the Netherlands it switches to separate sell prices by itself on 1 January 2027, when net metering ends. HBC+ has no tax or markup settings of its own.
+*Tariff data source* **Grid Clock** (the Grid Clock feed, new in v1.2) reads all-in buy and sell prices per quarter for your own supplier from the public files of [Grid Clock](https://gridclock.eu). Grid Clock computes them from the supplier's formula, VAT and the country's energy tax. In the Netherlands it switches to separate sell prices by itself on 1 January 2027, when net metering ends. HBC+ has no tax or markup settings of its own.
 
 **Setup.**
 
-1. Check that **Tariff data source** (Timed/Dynamic view) is set to *Grid Clock feed*. It is the default on a new install; after an update from v1.1 your earlier choice stays.
+1. Check that **Tariff data source** (Timed/Dynamic view) is set to *Grid Clock*. It is the default on a new install; after an update from v1.1 your earlier choice stays.
 2. Choose your **Zone** (NL or BE) and your **Supplier**. Until you choose one, HBC+ uses the market price, with sell = buy.
 3. Belgium: choose your **Grid operator**. Its distribution and transport cost per kWh is added to the buy price.
 4. Check the line **Grid Clock feed** under the source: `ok` or `not modified` is good; `error` shows the reason.
@@ -353,7 +353,7 @@ The guard acts on the strategy that actually runs: the sub-strategy of Dynamic o
 
 **Safety.**
 
-1. **On** only acts with *Tariff data source* = *Grid Clock feed*: only the feed has the real all-in prices. With another source a market price below zero looks negative while you still pay energy tax, so the guard stays in Monitor.
+1. **On** only acts with *Tariff data source* = *Grid Clock*: only the feed has the real all-in prices. With another source a market price below zero looks negative while you still pay energy tax, so the guard stays in Monitor.
 2. **Full stop** is never changed (Oscillation Guard, phase-overload alarm, manual stop), and nothing changes while the EV stop trigger is on.
 3. **Import** at full power only on phase guard *Enforce*, or when no phase carries two batteries (`binary_sensor.hbc_phase_shared`). Otherwise that part stays in Monitor, so two batteries on one 16 A group never charge at full power together.
 4. A missing price-guard entity means no price guard: the control loop works as in v1.1.
@@ -410,9 +410,9 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 v1.2 prepares HBC+ for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an imported kWh costs.
 
-- **F6 — Grid Clock feed.** A new *Tariff data source* with all-in buy and sell prices per quarter for your own supplier, public and without a token (see [Grid Clock feed](#grid-clock-feed)).
+- **F6 — Grid Clock feed.** The *Tariff data source* *Grid Clock* now reads all-in buy and sell prices per quarter for your own supplier from a public feed, without a token (see [Grid Clock feed](#grid-clock-feed)).
 - **F7 — Buy and sell prices.** Every quarter carries a sell price next to the buy price; Dynamic values *Sell* at the sell price; new `sensor.hbc_energy_export_price_now` and a sell line in the chart (see [Buy and sell prices](#buy-and-sell-prices)).
-- **Grid Clock integration source removed.** The option *Grid Clock* (prices from the Grid Clock integration) is gone from *Tariff data source*; *Grid Clock feed* replaces it and needs no integration.
+- **Grid Clock integration no longer needed.** The option *Grid Clock* no longer reads the Grid Clock integration; it uses the Grid Clock feed instead.
 - **F8 — Price guard.** Stops exporting and charges instead while prices are negative, with signals for a PV limiter (see [Price guard](#price-guard)).
 
 With default settings v1.2 behaves exactly like v1.1. Checked offline: with sell = buy, Dynamic gives identical marks, strategy and spreads in 96 price lists, and with the guard Off the strategy choice is identical for every strategy.
@@ -423,8 +423,8 @@ With default settings v1.2 behaves exactly like v1.1. Checked offline: with sell
 2. **Packages:** copy all files from `packages/`. Two are new (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` changed. *Check configuration* and restart HA.
 3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc).
 4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor.
-5. **Used *Grid Clock* as tariff source?** That option is gone; after the restart the source falls back to *Grid Clock feed*. Choose your supplier. The Grid Clock integration is no longer needed.
-6. **Optional:** choose *Grid Clock feed* and your supplier, and run the price guard in *Monitor* first.
+5. **Used *Grid Clock* as tariff source?** It stays selected and now reads the Grid Clock feed. Choose your supplier. The Grid Clock integration is no longer needed.
+6. **Optional:** choose *Grid Clock* and your supplier, and run the price guard in *Monitor* first.
 
 ## What's new in HBC+ v1.1
 
@@ -1007,7 +1007,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | Warning *… keeps ignoring commands* | The battery does not follow HBC+ (RS485 switched off in the Marstek app, firmware mode, Modbus problem) | Check RS485 control and the work mode of that battery |
 | *Grid Clock feed* shows `error`, reason `HTTP 404` | No feed file for this zone or supplier (yet), or the supplier was removed | Choose another supplier; the list refreshes at start and daily at 00:10 |
 | The supplier list only shows *Market price (no supplier)* | The supplier index could not be loaded (no internet, or the Dynamic tab not deployed) | Check the status of the *Grid Clock suppliers* group in the Dynamic tab; it retries at start and daily |
-| Price guard on *On*, but it only shows *would* | The tariff source is not *Grid Clock feed*, or import with a shared phase and the phase guard not on *Enforce* | See the warnings in the *Price guard* section |
+| Price guard on *On*, but it only shows *would* | The tariff source is not *Grid Clock*, or import with a shared phase and the phase guard not on *Enforce* | See the warnings in the *Price guard* section |
 
 To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*. Warnings and errors do not need *Insight mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
 

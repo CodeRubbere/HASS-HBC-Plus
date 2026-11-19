@@ -9,30 +9,28 @@ Ready for the end of Dutch net metering on 1 January 2027: from then on an expor
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
 
 ### Added
-- **Grid Clock feed** (F6) — new *Tariff data source* with all-in buy and sell prices per quarter for your own
-  supplier, from the public files on `cdn.gridclock.eu`. No account, token or registration; only the zone and the
+- **Grid Clock feed** (F6) — the *Tariff data source* *Grid Clock* now has all-in buy and sell prices per quarter for
+  your own supplier, from the public files on `cdn.gridclock.eu`. No account, token or registration; only the zone and the
   supplier's short name are in the request. Supplier and (Belgium) grid operator are chosen on the Timed/Dynamic
   view and kept across restarts. New package `hbc_gridclock.yaml`, status in `sensor.hbc_grid_clock_feed`.
 - **Buy and sell prices** (F7) — every quarter carries a sell price next to the buy price. Dynamic values *Sell* at
   the sell price; new `sensor.hbc_energy_export_price_now`, *Sell now* tile and a sell line in the price chart.
 - **Price guard** (F8) — while prices are negative, stops exporting and charges instead (Off / Monitor / On, Off by
   default), with signals for a PV limiter (`binary_sensor.hbc_pv_curtail_advised`). New package
-  `hbc_price_guard.yaml`. *On* only with the Grid Clock feed; never overrides *Full stop* or the EV stop trigger.
+  `hbc_price_guard.yaml`. *On* only with the tariff source *Grid Clock*; never overrides *Full stop* or the EV stop trigger.
 
 ### Changed
 - Dynamic: *Price split* gives every source a sell list (sell = buy without the feed); marks carry `sell` and `neg`.
 - Start, Timed, Charge and Sell apply the price guard; Charge has a new *Price goal*.
 - All flow tabs are named *v1.2*; the *How this flow works* texts describe the v1.2 changes.
 - Dashboard: buy/sell tiles, sell line, price guard section, Home view price-guard card.
-
-### Removed
-- Tariff data source *Grid Clock* (prices from the Grid Clock integration) and its automation in `hbc_config.yaml`.
-  *Grid Clock feed* replaces it and needs no integration.
+- Tariff data source *Grid Clock* reads the Grid Clock feed instead of the Grid Clock integration; the integration and
+  its automation in `hbc_config.yaml` are no longer needed.
 
 ### Updating from 1.1
 Copy all packages (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
-`node-red/hbc-plus-all-flows.json`, paste the dashboard again. Used *Grid Clock* as source? Choose your supplier
-under *Grid Clock feed*. Full steps: *Updating from v1.1* in the user guide.
+`node-red/hbc-plus-all-flows.json`, paste the dashboard again. Used *Grid Clock* as source? It stays selected and
+now reads the feed: choose your supplier. Full steps: *Updating from v1.1* in the user guide.
 
 ## [1.1.0] – 16 November 2026
 

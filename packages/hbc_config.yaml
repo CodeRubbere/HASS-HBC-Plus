@@ -51,5 +51,5 @@
 # any particular integration. Source-specific triggers belong here, in installation config.
 #
 # The Grid Clock feed (HBC+ v1.2) needs no trigger here: Node-RED refreshes the prices itself when
-# you change the zone, supplier or grid operator. The automation for the old "Grid Clock" option
-# (Grid Clock integration) was removed with that option.
+# you change the zone, supplier or grid operator. The automation for the Grid Clock integration
+# (what "Grid Clock" used up to v1.1) was removed.
