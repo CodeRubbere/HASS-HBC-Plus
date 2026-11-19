@@ -293,6 +293,18 @@ views:
             vertical: false
             features:
               - type: select-options
+                options:
+                  - Full stop
+                  - Self-consumption
+                  - Timed
+                  - Dynamic
+                  - Charge
+                  - Charge PV
+                  - Charge Deadline
+                  - Sell
+                  - Zero import
+                  - Standby / peak shave
+                  - Helios
             features_position: bottom
             visibility:
               - condition: state

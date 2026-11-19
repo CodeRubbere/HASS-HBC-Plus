@@ -19,6 +19,7 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 ### Changed
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
   stops every battery). Strategy arbiter: requester `selftest` has priority 90.
+- Dashboard: the *Choose strategy* tile no longer offers *Self-test*.
 - Dynamic, *Determine dynamic strategy*: step 3b for the load forecast; with the switch off the marks are identical
   to v1.3. `sensor.hbc_energy_prices_data` has a new attribute `load_forecast`.
 

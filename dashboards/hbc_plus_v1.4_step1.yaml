@@ -410,6 +410,7 @@ views:
                   - Sell
                   - Zero import
                   - Standby / peak shave
+                  - Helios
             features_position: bottom
             visibility:
               - condition: state

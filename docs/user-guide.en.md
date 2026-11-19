@@ -441,7 +441,7 @@ Phase detection needs: P1 power per phase, all battery entities, *Full control*,
 
 **Never automatic.** The test never changes the phase map. When a measured phase differs from *Phase* (`input_select.marstek_mN_phase`), the table shows ⚠️ and the button **Apply phase map** appears (`script.hbc_selftest_apply_phase_map`). Batteries on *Own circuit* are never changed. *Stop self-test* (`script.hbc_selftest_abort`) stops a running test; choosing another strategy yourself also stops it within 30 s. You get a notification with the result.
 
-The strategy option *Self-test* is only for this test. Chosen by hand, it stops every battery, like *Full stop*.
+The strategy option *Self-test* is only for this test, so the *Choose strategy* tile does not offer it. Chosen by hand anyway (for example in the entity's dialog), it stops every battery, like *Full stop*.
 
 ## Design background and decisions
 

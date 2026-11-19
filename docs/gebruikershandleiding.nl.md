@@ -441,7 +441,7 @@ Fasedetectie heeft nodig: P1-vermogen per fase, alle batterij-entiteiten, *Full 
 
 **Nooit automatisch.** De test wijzigt de fasekaart nooit zelf. Wijkt een gemeten fase af van *Phase* (`input_select.marstek_mN_phase`), dan toont de tabel ⚠️ en verschijnt de knop **Apply phase map** (`script.hbc_selftest_apply_phase_map`). Batterijen op *Own circuit* worden nooit gewijzigd. *Stop self-test* (`script.hbc_selftest_abort`) stopt een lopende test; kies je zelf een andere strategie, dan stopt de test ook binnen 30 s. Je krijgt een melding met de uitslag.
 
-De strategie-optie *Self-test* is alleen voor deze test. Kies je haar met de hand, dan stoppen alle batterijen, zoals bij *Full stop*.
+De strategie-optie *Self-test* is alleen voor deze test; de tegel *Choose strategy* biedt haar daarom niet aan. Kies je haar toch met de hand (bijvoorbeeld in het dialoogvenster van de entiteit), dan stoppen alle batterijen, zoals bij *Full stop*.
 
 ## Achtergrond en ontwerpkeuzes
 
