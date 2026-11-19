@@ -932,6 +932,17 @@ views:
                   name: Grid charge up to
             show_header_toggle: false
             state_color: false
+          - color: none
+            type: entities
+            entities:
+              - entity: sensor.hbc_energy_price_now
+                name: Buy price now
+            show_header_toggle: false
+            visibility:
+              - condition: state
+                entity_id: input_select.house_battery_strategy_dynamic_data_source
+                state:
+                  - Grid Clock feed
           - type: distribution
             entities:
               - entity: sensor.charge_available_energy
@@ -1108,14 +1119,17 @@ views:
                   entity: input_number.house_battery_strategy_sell_target_soc
             show_header_toggle: false
             state_color: false
-          - type: entities
+          - color: none
+            type: entities
             entities:
               - entity: sensor.hbc_energy_export_price_now
                 name: Sell price now
-              - entity: sensor.hbc_energy_price_now
-                name: Buy price now
             show_header_toggle: false
-            state_color: false
+            visibility:
+              - condition: state
+                entity_id: input_select.house_battery_strategy_dynamic_data_source
+                state:
+                  - Grid Clock feed
           - type: heading
             icon: mdi:information-slab-circle
             heading: When done, switch to strategy
@@ -3363,6 +3377,8 @@ views:
             heading: Notifications
             heading_style: title
             icon: mdi:cellphone-message
+            grid_options:
+              rows: 1
           - type: markdown
             content: >-
               <font color=grey>Every HBC+ notification goes to the notify
