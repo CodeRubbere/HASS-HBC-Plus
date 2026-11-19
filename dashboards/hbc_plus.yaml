@@ -932,6 +932,17 @@ views:
                   name: Grid charge up to
             show_header_toggle: false
             state_color: false
+          - color: none
+            type: entities
+            entities:
+              - entity: sensor.hbc_energy_price_now
+                name: Buy price now
+            show_header_toggle: false
+            visibility:
+              - condition: state
+                entity_id: input_select.house_battery_strategy_dynamic_data_source
+                state:
+                  - Grid Clock feed
           - type: distribution
             entities:
               - entity: sensor.charge_available_energy
@@ -1108,14 +1119,17 @@ views:
                   entity: input_number.house_battery_strategy_sell_target_soc
             show_header_toggle: false
             state_color: false
-          - type: entities
+          - color: none
+            type: entities
             entities:
               - entity: sensor.hbc_energy_export_price_now
                 name: Sell price now
-              - entity: sensor.hbc_energy_price_now
-                name: Buy price now
             show_header_toggle: false
-            state_color: false
+            visibility:
+              - condition: state
+                entity_id: input_select.house_battery_strategy_dynamic_data_source
+                state:
+                  - Grid Clock feed
           - type: heading
             icon: mdi:information-slab-circle
             heading: When done, switch to strategy
@@ -2098,6 +2112,97 @@ views:
               - condition: state
                 entity: input_boolean.house_battery_control_is_debug_mode
                 state: 'on'
+      - type: grid
+        cards:
+          - type: heading
+            heading: Load forecast
+            heading_style: title
+            icon: mdi:home-lightning-bolt-outline
+          - type: heading
+            icon: mdi:information-slab-circle
+            heading: Charge only what the expensive hours need
+            heading_style: subtitle
+            tap_action:
+              action: url
+              url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#load-forecast
+          - type: markdown
+            content: >-
+              <font color=grey>HBC+ learns how much the house uses per quarter,
+              on working days and weekend days. With the switch on, Dynamic
+              keeps only as many cheap quarters as it needs to charge the
+              expected use of the expensive quarters (plus the margin, minus
+              what is stored), the cheapest first. Needs at least 7 working days
+              and 4 weekend days of learning, the cheap strategy Charge, and an
+              expensive strategy other than Sell.</font>
+            text_only: true
+          - type: entities
+            entities:
+              - entity: input_boolean.house_battery_dynamic_use_load_forecast
+                name: Dynamic uses load forecast
+              - entity: input_number.house_battery_load_forecast_margin
+                name: Margin
+              - entity: sensor.hbc_load_forecast
+                name: Expected use, next 24 h
+              - entity: sensor.hbc_load_forecast_expensive
+                name: Expected use in expensive quarters
+              - type: attribute
+                entity: sensor.hbc_load_profile
+                attribute: days_wd
+                name: Learned working days
+              - type: attribute
+                entity: sensor.hbc_load_profile
+                attribute: days_we
+                name: Learned weekend days
+              - type: button
+                name: Forget the learned profile
+                icon: mdi:restore
+                action_name: Reset
+                tap_action:
+                  action: perform-action
+                  perform_action: script.hbc_load_profile_reset
+                  confirmation:
+                    text: Forget everything HBC+ learned about your house use?
+          - type: markdown
+            content: >-
+              {%- set lf = state_attr('sensor.hbc_energy_prices_data',
+              'load_forecast') or {} -%} {%- if
+              is_state('input_boolean.house_battery_dynamic_use_load_forecast',
+              'on') -%} {%- if lf.used -%} ✅ Dynamic keeps **{{ lf.low_kept }}**
+              cheap quarters and skips {{ lf.low_dropped }}: the expensive
+              quarters need {{ lf.need_kwh }} kWh, {{ lf.stored_kwh }} kWh is
+              stored, one cheap quarter charges {{ lf.per_low_kwh }} kWh. {%-
+              elif lf.reason -%} ⏳ Not used now: {{ lf.reason }}. Dynamic
+              charges as without the forecast. {%- else -%} ⏳ Waiting for the
+              next Dynamic run (every quarter). {%- endif -%} {%- endif %}
+            text_only: true
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Expected use, next 24 hours
+            graph_span: 24h
+            span:
+              start: minute
+            now:
+              show: true
+              label: Now
+            apex_config:
+              xaxis:
+                labels:
+                  datetimeUTC: false
+                  format: HH:mm
+              yaxis:
+                decimalsInFloat: 0
+                title:
+                  text: W
+            series:
+              - entity: sensor.hbc_load_forecast
+                name: Forecast
+                type: area
+                curve: stepline
+                data_generator: >
+                  const f = entity.attributes.forecast || []; const t0 = new
+                  Date(entity.attributes.start).getTime(); return f.map((w, k)
+                  => [t0 + k * 900000, w]);
       - type: grid
         cards:
           - type: heading
@@ -3570,7 +3675,8 @@ views:
               working, then measures per battery which phase it is on: one
               battery at a time charges at 800 W for about 35 s (1 to 3 minutes
               per battery, your strategy takes over again afterwards). The test
-              never changes the phase map: apply it with the button below.</font>
+              never changes the phase map: apply it with the button
+              below.</font>
             text_only: true
           - type: tile
             entity: sensor.hbc_self_test_status
@@ -3589,8 +3695,8 @@ views:
               perform_action: script.hbc_selftest_run
               confirmation:
                 text: >-
-                  Run the self-test? With phase detection on, the batteries leave
-                  your strategy for 1 to 3 minutes per battery.
+                  Run the self-test? With phase detection on, the batteries
+                  leave your strategy for 1 to 3 minutes per battery.
             visibility:
               - condition: state
                 entity: sensor.hbc_self_test_status
@@ -3627,27 +3733,44 @@ views:
                 state: running
           - type: markdown
             content: >
-              {% set c = state_attr('sensor.hbc_self_test_status', 'checks') or [] %}
-              {% set icon = {'ok': '✅', 'warning': '⚠️', 'error': '❌'} %}
+              {% set c = state_attr('sensor.hbc_self_test_status', 'checks') or
+              [] %} {% set icon = {'ok': '✅', 'warning': '⚠️', 'error': '❌'} %}
               {% if c %}| Check | | Details |
 
               | :--- | :---: | :--- |
 
-              {% for x in c %}| {{ x.label }} | {{ icon.get(x.result, x.result) }} | {{ x.info | replace('|', '/') }} |
+              {% for x in c %}| {{ x.label }} | {{ icon.get(x.result, x.result)
+              }} | {{ x.info | replace('|', '/') }} |
 
-              {% endfor %}{% elif is_state('sensor.hbc_self_test_status', 'running') %}Running the checks...{% else %}Not run yet.{% endif %}
+              {% endfor %}{% elif is_state('sensor.hbc_self_test_status',
+              'running') %}Running the checks...{% else %}Not run yet.{% endif
+              %}
           - type: markdown
             content: >
-              {% set p = states('sensor.hbc_self_test_phases') %}
-              {% set bs = state_attr('sensor.hbc_self_test_phases', 'batteries') or [] %}
-              {% if is_state('sensor.hbc_self_test_status', 'running') and is_state_attr('sensor.hbc_self_test_status', 'step', 'phase_detection') %}**Phase detection: running** – one battery at a time charges at 800 W, about 1 to 3 minutes per battery.{% elif p in ['unknown', 'unavailable'] %}Phase detection not run yet.{% else %}**Phase detection: {{ p }}**{% if state_attr('sensor.hbc_self_test_phases', 'reason') %} – {{ state_attr('sensor.hbc_self_test_phases', 'reason') }}{% endif %}
+              {% set p = states('sensor.hbc_self_test_phases') %} {% set bs =
+              state_attr('sensor.hbc_self_test_phases', 'batteries') or [] %} {%
+              if is_state('sensor.hbc_self_test_status', 'running') and
+              is_state_attr('sensor.hbc_self_test_status', 'step',
+              'phase_detection') %}**Phase detection: running** – one battery at
+              a time charges at 800 W, about 1 to 3 minutes per battery.{% elif
+              p in ['unknown', 'unavailable'] %}Phase detection not run yet.{%
+              else %}**Phase detection: {{ p }}**{% if
+              state_attr('sensor.hbc_self_test_phases', 'reason') %} – {{
+              state_attr('sensor.hbc_self_test_phases', 'reason') }}{% endif %}
 
 
-              {% if bs %}| Battery | Set | Measured | Rise L1 / L2 / L3 (W) | Note |
+              {% if bs %}| Battery | Set | Measured | Rise L1 / L2 / L3 (W) |
+              Note |
 
               | :--- | :---: | :---: | :--- | :--- |
 
-              {% for b in bs %}{% set cur = states('input_select.marstek_' ~ (b.id | lower) ~ '_phase') %}| {{ b.id }} | {{ cur }} | {{ b.measured or '–' }}{{ ' ⚠️' if b.measured and cur in ['L1', 'L2', 'L3'] and cur != b.measured }} | {{ b.delta.L1 | default('–') }} / {{ b.delta.L2 | default('–') }} / {{ b.delta.L3 | default('–') }} | {{ b.note }}{{ ' (' ~ b.attempts ~ ' attempts)' if b.attempts | default(0) > 1 }} |
+              {% for b in bs %}{% set cur = states('input_select.marstek_' ~
+              (b.id | lower) ~ '_phase') %}| {{ b.id }} | {{ cur }} | {{
+              b.measured or '–' }}{{ ' ⚠️' if b.measured and cur in ['L1', 'L2',
+              'L3'] and cur != b.measured }} | {{ b.delta.L1 | default('–') }} /
+              {{ b.delta.L2 | default('–') }} / {{ b.delta.L3 | default('–') }}
+              | {{ b.note }}{{ ' (' ~ b.attempts ~ ' attempts)' if b.attempts |
+              default(0) > 1 }} |
 
               {% endfor %}{% endif %}{% endif %}
           - type: button
@@ -3668,6 +3791,9 @@ views:
               - condition: numeric_state
                 entity: sensor.hbc_self_test_phase_changes
                 above: 0
+      - type: grid
+        cards:
+          - type: heading
             icon: mdi:transmission-tower
             heading: Grid power limits & peak shaving
             heading_style: title

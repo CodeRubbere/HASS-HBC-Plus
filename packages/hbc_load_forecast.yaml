@@ -1,0 +1,226 @@
+# yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
+###########################################################################################################
+# HBC+ v1.4 - house load forecast (F2)
+#
+# HBC+ learns how much power the house draws from the grid and the batteries per quarter of the day, separately
+# for working days and weekend days, and forecasts the next 24 hours from that.
+#
+#   sensor.hbc_load_profile            learned days; attributes wd / we = 96 quarter averages (W), n_wd / n_we
+#                                      = learned quarters. Updated every quarter, kept across restarts.
+#   sensor.hbc_load_forecast           expected house demand for the next 24 hours (kWh); attribute forecast =
+#                                      96 values (W) from attribute start
+#   sensor.hbc_load_forecast_expensive expected house demand in the coming quarters Dynamic marked expensive (kWh)
+#   input_boolean.house_battery_dynamic_use_load_forecast   Dynamic charges only what the expensive quarters need
+#   input_number.house_battery_load_forecast_margin         extra on top of the forecast (%), default 15
+#   script.hbc_load_profile_reset      forget the profile (after a big change: heat pump, EV, new household)
+#
+# What is learned: house demand = grid import - export - battery charge + battery discharge, i.e. what the house
+# used from the grid and the batteries together (PV already subtracted), per quarter, never below 0. Taken from
+# the energy counters of hbc_savings.yaml, so they are required. Each quarter updates its slot with an
+# exponential average (new value weighs 0.15): stable after about two weeks, follows the seasons slowly.
+# Working day or weekend: by the weekday; with the Workday integration (binary_sensor.workday_sensor), a public
+# holiday today counts as a weekend day.
+#
+# Dynamic (Node-RED, Determine dynamic strategy) uses the profile only when the switch is on, the cheap strategy
+# is Charge, the expensive strategy is not Sell, and at least 7 working days and 4 weekend days are learned.
+# Then, per day, it keeps only as many cheap quarters as it needs to charge the expected demand of that day's
+# expensive quarters (plus the margin, minus what is already stored), the cheapest first. Switch off: exactly
+# as v1.3.
+###########################################################################################################
+
+input_boolean:
+  # No 'initial': off on first install, and your choice is kept across restarts.
+  house_battery_dynamic_use_load_forecast:
+    name: Dynamic uses load forecast
+    icon: mdi:home-lightning-bolt-outline
+
+input_number:
+  house_battery_load_forecast_margin:
+    name: Load forecast margin
+    icon: mdi:plus-circle-outline
+    min: 0
+    max: 50
+    step: 5
+    unit_of_measurement: "%"
+    mode: slider
+
+script:
+  hbc_load_profile_reset:
+    alias: "HBC+: forget the learned load profile"
+    icon: mdi:restore
+    mode: single
+    sequence:
+      - event: hbc_load_profile_reset
+
+automation:
+  # Default margin on first install (the profile does not exist yet then).
+  - id: hbc_load_forecast_defaults
+    alias: "HBC+ load forecast: defaults on first start"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: template
+        value_template: "{{ states('sensor.hbc_load_profile') in ['unknown', 'unavailable'] }}"
+    actions:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_load_forecast_margin
+        data:
+          value: 15
+
+template:
+  # --- learn: every quarter, the quarter that just ended -------------------------------------------------------
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/15"
+      - trigger: event
+        event_type: hbc_load_profile_reset
+        id: reset
+    action:
+      - variables:
+          c: >-
+            {{ {'imp': states('sensor.hbc_grid_import_energy'), 'exp': states('sensor.hbc_grid_export_energy'),
+                'ch': states('sensor.hbc_battery_charge_energy'), 'dis': states('sensor.hbc_battery_discharge_energy')} }}
+          ok_c: "{{ c.values() | select('is_number') | list | count == 4 }}"
+          cur: >-
+            {{ {'ts': as_timestamp(now()) | round(0), 'imp': c.imp | float(0), 'exp': c.exp | float(0),
+                'ch': c.ch | float(0), 'dis': c.dis | float(0)} if ok_c else {} }}
+          snap: "{{ state_attr('sensor.hbc_load_profile', 'snap') or {} }}"
+          qstart: "{{ (now() - timedelta(minutes=15)).isoformat() }}"
+          idx: >-
+            {%- set s = as_datetime(qstart) | as_local -%}
+            {{ s.hour * 4 + (s.minute // 15) }}
+          weekend: >-
+            {%- set s = as_datetime(qstart) | as_local -%}
+            {%- if s.date() == now().date() and states('binary_sensor.workday_sensor') in ['on', 'off'] -%}
+              {{ is_state('binary_sensor.workday_sensor', 'off') }}
+            {%- else -%}
+              {{ s.weekday() >= 5 }}
+            {%- endif -%}
+          w: >-
+            {%- set ok = trigger.id != 'reset' and ok_c and snap.get('ts') is number and 800 <= cur.ts - snap.ts <= 1000 -%}
+            {%- if ok -%}
+              {%- set d = [cur.imp - snap.imp, cur.exp - snap.exp, cur.ch - snap.ch, cur.dis - snap.dis] -%}
+              {%- set ok = d | select('lt', 0) | list | count == 0 -%}
+            {%- endif -%}
+            {%- if ok -%}
+              {{ ([(d[0] - d[1]) - (d[2] - d[3]), 0] | max * 3600000 / (cur.ts - snap.ts)) | round(0) }}
+            {%- else -%}
+              -1
+            {%- endif -%}
+          old_wd: >-
+            {%- set l = [] if trigger.id == 'reset' else (state_attr('sensor.hbc_load_profile', 'wd') or []) -%}
+            {{ l if l | count == 96 else [none] * 96 }}
+          old_we: >-
+            {%- set l = [] if trigger.id == 'reset' else (state_attr('sensor.hbc_load_profile', 'we') or []) -%}
+            {{ l if l | count == 96 else [none] * 96 }}
+          upd: "{{ w | int(-1) >= 0 }}"
+          new: >-
+            {%- set old = old_we if weekend else old_wd -%}
+            {%- set ns = namespace(l=[]) -%}
+            {%- for v in old -%}
+              {%- if upd and loop.index0 == idx | int -%}
+                {%- set ns.l = ns.l + [(w | float if v is none else 0.85 * v + 0.15 * (w | float)) | round(0)] -%}
+              {%- else -%}
+                {%- set ns.l = ns.l + [v] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.l }}
+          n_wd: >-
+            {{ 0 if trigger.id == 'reset' else (state_attr('sensor.hbc_load_profile', 'n_wd') | int(0)) + (1 if upd and not weekend else 0) }}
+          n_we: >-
+            {{ 0 if trigger.id == 'reset' else (state_attr('sensor.hbc_load_profile', 'n_we') | int(0)) + (1 if upd and weekend else 0) }}
+    sensor:
+      - name: "HBC load profile"
+        unique_id: hbc_load_profile
+        icon: mdi:home-analytics
+        unit_of_measurement: d
+        state: "{{ ((n_wd | int + n_we | int) / 96) | round(1) }}"
+        attributes:
+          wd: "{{ old_wd if weekend else new }}"
+          we: "{{ new if weekend else old_we }}"
+          n_wd: "{{ n_wd | int }}"
+          n_we: "{{ n_we | int }}"
+          days_wd: "{{ (n_wd | int / 96) | round(1) }}"
+          days_we: "{{ (n_we | int / 96) | round(1) }}"
+          last: "{{ {'quarter': qstart, 'w': w | int, 'weekend': weekend} }}"
+          snap: "{{ cur }}"
+
+  # --- forecast ------------------------------------------------------------------------------------------------
+  - sensor:
+      - name: "HBC load forecast"
+        unique_id: hbc_load_forecast
+        icon: mdi:home-lightning-bolt-outline
+        unit_of_measurement: kWh
+        availability: "{{ (state_attr('sensor.hbc_load_profile', 'wd') or []) | count == 96 }}"
+        state: >-
+          {%- set wd = state_attr('sensor.hbc_load_profile', 'wd') or [] -%}
+          {%- set we = state_attr('sensor.hbc_load_profile', 'we') or [] -%}
+          {%- set hol = is_state('binary_sensor.workday_sensor', 'off') -%}
+          {%- set t0 = now().replace(minute=(now().minute // 15) * 15, second=0, microsecond=0) -%}
+          {%- set ns = namespace(e=0) -%}
+          {%- for k in range(96) -%}
+            {%- set t = t0 + timedelta(minutes=15 * k) -%}
+            {%- set q = t.hour * 4 + t.minute // 15 -%}
+            {%- set wkend = (hol if t.date() == now().date() else false) or t.weekday() >= 5 -%}
+            {%- set a = (we if wkend else wd)[q] -%}
+            {%- set b = (wd if wkend else we)[q] -%}
+            {%- set v = a if a is number else (b if b is number else 0) -%}
+            {%- set ns.e = ns.e + v / 4000 -%}
+          {%- endfor -%}
+          {{ ns.e | round(2) }}
+        attributes:
+          start: "{{ now().replace(minute=(now().minute // 15) * 15, second=0, microsecond=0).isoformat() }}"
+          forecast: >-
+            {%- set wd = state_attr('sensor.hbc_load_profile', 'wd') or [] -%}
+            {%- set we = state_attr('sensor.hbc_load_profile', 'we') or [] -%}
+            {%- set hol = is_state('binary_sensor.workday_sensor', 'off') -%}
+            {%- set t0 = now().replace(minute=(now().minute // 15) * 15, second=0, microsecond=0) -%}
+            {%- set ns = namespace(l=[]) -%}
+            {%- for k in range(96) -%}
+              {%- set t = t0 + timedelta(minutes=15 * k) -%}
+              {%- set q = t.hour * 4 + t.minute // 15 -%}
+              {%- set wkend = (hol if t.date() == now().date() else false) or t.weekday() >= 5 -%}
+              {%- set a = (we if wkend else wd)[q] -%}
+              {%- set b = (wd if wkend else we)[q] -%}
+              {%- set ns.l = ns.l + [a if a is number else (b if b is number else none)] -%}
+            {%- endfor -%}
+            {{ ns.l }}
+          learned: >-
+            {{ (state_attr('sensor.hbc_load_profile', 'n_wd') | int(0)) >= 7 * 96
+               and (state_attr('sensor.hbc_load_profile', 'n_we') | int(0)) >= 4 * 96 }}
+
+      - name: "HBC load forecast expensive"
+        unique_id: hbc_load_forecast_expensive
+        icon: mdi:cash-clock
+        unit_of_measurement: kWh
+        availability: "{{ (state_attr('sensor.hbc_load_profile', 'wd') or []) | count == 96 }}"
+        state: >-
+          {%- set wd = state_attr('sensor.hbc_load_profile', 'wd') or [] -%}
+          {%- set we = state_attr('sensor.hbc_load_profile', 'we') or [] -%}
+          {%- set hol = is_state('binary_sensor.workday_sensor', 'off') -%}
+          {%- set ts = as_timestamp(now()) -%}
+          {%- set ns = namespace(e=0) -%}
+          {%- for m in state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+            {%- if m.mark == 'high' and as_timestamp(m.end, 0) > ts -%}
+              {%- set s = as_local(as_datetime(m.start)) -%}
+              {%- set h = (as_timestamp(m.end, 0) - [as_timestamp(m.start, 0), ts] | max) / 3600 -%}
+              {%- set q = s.hour * 4 + s.minute // 15 -%}
+              {%- set wkend = (hol if s.date() == now().date() else false) or s.weekday() >= 5 -%}
+              {%- set a = (we if wkend else wd)[q] -%}
+              {%- set b = (wd if wkend else we)[q] -%}
+              {%- set v = a if a is number else (b if b is number else 0) -%}
+              {%- set ns.e = ns.e + v * h / 1000 -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.e | round(2) }}
+
+recorder:
+  exclude:
+    entities:
+      # Large attributes (2 x 96 values), and the forecast re-renders every minute (now()).
+      - sensor.hbc_load_profile
+      - sensor.hbc_load_forecast
+      - sensor.hbc_load_forecast_expensive

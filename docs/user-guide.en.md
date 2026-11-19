@@ -343,6 +343,21 @@ Picks a strategy from the energy prices of today and tomorrow.
 
 Prices are refreshed at midnight, at 13:15 and 15:00, after a change of source, and until tomorrow's prices are in. If the source fails, Dynamic keeps the last valid prices or falls back to *Default to* (see R3). Other flows can fetch the same prices through the link call (see *Shared price fetch*).
 
+### Load forecast
+
+*New in v1.4.* Dynamic charges in the cheap quarters it marks, but does not know how much the house will use in the expensive ones. It may charge more than needed (the rest goes back with losses) or too little. The load forecast (`packages/hbc_load_forecast.yaml`, *Timed/Dynamic* view, section *Load forecast*) fixes that.
+
+**Learning.** Every quarter HBC+ stores what the house used from the grid and the batteries together (grid import − export − battery charge + discharge, so PV is already subtracted), in a profile of 96 quarters for working days and one for weekend days (`sensor.hbc_load_profile`). Each quarter updates its slot with an exponential average (the new value weighs 0.15): stable after about two weeks, following the seasons slowly. With the Workday integration (`binary_sensor.workday_sensor`) a public holiday today counts as a weekend day. It needs the energy counters of `hbc_savings.yaml`.
+
+**Forecast.** `sensor.hbc_load_forecast` is the expected use for the next 24 hours (attribute `forecast`: 96 values in W, shown in the chart); `sensor.hbc_load_forecast_expensive` the expected use in the coming quarters Dynamic marked expensive.
+
+**In Dynamic** (*Dynamic uses load forecast*, off by default). Dynamic walks the coming quarters in time order, starting with what is stored now. Every expensive quarter must be covered by its expected use plus *Margin* (default 15 %); when the stored energy falls short, the cheapest cheap quarter **before** it is kept, adding one quarter at *Max. charge power*. Cheap quarters that no expensive quarter needs go back to the normal strategy. The section shows what Dynamic did in its last run. It is used only when:
+- at least 7 working days and 4 weekend days are learned;
+- the cheap strategy is *Charge* (other strategies do not charge from the grid);
+- the expensive strategy is not *Sell* (selling empties the batteries regardless of the house).
+
+Otherwise, and with the switch off, Dynamic works exactly as in v1.3. A big change in the house (heat pump, EV, someone moving in) makes the old profile wrong: press *Forget the learned profile* and switch off until it has learned again. With *Self-consumption* as the normal strategy the batteries also discharge outside the expensive quarters; a larger margin covers that.
+
 ### Grid Clock feed
 
 *Tariff data source* **Grid Clock feed** (new in v1.2) reads all-in buy and sell prices per quarter for your own supplier from the public files of [Grid Clock](https://gridclock.eu). Grid Clock computes them from the supplier's formula, VAT and the country's energy tax. In the Netherlands it switches to separate sell prices by itself on 1 January 2027, when net metering ends. HBC+ has no tax or markup settings of its own.
@@ -467,11 +482,11 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 *In development*
 
 - **F1 — Setup self-test.** One button on the *Advanced settings* view checks the setup (P1, battery entities, master mode, heartbeat, Node-RED, price sensor, notify targets) and measures per battery on which phase it is connected. A measured phase that differs from the phase map is shown, and applied only when you press *Apply phase map* (see [Setup self-test](#setup-self-test)).
-
+- **F2 — Load forecast.** HBC+ learns how much the house uses per quarter (working days and weekend days apart) and forecasts the next 24 hours. Optionally Dynamic charges only what the expensive quarters need, from the cheapest quarters before them (*Dynamic uses load forecast*, off by default; see [Load forecast](#load-forecast)).
 ### Updating from v1.3
 
 1. **Back up** as in [Step 1](#step-1--back-up).
-2. **Packages:** copy all files from `packages/`. `hbc_selftest.yaml` is new; `hbc_control.yaml` changed (strategy option *Self-test*). *Check configuration* and restart HA.
+2. **Packages:** copy all files from `packages/`. `hbc_selftest.yaml` and `hbc_load_forecast.yaml` are new; `hbc_control.yaml` changed (strategy option *Self-test*, attribute `load_forecast`). *Check configuration* and restart HA.
 3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in *Updating HBC+* (`#updating-hbc`). New tab *HBC+ Self-test v1.4*; the Strategy arbiter knows the requester `selftest` (priority 90).
 4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor.
 5. **Run the self-test** once: *Advanced settings* → *Self-test* → *Run self-test*.
@@ -800,7 +815,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `.gitattributes` | Git setting: normalises line endings of text files |
 | `.gitignore` | Keeps macOS and editor files out of the repository |
 
-**packages/** — Home Assistant packages; copy all twelve into your HA `packages/` folder.
+**packages/** — Home Assistant packages; copy all thirteen into your HA `packages/` folder.
 
 | File | Contents |
 | --- | --- |
@@ -816,6 +831,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `hbc_calibration.yaml` | Battery calibration (v1.3): settings, last full per battery, plan, start and finish automations |
 | `hbc_savings.yaml` | Savings and round-trip efficiency (v1.3): split power, energy counters, quarterly settlement, utility meters, efficiency and suggested spread |
 | `hbc_selftest.yaml` | Setup self-test (v1.4): `script.hbc_selftest_run`, `_abort`, `_apply_phase_map` and the result sensors |
+| `hbc_load_forecast.yaml` | Load forecast (v1.4): learned profile per quarter, forecast sensors, switch and margin for Dynamic, reset script. Needs `hbc_savings.yaml` |
 
 **dashboards/**
 
@@ -862,7 +878,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all twelve files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
+1. Copy all thirteen files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
 2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, add template aliases in `hbc_config.yaml`.
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
 4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
@@ -1024,6 +1040,10 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | `sensor.hbc_self_test_status` | `hbc_selftest.yaml` | Self-test: `running`, `ok`, `warnings`, `errors` or `aborted`; attribute `checks` (id, label, result, info) |
 | `sensor.hbc_self_test_phases` | `hbc_selftest.yaml` | Phase detection: `ok`, `mismatch`, `uncertain`, `skipped`, `not_started`, `timeout`, `aborted`; attribute `batteries` (measured and set phase, rise per phase, note) |
 | `sensor.hbc_self_test_phase_changes` | `hbc_selftest.yaml` | Number of batteries whose measured phase differs from the phase map now; shows *Apply phase map* |
+| `sensor.hbc_load_profile` | `hbc_load_forecast.yaml` | Learned days; attributes `wd` / `we` (96 quarter averages, W), `days_wd`, `days_we` |
+| `sensor.hbc_load_forecast` | `hbc_load_forecast.yaml` | Expected use, next 24 h (kWh); attribute `forecast` (96 × W from `start`), `learned` |
+| `sensor.hbc_load_forecast_expensive` | `hbc_load_forecast.yaml` | Expected use in the coming expensive quarters (kWh) |
+| `input_boolean.house_battery_dynamic_use_load_forecast`, `input_number.house_battery_load_forecast_margin`, `script.hbc_load_profile_reset` | `hbc_load_forecast.yaml` | Dynamic uses the forecast (off by default), margin (default 15 %), forget the profile |
 
 ### Grid Clock feed and price guard (v1.2)
 
@@ -1156,6 +1176,9 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | Self-test: phase detection *skipped* | A check it needs is not OK (see the reason) | Fix that check; a single-phase meter has no phase detection |
 | Self-test: *not_started* | The Oscillation Guard holds the strategy, or the option *Self-test* is missing | Wait for the guard; copy `hbc_control.yaml` v1.4 and restart HA |
 | Self-test: a battery *uncertain* | The house load changed in every attempt, the battery did not charge, or it was full | Run it again when the house is quiet; check the note in the table |
+| Load forecast: *Not used now: load profile still learning* | Fewer than 7 working days or 4 weekend days learned | Wait; `days_wd` / `days_we` on `sensor.hbc_load_profile` show the progress |
+| Load forecast stays at 0 / profile does not grow | An energy counter of `hbc_savings.yaml` is unavailable, or HA was down during the quarter | Check `sensor.hbc_grid_import_energy` and `sensor.hbc_battery_charge_energy`; attribute `last` on `sensor.hbc_load_profile` shows the last quarter (`w` = −1: skipped) |
+| The batteries are empty before the end of the expensive hours | Forecast too low (new appliance, cold snap) or normal strategy Self-consumption | Raise *Margin*, or *Forget the learned profile* after a big change |
 
 To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*. Warnings and errors do not need *Insight mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
 

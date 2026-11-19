@@ -343,6 +343,21 @@ Kiest een strategie op basis van de energieprijzen van vandaag en morgen.
 
 De prijzen worden ververst om middernacht, om 13:15 en 15:00, na een bronwissel, en tot de prijzen van morgen binnen zijn. Valt de bron uit, dan houdt Dynamic de laatste geldige prijzen aan of valt terug op *Default to* (zie R3). Andere flows kunnen dezelfde prijzen ophalen via de link call (zie *Gedeelde prijsophaling*).
 
+### Voorspelling huisverbruik
+
+*Nieuw in v1.4.* Dynamic laadt in de goedkope kwartieren die het markeert, maar weet niet hoeveel het huis in de dure kwartieren gaat gebruiken. Het laadt dan soms meer dan nodig (de rest gaat met verlies terug) of te weinig. De voorspelling van het huisverbruik (`packages/hbc_load_forecast.yaml`, view *Timed/Dynamic*, sectie *Load forecast*) lost dat op.
+
+**Leren.** Elk kwartier slaat HBC+ op wat het huis van net en batterijen samen gebruikte (afname − teruglevering − laden + ontladen, dus PV is er al af), in een profiel van 96 kwartieren voor werkdagen en één voor weekenddagen (`sensor.hbc_load_profile`). Elk kwartier werkt zijn plek bij met een glijdend gemiddelde (de nieuwe waarde weegt 0,15): stabiel na ongeveer twee weken, en het volgt de seizoenen langzaam. Met de Workday-integratie (`binary_sensor.workday_sensor`) telt een feestdag vandaag als weekenddag. Het gebruikt de energietellers van `hbc_savings.yaml`.
+
+**Voorspelling.** `sensor.hbc_load_forecast` is het verwachte verbruik voor de komende 24 uur (attribuut `forecast`: 96 waarden in W, te zien in de grafiek); `sensor.hbc_load_forecast_expensive` het verwachte verbruik in de komende kwartieren die Dynamic als duur markeerde.
+
+**In Dynamic** (*Dynamic uses load forecast*, standaard uit). Dynamic loopt de komende kwartieren in tijdvolgorde af en begint met wat nu is opgeslagen. Elk duur kwartier moet zijn verwachte verbruik plus *Margin* (standaard 15 %) gedekt hebben; schiet de opgeslagen energie tekort, dan blijft het goedkoopste goedkope kwartier **daarvóór** staan, dat één kwartier laden op *Max. charge power* toevoegt. Goedkope kwartieren die geen duur kwartier nodig heeft, gaan terug naar de normale strategie. De sectie toont wat Dynamic bij de laatste run deed. Het wordt alleen gebruikt als:
+- er minstens 7 werkdagen en 4 weekenddagen geleerd zijn;
+- de goedkope strategie *Charge* is (andere strategieën laden niet van het net);
+- de dure strategie niet *Sell* is (verkopen maakt de batterijen leeg, los van het huis).
+
+Anders, en met de schakelaar uit, werkt Dynamic precies zoals in v1.3. Een grote verandering in huis (warmtepomp, EV, iemand die erbij komt wonen) maakt het oude profiel onjuist: druk op *Forget the learned profile* en zet de schakelaar uit tot het opnieuw geleerd heeft. Met *Self-consumption* als normale strategie ontladen de batterijen ook buiten de dure kwartieren; een grotere marge vangt dat op.
+
 ### Grid Clock-feed
 
 *Tariefbron* **Grid Clock feed** (nieuw in v1.2) leest all-in inkoop- en terugleverprijzen per kwartier voor je eigen leverancier uit de openbare bestanden van [Grid Clock](https://gridclock.eu). Grid Clock rekent ze uit met de formule van de leverancier, btw en de energiebelasting van het land. In Nederland schakelt hij op 1 januari 2027, als salderen stopt, zelf over op aparte terugleverprijzen. HBC+ heeft zelf geen instellingen voor belasting of opslag.
@@ -467,11 +482,11 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 *In ontwikkeling*
 
 - **F1 — Zelftest bij installatie.** Eén knop op de view *Advanced settings* controleert de installatie (P1, batterij-entiteiten, mastermodus, heartbeat, Node-RED, prijssensor, meldingsdoelen) en meet per batterij op welke fase ze is aangesloten. Een gemeten fase die afwijkt van de fasekaart wordt getoond, en pas toegepast als je op *Apply phase map* drukt (zie [Zelftest bij installatie](#zelftest-bij-installatie)).
-
+- **F2 — Voorspelling huisverbruik.** HBC+ leert per kwartier hoeveel het huis gebruikt (werkdagen en weekenddagen apart) en voorspelt de komende 24 uur. Optioneel laadt Dynamic alleen wat de dure kwartieren nodig hebben, in de goedkoopste kwartieren ervóór (*Dynamic uses load forecast*, standaard uit; zie [Voorspelling huisverbruik](#voorspelling-huisverbruik)).
 ### Bijwerken vanaf v1.3
 
 1. **Back-up maken** zoals in [Stap 1](#stap-1--back-up-maken).
-2. **Packages:** kopieer alle bestanden uit `packages/`. `hbc_selftest.yaml` is nieuw; `hbc_control.yaml` is gewijzigd (strategie-optie *Self-test*). *Configuratie controleren* en HA herstarten.
+2. **Packages:** kopieer alle bestanden uit `packages/`. `hbc_selftest.yaml` en `hbc_load_forecast.yaml` zijn nieuw; `hbc_control.yaml` is gewijzigd (strategie-optie *Self-test*, attribuut `load_forecast`). *Configuratie controleren* en HA herstarten.
 3. **Flows:** verwijder elk tabblad waarvan de naam met *HBC+* begint, importeer `node-red/hbc-plus-all-flows.json` en deploy, zoals in [HBC+ bijwerken](#hbc-bijwerken). Nieuw tabblad *HBC+ Self-test v1.4*; de Strategy arbiter kent de aanvrager `selftest` (prioriteit 90).
 4. **Dashboard:** plak `dashboards/hbc_plus.yaml` opnieuw in de raw-configuratie-editor.
 5. **Draai de zelftest** één keer: *Advanced settings* → *Self-test* → *Run self-test*.
@@ -800,7 +815,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `.gitattributes` | Git-instelling: normaliseert de regeleinden van tekstbestanden |
 | `.gitignore` | Houdt macOS- en editorbestanden buiten de repository |
 
-**packages/** — Home Assistant-packages; kopieer ze alle twaalf naar de map `packages/` van HA.
+**packages/** — Home Assistant-packages; kopieer ze alle dertien naar de map `packages/` van HA.
 
 | Bestand | Inhoud |
 | --- | --- |
@@ -816,6 +831,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `hbc_calibration.yaml` | Batterijkalibratie (v1.3): instellingen, laatste volle lading per batterij, automatiseringen voor plannen, starten en afronden |
 | `hbc_savings.yaml` | Besparing en rendement (v1.3): gesplitst vermogen, energietellers, afrekening per kwartier, utility meters, rendement en voorgestelde spread |
 | `hbc_selftest.yaml` | Zelftest bij installatie (v1.4): `script.hbc_selftest_run`, `_abort`, `_apply_phase_map` en de uitslagsensoren |
+| `hbc_load_forecast.yaml` | Voorspelling huisverbruik (v1.4): geleerd profiel per kwartier, voorspellingssensoren, schakelaar en marge voor Dynamic, resetscript. Heeft `hbc_savings.yaml` nodig |
 
 **dashboards/**
 
@@ -862,7 +878,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 
 ### Stap 2 — Home Assistant-packages
 
-1. Kopieer alle twaalf bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
+1. Kopieer alle dertien bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
 2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, voeg dan template-aliassen toe in `hbc_config.yaml`.
 3. *Ontwikkelhulpmiddelen* → *Configuratie controleren*, en herstart Home Assistant.
 4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One battery per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, en de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA herstelt de waarden na elke volgende herstart.
@@ -1024,6 +1040,10 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | `sensor.hbc_self_test_status` | `hbc_selftest.yaml` | Zelftest: `running`, `ok`, `warnings`, `errors` of `aborted`; attribuut `checks` (id, label, result, info) |
 | `sensor.hbc_self_test_phases` | `hbc_selftest.yaml` | Fasedetectie: `ok`, `mismatch`, `uncertain`, `skipped`, `not_started`, `timeout`, `aborted`; attribuut `batteries` (gemeten en ingestelde fase, stijging per fase, opmerking) |
 | `sensor.hbc_self_test_phase_changes` | `hbc_selftest.yaml` | Aantal batterijen waarvan de gemeten fase nu afwijkt van de fasekaart; toont *Apply phase map* |
+| `sensor.hbc_load_profile` | `hbc_load_forecast.yaml` | Geleerde dagen; attributen `wd` / `we` (96 kwartiergemiddelden, W), `days_wd`, `days_we` |
+| `sensor.hbc_load_forecast` | `hbc_load_forecast.yaml` | Verwacht verbruik, komende 24 uur (kWh); attribuut `forecast` (96 × W vanaf `start`), `learned` |
+| `sensor.hbc_load_forecast_expensive` | `hbc_load_forecast.yaml` | Verwacht verbruik in de komende dure kwartieren (kWh) |
+| `input_boolean.house_battery_dynamic_use_load_forecast`, `input_number.house_battery_load_forecast_margin`, `script.hbc_load_profile_reset` | `hbc_load_forecast.yaml` | Dynamic gebruikt de voorspelling (standaard uit), marge (standaard 15 %), profiel vergeten |
 
 ### Grid Clock-feed en prijsbewaking (v1.2)
 
@@ -1156,6 +1176,9 @@ Twee meters per fase volgen vanzelf de instellingen van de fasebewaking, in % va
 | Zelftest: fasedetectie *skipped* | Een controle die ze nodig heeft is niet OK (zie de reden) | Los die controle op; een eenfasige meter heeft geen fasedetectie |
 | Zelftest: *not_started* | De Oscillation Guard houdt de strategie vast, of de optie *Self-test* ontbreekt | Wacht op de guard; kopieer `hbc_control.yaml` v1.4 en herstart HA |
 | Zelftest: een batterij *uncertain* | Het huisverbruik veranderde bij elke poging, de batterij laadde niet, of ze was vol | Draai de test opnieuw als het rustig is in huis; zie de opmerking in de tabel |
+| Voorspelling: *Not used now: load profile still learning* | Minder dan 7 werkdagen of 4 weekenddagen geleerd | Wachten; `days_wd` / `days_we` op `sensor.hbc_load_profile` tonen de voortgang |
+| Voorspelling blijft 0 / het profiel groeit niet | Een energieteller van `hbc_savings.yaml` is niet beschikbaar, of HA lag eruit tijdens het kwartier | Controleer `sensor.hbc_grid_import_energy` en `sensor.hbc_battery_charge_energy`; attribuut `last` op `sensor.hbc_load_profile` toont het laatste kwartier (`w` = −1: overgeslagen) |
+| De batterijen zijn leeg voor het einde van de dure uren | Voorspelling te laag (nieuw apparaat, koudegolf) of normale strategie Self-consumption | Verhoog *Margin*, of *Forget the learned profile* na een grote verandering |
 
 Wil je zien wat HBC+ besliste en waarom, open dan de view **Problem solver** (spinnen-icoon) en zet *Insight mode* aan. Voor waarschuwingen en fouten is *Insight mode* niet nodig: die staan altijd in het Node-RED-log (hetzelfde bericht hooguit eens per minuut) en in `sensor.hbc_health`.
 

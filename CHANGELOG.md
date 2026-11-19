@@ -11,10 +11,16 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   measures per battery on which phase it is connected (800 W for about 35 s per battery, up to three attempts).
   A phase that differs from the phase map is applied only with *Apply phase map*. New package `hbc_selftest.yaml`,
   new tab *HBC+ Self-test v1.4*, results in `sensor.hbc_self_test_status` and `sensor.hbc_self_test_phases`.
+- **Load forecast** (F2) — HBC+ learns the house use per quarter (working days and weekend days apart) and
+  forecasts the next 24 hours (`sensor.hbc_load_forecast`). Optionally (*Dynamic uses load forecast*, off by
+  default) Dynamic keeps only the cheap quarters the expensive quarters need, from the cheapest before each.
+  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Timed/Dynamic view.
 
 ### Changed
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
   stops every battery). Strategy arbiter: requester `selftest` has priority 90.
+- Dynamic, *Determine dynamic strategy*: step 3b for the load forecast; with the switch off the marks are identical
+  to v1.3. `sensor.hbc_energy_prices_data` has a new attribute `load_forecast`.
 
  – planned 10 December 2026
 
