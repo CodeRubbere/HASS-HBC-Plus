@@ -717,9 +717,21 @@ views:
         type: markdown
         content: '### Home Battery Control Plus *(HBC+ v1.1)*'
         text_only: true
+      layout: center
+      badges_position: top
+      badges_wrap: wrap
     cards: []
+    badges:
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        entity: sensor.hbc_time
+        show_entity_picture: false
+        name: Time
+        tap_action:
+          action: none
   - type: sections
-    max_columns: 3
     icon: mdi:transmission-tower-off
     path: self-consumption
     sections:
@@ -837,7 +849,7 @@ views:
             grid_options:
               columns: full
         column_span: 2
-    title: Self-consumption
+    title: PID Control
     cards: []
     badges:
       - type: entity
@@ -871,7 +883,7 @@ views:
       card:
         type: markdown
         content: >-
-          ### Self-consumption strategy (NoM)
+          ### PID Control
 
           The **PID controller** steers your batteries to keep grid usage near
           target, _e.g. 0 Watt_, and is used by: 
@@ -879,6 +891,7 @@ views:
           _Self-consumption, Charge PV, Charge (regulated), Peak shaving and
           more..._
         text_only: true
+    max_columns: 3
   - type: sections
     max_columns: 4
     title: Charge/Sell
@@ -1750,6 +1763,19 @@ views:
       layout: center
       badges_position: top
       badges_wrap: scroll
+      card:
+        type: markdown
+        text_only: true
+        content: >
+          ### Charge & Sell
+
+
+          **Charge** and **Sell** run your batteries until a goal is reached,
+          then switch to the strategy you choose.
+
+          **Charge Deadline** reaches its goal before a set time.
+
+          _Choose them yourself, or let Timed and Dynamic switch to them..._
   - type: sections
     title: Timed/Dynamic
     path: timed-dynamic
@@ -2571,6 +2597,19 @@ views:
       layout: center
       badges_position: top
       badges_wrap: scroll
+      card:
+        type: markdown
+        text_only: true
+        content: >-
+          ### Timed & Dynamic
+
+
+          **Timed** runs the strategy you set for each period of the day.
+
+          **Dynamic** picks a strategy from the energy prices.
+
+          _Prices come from your tariff data source, by default the Grid Clock
+          feed..._
     max_columns: 4
   - type: sections
     max_columns: 3
@@ -2700,9 +2739,21 @@ views:
             chart_type: bar
             grid_options:
               columns: full
+    header:
+      card:
+        type: markdown
+        text_only: true
+        content: >-
+          ### Savings
+
+
+          **Savings** is what your energy cost with the batteries, compared
+          without them.
+
+          _Round-trip efficiency and the suggested minimum spread help you tune
+          Dynamic..._
   - type: sections
-    max_columns: 3
-    title: Phases
+    title: Phase guard
     path: phases
     icon: mdi:sine-wave
     badges:
@@ -2734,6 +2785,18 @@ views:
       layout: center
       badges_position: top
       badges_wrap: scroll
+      card:
+        type: markdown
+        text_only: true
+        content: >-
+          ### Phases guard
+
+
+          **Phase guard** keeps each phase below its grid fuse and battery
+          circuit.
+
+          _Per phase: load against the fuse, the active battery and the room
+          left to charge or discharge..._
     sections:
       - type: grid
         column_span: 3
@@ -3185,8 +3248,9 @@ views:
                 entity: sensor.hbc_phase_l3_active
                 attribute: would
                 name: What HBC+ would do
-  - type: sections
     max_columns: 3
+    cards: []
+  - type: sections
     icon: mdi:spider-outline
     path: problem-solver
     background:
@@ -3286,7 +3350,7 @@ views:
         type: markdown
         text_only: true
         content: >-
-          ### Help
+          ### Logging
 
           Need help figuring out what is going on? 
 
@@ -3331,6 +3395,8 @@ views:
         tap_action:
           action: none
     cards: []
+    title: Logging
+    max_columns: 3
   - type: sections
     max_columns: 3
     title: Advanced settings
@@ -4197,3 +4263,17 @@ views:
       layout: center
       badges_position: top
       badges_wrap: scroll
+      card:
+        type: markdown
+        text_only: true
+        content: >-
+          ### Advanced settings
+
+
+          Settings you rarely change: 
+
+          **Battery life**, **Phase guard**, **EV trigger**, **Peak shaving**,
+          **Self test**, and **Per-battery limits**.
+
+          _Also notifications, the EV stop trigger, battery calibration and the
+          setup self-test..._
