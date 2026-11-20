@@ -1,4 +1,6 @@
 
+<p align="center"><img src="assets/logo/hbc-plus-readme.svg" alt="HBC+ Home Battery Control Plus" width="720"></p>
+
 # Home Battery Control Plus (HBC+)
 
 Home Battery Control Plus is an open-source solution for the community to control home batteries and electric vehicles using Home Assistant and Node-RED. Control your batteries exactly how you want, all in one place without vendor lock-ins.
@@ -52,6 +54,8 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | --- | --- |
 | `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml` the battery calibration `hbc_calibration.yaml` and savings `hbc_savings.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Prices, Charge & Sell, Timed & Dynamic, Savings, **Phase guard**, PID Control, Batteries, Settings and Logging |
+| `www/hbc-plus/` | The dashboard logo; copy it into your HA `www/` folder |
+| `assets/logo/` | The HBC+ logo as SVG and PNG: on light, on dark, one colour, app icon, GitHub social preview |
 | `node-red/hbc-plus-all-flows.json` | All 15 HBC+ Node-RED tabs in one import file |
 | `node-red/*.json` | The same tabs as separate files |
 | `node-red/README.md` | Per-tab overview of what HBC+ changes |
@@ -63,7 +67,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 1. Download the [latest release](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) (*Assets* → *Source code (zip)*) and unzip it.
 2. Make sure Home Assistant (with packages and MQTT) and Node-RED (with the palettes listed under *Before you use it*) are running.
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
-4. Copy `packages/*.yaml` to your HA `packages/` folder, restart HA, and run the script **HBC+ phase guard: apply defaults** once.
+4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
 5. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
 6. Add a dashboard named *Home Battery Control Plus* (keep the URL `home-battery-control-plus`) with the contents of `dashboards/hbc_plus.yaml`, set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
 7. Run in **Monitor** for a few days, then switch to **Enforce**.

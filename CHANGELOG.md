@@ -46,6 +46,8 @@ imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
 - **Price guard** (F8) — while prices are negative, stops exporting and charges instead (Off / Monitor / On, Off by
   default), with signals for a PV limiter (`binary_sensor.hbc_pv_curtail_advised`). New package
   `hbc_price_guard.yaml`. *On* only with the tariff source *Grid Clock*; never overrides *Full stop* or the EV stop trigger.
+- **Logo** — the HBC+ logo in the dashboard header and the README. New folder `www/hbc-plus/`: copy it into your HA
+  `www/` folder. All logo files (SVG and PNG) are in `assets/logo/`.
 
 ### Changed
 - Dynamic: *Price split* gives every source a sell list (sell = buy without the feed); marks carry `sell` and `neg`.
@@ -62,7 +64,8 @@ imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
   phase, e.g. DSMR in kW); the update steps keep your own copy. Setup step 2 (Settings view) explains both.
 
 ### Updating from 1.1
-Copy all packages except your own `hbc_config.yaml` (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
+Copy all packages except your own `hbc_config.yaml` (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`) and the new folder `www/hbc-plus/` into your HA `www/`
+folder, delete the old HBC+ tabs and import
 `node-red/hbc-plus-all-flows.json`, paste the dashboard again (new tab layout). Used *Grid Clock* as source? It stays selected and
 now reads the feed: choose your supplier. Full steps: *Updating from v1.1* in the user guide.
 

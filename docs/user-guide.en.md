@@ -467,13 +467,14 @@ v1.2 prepares HBC+ for the end of Dutch net metering on 1 January 2027: from the
 - **Grid Clock integration no longer needed.** The option *Grid Clock* no longer reads the Grid Clock integration; it uses the Grid Clock feed instead.
 - **F8 — Price guard.** Stops exporting and charges instead while prices are negative, with signals for a PV limiter (see [Price guard](#price-guard)).
 - **New dashboard layout.** Nine views in the order you use them: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging (see [Dashboard](#dashboard)). The view addresses stay the same, so links and bookmarks keep working.
+- **Logo.** HBC+ has a logo, in the dashboard header and at the top of the README. Copy `www/hbc-plus/` into your HA `www/` folder (see [Step 2](#step-2--home-assistant-packages)); all logo files are in `assets/logo/`.
 
 With default settings v1.2 behaves exactly like v1.1. Checked offline: with sell = buy, Dynamic gives identical marks, strategy and spreads in 96 price lists, and with the guard Off the strategy choice is identical for every strategy.
 
 ### Updating from v1.1
 
 1. **Back up** as in [Step 1](#step-1--back-up).
-2. **Packages:** copy all files from `packages/` except `hbc_config.yaml` (that one is yours). Two are new (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` changed. *Check configuration* and restart HA.
+2. **Packages:** copy all files from `packages/` except `hbc_config.yaml` (that one is yours). Two are new (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` changed. New: copy `www/hbc-plus/` into your HA `www/` folder (the logo in the dashboard header). *Check configuration* and restart HA.
 3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc).
 4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor. The views are new (see [Dashboard](#dashboard)); your settings stay.
 5. **Used *Grid Clock* as tariff source?** It stays selected and now reads the Grid Clock feed. Choose your supplier. The Grid Clock integration is no longer needed.
@@ -808,6 +809,14 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `README.md` | — | Overview of the Node-RED files and installation |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Example of the shared price fetch; not part of the all-flows file |
 
+**www/hbc-plus/** — copy into the `www/` folder of Home Assistant.
+
+| File | Contents |
+| --- | --- |
+| `hbc-plus-dashboard.svg` | The logo in the header of the dashboard, as `/local/hbc-plus/hbc-plus-dashboard.svg` |
+
+**assets/logo/** — the HBC+ logo for the README, GitHub and your own use (SVG and PNG): on light, on dark, one colour, app icon and GitHub social preview.
+
 **docs/**
 
 | File | Contents |
@@ -823,7 +832,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
+1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them. Copy the folder `www/hbc-plus/` into your HA `www/` folder too (create `www/` next to `packages/` if it is not there): it holds the logo for the dashboard header, which Home Assistant serves as `/local/hbc-plus/…`.
 2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, uncomment option A or B in `hbc_config.yaml` and replace the sensors marked `<< YOUR` (the comments in the file explain both).
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
 4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
@@ -927,7 +936,7 @@ A new HBC+ version comes as a new release on the [Releases page](https://github.
 2. **Read the release notes** for files that were renamed or removed, and delete those from your HA `packages/` folder (in v1.0: `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` and `nodered_heartbeat.yaml` became `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` and `hbc_heartbeat.yaml`).
 3. **Packages:** copy the new `packages/*.yaml` over the old ones, except `hbc_config.yaml`: that one is yours and is never replaced. If you changed another package yourself, carry that change over into the new file. Then *Check configuration* and restart HA.
 4. **Flows:** Node-RED cannot replace a flow tab on import (it skips it or imports a copy), so delete the old tabs first. In the Node-RED editor, double-click each tab whose name starts with *HBC+* and choose *Delete*; leave your own flows alone and do not deploy yet. Then *Import* `node-red/hbc-plus-all-flows.json`; if Node-RED reports that the *HA System* server node already exists, leave it unselected. Then *Deploy*. The tabs come back with the same node ids; if a flow of your own links to an HBC+ tab, open its link node and check that it still points to the right target. Changes you made inside HBC+ tabs are gone, so set your notify action in *Notify phone* again.
-5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor.
+5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor. Copy `www/hbc-plus/` again as well when the release changed it.
 6. **New settings:** a helper that is new in a release starts at its minimum. Set it right after the update; the release notes name it (for example *Battery circuit per phase*). Running *HBC+ phase guard: apply defaults* also sets it, but resets the phase map too.
 
 ## Configuration reference
@@ -1101,6 +1110,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | Charge Deadline books too few hours | Guard not on Enforce with 6 batteries, so it counts 15000 W | Set Enforce |
 | After an update the HBC+ tabs are still the old version, or appear twice | The old tabs were not deleted before the import: Node-RED skips a flow that already exists, or imports a copy | Delete every HBC+ tab, import `hbc-plus-all-flows.json` again and deploy ([Updating HBC+](#updating-hbc)) |
 | A dashboard button does not open the right view | The dashboard URL is not `home-battery-control-plus` | Add a new dashboard named *Home Battery Control Plus*, paste `dashboards/hbc_plus.yaml`, and delete the old one (Step 4) |
+| The dashboard header shows a broken image instead of the logo | `www/hbc-plus/` is not in the HA `www/` folder, or that folder was created after the last restart | Copy `www/hbc-plus/` into the HA `www/` folder and restart Home Assistant (Step 2) |
 | Link call to *Dynamic Fetch from Data Source* times out | The timeout is shorter than the fetch, or the link call no longer points to the section (for example after a re-import) | Set the timeout to at least 30 s; open the link call and pick *Dynamic Fetch from Data Source* again |
 | Dashboard: *No energy prices*, or `binary_sensor.hbc_price_data_missing` on | The tariff source delivers no prices (integration down, sensor renamed, wrong sensor auto-detected) | Check the price integration; set `input_text.house_battery_strategy_dynamic_price_sensor` to the right sensor; the status of *Data source settings* in the Dynamic tab shows which sensor is used |
 | Dynamic status yellow: *(last prices)* | The last fetch failed; the previous prices of the same source are still in use | Nothing to do if it clears on the next run; otherwise as above |
