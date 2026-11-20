@@ -1,7 +1,5 @@
 <p align="center"><img src="assets/logo/hbc-plus-readme.svg" alt="HBC+ Home Battery Control Plus" width="720"></p>
 
-<p align="center"><img src="assets/logo/hbc-plus-readme.svg" alt="HBC+ Home Battery Control Plus" width="720"></p>
-
 # Home Battery Control Plus (HBC+)
 
 Home Battery Control Plus is an open-source solution for the community to control home batteries and electric vehicles using Home Assistant and Node-RED. Control your batteries exactly how you want, all in one place without vendor lock-ins.
