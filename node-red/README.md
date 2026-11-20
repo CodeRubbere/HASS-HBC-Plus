@@ -79,7 +79,7 @@ All files carry the same copy of the *HA System* server node (`176d29a.6f648d6`)
 4. Home Assistant needs `packages/hbc_phase_guard.yaml` (restart HA) and the HBC+ dashboard
    (`dashboards/hbc_plus.yaml`). Run *HBC+ phase guard: apply defaults* once.
 5. Guard mode **Monitor** first: watch the node status of *HBC+ phase planner* / *HBC+ phase guard*
-   (`would: ...`) and the Phases view. Switch to **Enforce** only when that looks right.
+   (`would: ...`) and the Phase guard view. Switch to **Enforce** only when that looks right.
 
 ## Outside Node-RED
 - `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops) is phase-aware: on Enforce only the lowest

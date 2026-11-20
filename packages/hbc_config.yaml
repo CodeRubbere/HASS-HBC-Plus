@@ -1,55 +1,107 @@
-# This file contains config for Home Assistant unique to your installation and should not be overwritten with each update of House Battery Control
-# It should be included in the main configuration.yaml file as a `package` via `!include_dir_named` https://www.home-assistant.io/docs/configuration/packages/.
-# Use the values below as a `template` for your specific needs
-
-# P1 alias disabled (2026-10-22): HomeWizard Instant already provides sensor.p1_meter_power,
-# which every HBC+ flow and your own automations read directly.
-# The alias below could never get that entity_id (it is taken), so it only added a duplicate.
-# If you ever swap meters, re-enable it and point `state:` at the new meter's total power sensor.
+###########################################################################################################
+# HBC+ - your installation-specific config                                                      (HBC+ v1.2)
 #
+# This is the one package that belongs to YOUR installation. Updates never replace it: when you copy the
+# new packages, keep your own hbc_config.yaml (the update steps in the user guide say so).
+# As shipped, everything below is commented out and Home Assistant loads it as an empty package.
+#
+# Grid power. HBC+ reads your P1 meter under fixed names, in W, import positive and export negative:
+#   sensor.p1_meter_power            net grid power, all phases together
+#   sensor.p1_meter_power_phase_1    net power on L1 (phase guard and self-test)
+#   sensor.p1_meter_power_phase_2    net power on L2
+#   sensor.p1_meter_power_phase_3    net power on L3
+# Does your meter already provide these names (a HomeWizard P1, for example)? Then leave this file as it is.
+# Otherwise uncomment ONE option below: remove the leading "# " from every line between BEGIN and END,
+# "template:" included, and replace each sensor marked "<< YOUR". Then Developer tools -> YAML ->
+# Check configuration, and reload Template entities. An alias only gets the name above when no other entity
+# has that ID yet. A single-phase installation needs only the first alias of option A (phase guard Off).
+###########################################################################################################
+
+# ---- Option A: your meter has net power sensors, only under other names --------------------------------
+# BEGIN option A
 # template:
 #   - sensor:
-#       Example: sensor for single-phase power meter (split into consumption and production)
-#      - name: "L1 Meter Power"
-#       unique_id: "L1_meter_power"
-#       unit_of_measurement: "W"
-#        device_class: "power"
-#        state_class: "measurement"
-#        state: >
-#          {% set consumption = states('sensor.electricity_meter_power_consumption_phase_l1') | float(0) %}
-#          {% set production = states('sensor.electricity_meter_power_production_phase_l1') | float(0) %}
-#          {{ (consumption - production) | round(2) }}
+#       - name: "P1 meter power"
+#         unique_id: hbc_p1_meter_power
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: "{{ states('sensor.your_meter_power') | float(none) }}"  # << YOUR net grid power (W)
+#       - name: "P1 meter power phase 1"
+#         unique_id: hbc_p1_meter_power_phase_1
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: "{{ states('sensor.your_meter_power_l1') | float(none) }}"  # << YOUR net power L1 (W)
+#       - name: "P1 meter power phase 2"
+#         unique_id: hbc_p1_meter_power_phase_2
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: "{{ states('sensor.your_meter_power_l2') | float(none) }}"  # << YOUR net power L2 (W)
+#       - name: "P1 meter power phase 3"
+#         unique_id: hbc_p1_meter_power_phase_3
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: "{{ states('sensor.your_meter_power_l3') | float(none) }}"  # << YOUR net power L3 (W)
+# END option A
 
-#       Example: sensor for three-phase power meter (singular net power value going positive for consumption, negative for production)
-#      - name: "P1 Meter Power"
-#         unique_id: "P1_meter_power"
-#        unit_of_measurement: "W"
-#         device_class: "power"
-#         state_class: "measurement"
-#         state: >
-#           {% set l1 = states('sensor.p1_meter_power_phase_1') | float(0) %}
-#           {% set l2 = states('sensor.p1_meter_power_phase_2') | float(0) %}
-#           {% set l3 = states('sensor.p1_meter_power_phase_3') | float(0) %}
-#           {{ (l1 + l2 + l3) | round(2) }}
+# ---- Option B: your meter reports import and export per phase separately (DSMR, for example, in kW) ---
+# BEGIN option B
+# template:
+#   - sensor:
+#       - name: "P1 meter power phase 1"
+#         unique_id: hbc_p1_meter_power_phase_1
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >-
+#           {% set factor = 1000 %}{# kW -> W; use 1 when your meter reports W #}
+#           {% set imp = states('sensor.electricity_meter_power_consumption_phase_l1') %}{# << YOUR import L1 #}
+#           {% set exp = states('sensor.electricity_meter_power_production_phase_l1') %}{# << YOUR export L1 #}
+#           {{ ((imp | float - exp | float) * factor) | round(0) if is_number(imp) and is_number(exp) else none }}
+#       - name: "P1 meter power phase 2"
+#         unique_id: hbc_p1_meter_power_phase_2
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >-
+#           {% set factor = 1000 %}{# kW -> W; use 1 when your meter reports W #}
+#           {% set imp = states('sensor.electricity_meter_power_consumption_phase_l2') %}{# << YOUR import L2 #}
+#           {% set exp = states('sensor.electricity_meter_power_production_phase_l2') %}{# << YOUR export L2 #}
+#           {{ ((imp | float - exp | float) * factor) | round(0) if is_number(imp) and is_number(exp) else none }}
+#       - name: "P1 meter power phase 3"
+#         unique_id: hbc_p1_meter_power_phase_3
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >-
+#           {% set factor = 1000 %}{# kW -> W; use 1 when your meter reports W #}
+#           {% set imp = states('sensor.electricity_meter_power_consumption_phase_l3') %}{# << YOUR import L3 #}
+#           {% set exp = states('sensor.electricity_meter_power_production_phase_l3') %}{# << YOUR export L3 #}
+#           {{ ((imp | float - exp | float) * factor) | round(0) if is_number(imp) and is_number(exp) else none }}
+#       # the total is the sum of the three phase sensors above: nothing to fill in here
+#       - name: "P1 meter power"
+#         unique_id: hbc_p1_meter_power
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >-
+#           {% set ns = namespace(sum=0, ok=true) %}
+#           {% for i in [1, 2, 3] %}{% set v = states('sensor.p1_meter_power_phase_' ~ i) %}
+#           {% if is_number(v) %}{% set ns.sum = ns.sum + v | float %}{% else %}{% set ns.ok = false %}{% endif %}
+#           {% endfor %}{{ ns.sum | round(0) if ns.ok else none }}
+# END option B
 
-#       House battery control | Grid power
-#       Your P1 meter indicates the power drawn or returned to grid.
-#       This "P1 meter power" sensor acts as an alias for you power sensing configuration and is used throughout the node-RED scripts.
-#   - name: "P1 Meter Power"
-#     unique_id: "p1_meter_power"
-#     state: "{{ states('sensor.P1_meter_power') }}" # << SET YOUR GRID POWER SENSOR HERE
-#     unit_of_measurement: "W"
-#     device_class: "power"
-#     state_class: "measurement"
-
-# -------------------------------------------------------------------------------------------------
-# Refresh HBC's price data when the data BEHIND the selected tariff source changes (2026-10-31)
-# -------------------------------------------------------------------------------------------------
-# The Dynamic flow caches the price list per tariff data source and otherwise only re-reads it on
-# its 15-min tick or when an HBC setting changes. Its generic hook for "the source data changed,
-# fetch again" is the HA event `hbc_refresh_energy_prices`; the flow itself knows nothing about
-# any particular integration. Source-specific triggers belong here, in installation config.
+# ---------------------------------------------------------------------------------------------------------
+# Refresh HBC's price data when the data BEHIND the selected tariff source changes
+# ---------------------------------------------------------------------------------------------------------
+# The Dynamic flow caches the price list per tariff data source and otherwise only re-reads it on its
+# 15-min tick or when an HBC setting changes. Its generic hook for "the source data changed, fetch again"
+# is the HA event `hbc_refresh_energy_prices`; the flow itself knows nothing about any particular
+# integration. Source-specific triggers belong here, in installation config.
 #
-# The Grid Clock feed (HBC+ v1.2) needs no trigger here: Node-RED refreshes the prices itself when
-# you change the zone, supplier or grid operator. The automation for the Grid Clock integration
+# Grid Clock (the Grid Clock feed, HBC+ v1.2) needs no trigger here: Node-RED refreshes the prices itself
+# when you change the zone, supplier or grid operator. The automation for the Grid Clock integration
 # (what "Grid Clock" used up to v1.1) was removed.

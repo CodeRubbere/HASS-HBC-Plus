@@ -1291,7 +1291,7 @@ recorder:
     entity_globs:
       # PID control signals (updated every 2-40 seconds during operation)
       # HBC+ 2026-11-15: the P, I and D terms are recorded again: the 'PID analysis' graph on the
-      # Self-consumption view draws them, and Node-RED writes them at most once per 10 s (on change).
+      # PID Control view draws them, and Node-RED writes them at most once per 10 s (on change).
       # - input_number.house_battery_control_*_term
       - input_number.house_battery_control_*_deviation
       # - input_number.house_battery_control_error_signal

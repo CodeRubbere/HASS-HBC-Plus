@@ -11,8 +11,8 @@ imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
 ### Added
 - **Grid Clock feed** (F6) — the *Tariff data source* *Grid Clock* now has all-in buy and sell prices per quarter for
   your own supplier, from the public files on `cdn.gridclock.eu`. No account, token or registration; only the zone and the
-  supplier's short name are in the request. Supplier and (Belgium) grid operator are chosen on the Timed/Dynamic
-  view and kept across restarts. New package `hbc_gridclock.yaml`, status in `sensor.hbc_grid_clock_feed`.
+  supplier's short name are in the request. Supplier and (Belgium) grid operator are chosen on the Prices view
+  and kept across restarts. New package `hbc_gridclock.yaml`, status in `sensor.hbc_grid_clock_feed`.
 - **Buy and sell prices** (F7) — every quarter carries a sell price next to the buy price. Dynamic values *Sell* at
   the sell price; new `sensor.hbc_energy_export_price_now`, *Sell now* tile and a sell line in the price chart.
 - **Price guard** (F8) — while prices are negative, stops exporting and charges instead (Off / Monitor / On, Off by
@@ -23,13 +23,19 @@ imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
 - Dynamic: *Price split* gives every source a sell list (sell = buy without the feed); marks carry `sell` and `neg`.
 - Start, Timed, Charge and Sell apply the price guard; Charge has a new *Price goal*.
 - All flow tabs are named *v1.2*; the *How this flow works* texts describe the v1.2 changes.
-- Dashboard: buy/sell tiles, sell line, price guard section, Home view price-guard card.
+- Dashboard: new tab layout in the order you use it: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard,
+  PID Control, Batteries, Settings and Logging; the view addresses stay the same. Buy/sell tiles, sell line, price
+  guard section and a price-guard alert on the Overview.
 - Tariff data source *Grid Clock* reads the Grid Clock feed instead of the Grid Clock integration; the integration and
   its automation in `hbc_config.yaml` are no longer needed.
+- Charge Deadline: *Deadline required power* and *HBC battery fleet SoC* show *unknown* without a log error when they
+  have no value (before: *Received invalid sensor state: unknown … expected a number*).
+- `hbc_config.yaml`: clean P1 alias templates to uncomment (option A: other sensor names, option B: import and export per
+  phase, e.g. DSMR in kW); the update steps keep your own copy. Setup step 2 (Settings view) explains both.
 
 ### Updating from 1.1
-Copy all packages (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
-`node-red/hbc-plus-all-flows.json`, paste the dashboard again. Used *Grid Clock* as source? It stays selected and
+Copy all packages except your own `hbc_config.yaml` (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
+`node-red/hbc-plus-all-flows.json`, paste the dashboard again (new tab layout). Used *Grid Clock* as source? It stays selected and
 now reads the feed: choose your supplier. Full steps: *Updating from v1.1* in the user guide.
 
 ## [1.1.0] – 16 November 2026
