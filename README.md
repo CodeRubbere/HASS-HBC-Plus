@@ -1,3 +1,4 @@
+<p align="center"><img src="assets/logo/hbc-plus-readme.svg" alt="HBC+ Home Battery Control Plus" width="720"></p>
 
 # Home Battery Control Plus (HBC+)
 
