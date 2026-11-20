@@ -33,7 +33,8 @@ views:
       card:
         type: markdown
         text_only: true
-        content: '### Home Battery Control Plus *(HBC+ v1.2)*'
+        content: >-
+          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.2" alt="HBC+ Home Battery Control Plus" height="72"><br>v1.2</center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll

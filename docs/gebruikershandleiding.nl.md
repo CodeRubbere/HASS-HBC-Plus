@@ -417,13 +417,14 @@ v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027
 - **Grid Clock-integratie niet meer nodig.** De optie *Grid Clock* leest niet meer uit de Grid Clock-integratie; ze gebruikt nu de Grid Clock-feed.
 - **F8 — Prijsbewaking.** Stopt met terugleveren en laadt juist bij negatieve prijzen, met signalen voor een PV-begrenzer (zie [Prijsbewaking (price guard)](#prijsbewaking-price-guard)).
 - **Nieuwe indeling van het dashboard.** Negen views in de volgorde waarin je ze gebruikt: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings en Logging (zie [Dashboard](#dashboard)). De adressen van de views blijven gelijk, dus links en bladwijzers blijven werken.
+- **Logo.** HBC+ heeft een logo, in de kop van het dashboard en bovenaan de README. Kopieer `www/hbc-plus/` naar de map `www/` van HA (zie [Stap 2](#stap-2--home-assistant-packages)); alle logobestanden staan in `assets/logo/`.
 
 Met de standaardinstellingen werkt v1.2 precies als v1.1. Offline gecontroleerd: met terugleverprijs = inkoopprijs geeft Dynamic in 96 prijslijsten dezelfde markeringen, strategie en spreads, en met de prijsbewaking op Off is de strategiekeuze voor elke strategie gelijk.
 
 ### Bijwerken vanaf v1.1
 
 1. **Back-up maken** zoals in [Stap 1](#stap-1--back-up-maken).
-2. **Packages:** kopieer alle bestanden uit `packages/` behalve `hbc_config.yaml` (dat is van jou). Twee zijn nieuw (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` is gewijzigd. *Configuratie controleren* en HA herstarten.
+2. **Packages:** kopieer alle bestanden uit `packages/` behalve `hbc_config.yaml` (dat is van jou). Twee zijn nieuw (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` is gewijzigd. Nieuw: kopieer `www/hbc-plus/` naar de map `www/` van HA (het logo in de dashboardkop). *Configuratie controleren* en HA herstarten.
 3. **Flows:** verwijder elk tabblad waarvan de naam met *HBC+* begint, importeer `node-red/hbc-plus-all-flows.json` en deploy, zoals in [HBC+ bijwerken](#hbc-bijwerken).
 4. **Dashboard:** plak `dashboards/hbc_plus.yaml` opnieuw in de raw-configuratie-editor. De views zijn nieuw (zie [Dashboard](#dashboard)); je instellingen blijven staan.
 5. **Gebruikte je *Grid Clock* als tariefbron?** Die blijft gekozen en leest nu de Grid Clock-feed. Kies je leverancier. De Grid Clock-integratie is niet meer nodig.
@@ -755,6 +756,14 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `README.md` | — | Overzicht van de Node-RED-bestanden en installatie |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Voorbeeld van de gedeelde prijsophaling; zit niet in het all-flows-bestand |
 
+**www/hbc-plus/** — kopieer naar de map `www/` van Home Assistant.
+
+| Bestand | Inhoud |
+| --- | --- |
+| `hbc-plus-dashboard.svg` | Het logo in de kop van het dashboard, als `/local/hbc-plus/hbc-plus-dashboard.svg` |
+
+**assets/logo/** — het HBC+-logo voor de README, GitHub en eigen gebruik (SVG en PNG): op licht, op donker, in één kleur, app-icoon en GitHub-preview.
+
 **docs/**
 
 | Bestand | Inhoud |
@@ -770,7 +779,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 
 ### Stap 2 — Home Assistant-packages
 
-1. Kopieer alle acht bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën, maar houd je eigen `hbc_config.yaml` als je die al hebt). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze.
+1. Kopieer alle acht bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën, maar houd je eigen `hbc_config.yaml` als je die al hebt). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze. Kopieer ook de map `www/hbc-plus/` naar de map `www/` van HA (maak `www/` naast `packages/` aan als die er nog niet is): daarin staat het logo voor de dashboardkop, dat Home Assistant aanbiedt als `/local/hbc-plus/…`.
 2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, haal dan het commentaar weg bij optie A of B in `hbc_config.yaml` en vervang de sensoren met `<< YOUR` (de uitleg staat in het bestand).
 3. *Ontwikkelhulpmiddelen* → *Configuratie controleren*, en herstart Home Assistant.
 4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One battery per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, en de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA herstelt de waarden na elke volgende herstart.
@@ -851,7 +860,7 @@ Een nieuwe HBC+-versie komt als nieuwe release op de [Releases-pagina](https://g
 2. **Lees de release notes** op hernoemde of verwijderde bestanden, en verwijder die uit de map `packages/` van HA (in v1.0 werden `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` en `nodered_heartbeat.yaml` hernoemd naar `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` en `hbc_heartbeat.yaml`).
 3. **Packages:** kopieer de nieuwe `packages/*.yaml` over de oude heen, behalve `hbc_config.yaml`: dat bestand is van jou en wordt nooit vervangen. Heb je zelf een ander package aangepast, neem die wijziging dan over in het nieuwe bestand. Daarna *Configuratie controleren* en HA herstarten.
 4. **Flows:** Node-RED kan bij een import geen flow-tabblad vervangen (het slaat het over of importeert een kopie), dus verwijder eerst de oude tabbladen. Dubbelklik in de Node-RED-editor op elk tabblad waarvan de naam met *HBC+* begint en kies *Delete*; laat je eigen flows staan en deploy nog niet. *Importeer* daarna `node-red/hbc-plus-all-flows.json`; meldt Node-RED dat de servernode *HA System* al bestaat, laat die dan uitgevinkt. Daarna *Deploy*. De tabbladen komen terug met dezelfde node-id's; linkt een eigen flow naar een HBC+-tabblad, open dan de link-node en controleer of die nog naar het juiste doel wijst. Wijzigingen die je in HBC+-tabbladen maakte zijn weg, dus zet je notify-actie in *Notify phone* opnieuw.
-5. **Dashboard:** heeft de release `dashboards/hbc_plus.yaml` gewijzigd, plak hem dan opnieuw in de ruwe configuratie-editor.
+5. **Dashboard:** heeft de release `dashboards/hbc_plus.yaml` gewijzigd, plak hem dan opnieuw in de ruwe configuratie-editor. Kopieer ook `www/hbc-plus/` opnieuw als de release die map heeft gewijzigd.
 6. **Nieuwe instellingen:** een helper die nieuw is in een release start op zijn minimum. Stel hem direct na het bijwerken in; de release notes noemen hem (bijvoorbeeld *Battery circuit per phase*). *HBC+ phase guard: apply defaults* zet hem ook, maar zet ook de fasekaart terug.
 
 ## Configuratiereferentie
@@ -1006,6 +1015,7 @@ Twee meters per fase volgen vanzelf de instellingen van de fasebewaking, in % va
 | Charge Deadline boekt te weinig uren | Guard niet op Enforce met 6 batterijen, dus het telt 15000 W | Zet Enforce |
 | Na een update zijn de HBC+-tabbladen nog de oude versie, of staan ze er dubbel | De oude tabbladen zijn niet vóór de import verwijderd: Node-RED slaat een bestaande flow over, of importeert een kopie | Verwijder elk HBC+-tabblad, importeer `hbc-plus-all-flows.json` opnieuw en deploy ([HBC+ bijwerken](#hbc-bijwerken)) |
 | Een dashboardknop opent niet de juiste view | De dashboard-URL is niet `home-battery-control-plus` | Voeg een nieuw dashboard *Home Battery Control Plus* toe, plak `dashboards/hbc_plus.yaml` en verwijder het oude (stap 4) |
+| De dashboardkop toont een kapotte afbeelding in plaats van het logo | `www/hbc-plus/` staat niet in de map `www/` van HA, of die map is na de laatste herstart aangemaakt | Kopieer `www/hbc-plus/` naar de map `www/` van HA en herstart Home Assistant (stap 2) |
 | Link call naar *Dynamic Fetch from Data Source* loopt in een timeout | Timeout korter dan de ophaling, of de link call wijst niet meer naar de sectie (bijvoorbeeld na een herimport) | Zet de timeout op minstens 30 s; open de link call en kies opnieuw *Dynamic Fetch from Data Source* |
 | Dashboard: *No energy prices*, of `binary_sensor.hbc_price_data_missing` aan | De tariefbron levert geen prijzen (integratie offline, sensor hernoemd, verkeerde sensor geraden) | Controleer de prijsintegratie; zet `input_text.house_battery_strategy_dynamic_price_sensor` op de juiste sensor; de status van *Data source settings* in het Dynamic-tabblad toont welke sensor gebruikt wordt |
 | Dynamic-status geel: *(last prices)* | De laatste ophaling mislukte; de vorige prijzen van dezelfde bron zijn nog in gebruik | Niets doen als het bij de volgende run verdwijnt; anders als hierboven |
