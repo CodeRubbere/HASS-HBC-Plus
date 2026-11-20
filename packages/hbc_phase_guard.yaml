@@ -278,7 +278,7 @@ template:
             {% set ns.p = ns.p + states('number.marstek_m' ~ i ~ '_max_charge_power') | float(0) %}
           {% endfor %}
           {{ ns.p | round(0) }}
-      # Load per phase in % of the phase guard limits, for the gauges on the Phases view. A gauge
+      # Load per phase in % of the phase guard limits, for the gauges on the Phase guard view. A gauge
       # card cannot read its range from a helper; in % the bands follow the settings by themselves.
       # Grid load = P1 phase power / grid fuse (import +, export -).
       # Circuit load = batteries on the phase / battery circuit (charge +, discharge -).
@@ -466,7 +466,7 @@ script:
 # non-admin, and every automation can change these helpers. This cannot block that, but it makes every change
 # visible: a persistent notification and a phone notification (script.hbc_notify), naming who made the change. A burst of changes (for
 # example the defaults script) gives one notification, 10 s after the last change.
-# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Settings view.
 automation:
   - id: hbc_phase_guard_settings_changed
     alias: "HBC+: notify when a phase guard safety setting changes"
@@ -525,7 +525,7 @@ automation:
   # "Part of the cause": batteries above the battery circuit, or the phase above the grid fuse while the
   # batteries push the same way (charging on import, discharging on export). A house load alone that
   # overloads the grid fuse while the batteries discharge is not stopped: they are helping.
-  # Only with the guard on Monitor or Enforce, i.e. once the limits on the Phases view are set.
+  # Only with the guard on Monitor or Enforce, i.e. once the limits under Phase guard settings (Settings view) are set.
   - id: hbc_phase_overload_full_stop
     alias: "HBC+: Full stop when a phase stays overloaded by the batteries"
     mode: single
@@ -609,16 +609,16 @@ automation:
           title: "HBC+: phase overload - Full stop"
           message: >-
             Phase {{ bad_phases | join(', ') }} stayed above its limit for 10 s, with the batteries part of the
-            cause. HBC+ switched from {{ before }} to Full stop. Check the Phases view, then choose your strategy again.
+            cause. HBC+ switched from {{ before }} to Full stop. Check the Phase guard view, then choose your strategy again.
       - action: script.hbc_notify
         continue_on_error: true
         data:
           title: "HBC+: phase overload - Full stop"
           message: "Phase {{ bad_phases | join(', ') }} overloaded by the batteries; strategy {{ before }} -> Full stop."
 
-# The planner status is display-only (current attributes on the Phases view); keep it out of the database.
+# The planner status is display-only (current attributes on the Phase guard view); keep it out of the database.
 # HBC+ 2026-11-15: the per-phase battery power and headroom sensors too. They follow the P1 phase sensors,
-# so with a meter that reports every second they wrote up to ~500,000 rows a day, while the Phases view
+# so with a meter that reports every second they wrote up to ~500,000 rows a day, while the Phase guard view
 # only shows their current value. Excluding them also drops their long-term statistics (nothing uses them).
 recorder:
   exclude:

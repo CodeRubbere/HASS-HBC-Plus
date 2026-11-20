@@ -28,7 +28,7 @@
 #
 # Replaces the earlier nodered_heartbeat.yaml (same sensor and automation ids). DELETE that file from your
 # HA packages folder: with both files present HA sees duplicate ids and drops the fallback.
-# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Settings view.
 ###########################################################################################################
 
 mqtt:

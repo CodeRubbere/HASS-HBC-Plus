@@ -273,7 +273,7 @@ template:
           {%- elif ns.count > 0 -%}
             {{ (ns.plain / ns.count) | round(1) }}
           {%- else -%}
-            unknown
+            {{ none }}
           {%- endif -%}
         attributes:
           # How many packs are actually contributing, so a silent battery is visible.
@@ -1509,7 +1509,7 @@ template:
           {%- if remaining <= 0.05 -%}
             0
           {%- elif not state_attr('sensor.deadline_window', 'configured') | bool(false) or mins <= 0 -%}
-            unknown
+            {{ none }}
           {%- else -%}
             {#- Quantised to 50 W. This sensor follows sensor.deadline_window, so it
                 re-renders every minute and both of its inputs drift continuously: at 10 W
