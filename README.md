@@ -11,9 +11,9 @@ This project is designed for hobbyists who want full control over their home bat
 ![License](https://img.shields.io/github/license/gitcodebob/marstek-venus-rs485-node-red)
 [![GitHub stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=flat)](https://github.com/CodeRubbere/HASS-HBC-Plus/stargazers)
 
-**Current version: v1.1** (16 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.1](docs/user-guide.en.md#whats-new-in-hbc-v11)
+**Current version: v1.2** (20 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
 
-**Next: v1.2**, planned for 10 December 2026, ready for the end of Dutch net metering · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12) · [Changelog](CHANGELOG.md)
+**Next: v1.3**, planned for 22 December 2026, ready for the end of Dutch net metering · [What's new in v1.3](docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
 
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
@@ -40,7 +40,7 @@ Battery packages contributed by the community:
 
 With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without phase rules. Only *Enforce* applies them.
 
-**Coming in v1.2** (in development, planned for 10 December 2026, ready for the end of Dutch net metering on 1 January 2027):
+**Coming in v1.3** (in development, planned for 20 December 2026, ready for the end of Dutch net metering on 1 January 2027):
 
 - **Grid Clock feed** — the tariff source *Grid Clock* now has all-in buy and sell prices per quarter for your own supplier, public and without a token.
 - **Buy and sell prices** — Dynamic values *Sell* at the real sell price; a sell price sensor and a sell line in the price chart.
@@ -73,7 +73,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
 
-**Updating from v1.0?** Follow [Updating from v1.0](docs/user-guide.en.md#updating-from-v10): new packages and notifications, and the old HBC+ tabs are deleted before the import.
+**Updating from v1.0?** Follow [Updating from v1.1](docs/user-guide.en.md#updating-from-v11): new packages and notifications, and the old HBC+ tabs are deleted before the import.
 
 Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues).
 
