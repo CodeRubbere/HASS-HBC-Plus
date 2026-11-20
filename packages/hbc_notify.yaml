@@ -4,12 +4,12 @@
 #
 # Every HBC+ notification goes through script.hbc_notify: the automations in hbc_heartbeat.yaml,
 # hbc_control.yaml and hbc_phase_guard.yaml, and the "Notify phone" node of the Battery Oscillation Guard.
-# Where they go is set in one place: input_text.house_battery_notify_targets (Advanced settings view).
+# Where they go is set in one place: input_text.house_battery_notify_targets (Settings view).
 #   - one or more notify actions, comma-separated, e.g. "notify.mobile_app_robs_iphone, notify.mobile_app_ipad"
 #   - empty = notify.notify
 #   - an entry that does not look like notify.<name> is skipped, with a warning in the HA log
 #   - a well-formed name that does not exist (a typo in the phone name) gives an error in the HA log and no
-#     notification: use the test button on the Advanced settings view after changing the field
+#     notification: use the test button on the Settings view after changing the field
 # Required: without this file HBC+ sends no notifications at all.
 ###########################################################################################################
 

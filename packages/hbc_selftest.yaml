@@ -2,7 +2,7 @@
 ###########################################################################################################
 # HBC+ v1.4 - setup self-test (F1)
 #
-# One button (Advanced settings view, Self-test) checks that everything HBC+ needs is there and working,
+# One button (Batteries view, Battery phase test) checks that everything HBC+ needs is there and working,
 # and measures per battery which phase it is connected to.
 #
 #   script.hbc_selftest_run             run the test (field phase_detection, default true)

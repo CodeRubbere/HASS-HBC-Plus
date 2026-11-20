@@ -6,7 +6,7 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 ## [1.4.0] – in development
 
 ### Added
-- **Setup self-test** (F1) — one button on the *Advanced settings* view checks the setup (P1, battery entities,
+- **Setup self-test** (F1) — one button on the *Batteries* view checks the setup (P1, battery entities,
   master mode, heartbeat, health, the Node-RED flow, price sensor pin, notify targets, EV stop trigger) and
   measures per battery on which phase it is connected (800 W for about 35 s per battery, up to three attempts).
   A phase that differs from the phase map is applied only with *Apply phase map*. New package `hbc_selftest.yaml`,
@@ -14,45 +14,80 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - **Load forecast** (F2) — HBC+ learns the house use per quarter (working days and weekend days apart) and
   forecasts the next 24 hours (`sensor.hbc_load_forecast`). Optionally (*Dynamic uses load forecast*, off by
   default) Dynamic keeps only the cheap quarters the expensive quarters need, from the cheapest before each.
-  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Timed/Dynamic view.
+  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Timed & Dynamic view.
 
 ### Changed
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
   stops every battery). Strategy arbiter: requester `selftest` has priority 90.
 - Dashboard: the *Choose strategy* tile no longer offers *Self-test*.
+- Self-test: with the phase guard on *Enforce*, the *HBC+ phase planner* makes the battery under test the charger on its
+  phase, also when the phase map puts another battery there (before, that battery could stay idle: *did not charge*).
+  *Did not charge* now names the likely cause; the *Phase detection* card shows the phase guard mode.
 - Dynamic, *Determine dynamic strategy*: step 3b for the load forecast; with the switch off the marks are identical
   to v1.3. `sensor.hbc_energy_prices_data` has a new attribute `load_forecast`.
 
- – planned 10 December 2026
+## [1.3.0] – planned 22 December 2026
+
+### Added
+- **Savings** (F1) — new *Savings* view: what your energy cost with the batteries compared with without them, per day,
+  month and year, split into stored PV and charging from the grid. New package `hbc_savings.yaml`.
+- **Measured round-trip efficiency** (F2) — `sensor.hbc_round_trip_efficiency` over 7 days and a suggested *Minimum
+  spread* you can take over with one button. Optionally Dynamic pairs on what a kWh really earns after losses
+  (*Dynamic uses measured efficiency*, off by default).
+- **One notification setting** (F3) — every HBC+ notification goes through `script.hbc_notify`. Set *Notify targets*
+  once on the *Settings* view (comma-separated; empty = `notify.notify`), with a *Send a test notification*
+  button. New package `hbc_notify.yaml`, required.
+- **Battery calibration** (F4) — a battery that has not been full for 14 days is charged to 100 % once, in the
+  cheapest block after midnight, with Charge Deadline; its charge cutoff goes to 100 % for that night and back
+  afterwards. On by default (*Auto*). New package `hbc_calibration.yaml`.
+- **Strategy requests from Home Assistant** (F5) — `script.hbc_strategy_hold` and `script.hbc_strategy_release` hold
+  a strategy through the Strategy arbiter, with a time-out, without Node-RED; also via MQTT (`hbc/arbiter/request`).
+  Active holds show on the Overview (`sensor.hbc_strategy_holds`).
+
+### Changed
+- Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
+  *Held by* on the Overview while a strategy hold is active.
+
+### Updating from 1.2
+Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml` and `hbc_savings.yaml`), delete the old
+HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard again. Had you set your own notify
+action? Put it in *Notify targets* and press *Send a test notification*. Full steps: *Updating from v1.2* in the user
+guide.
+
+## [1.2.0] – planned 10 December 2026
 
 Ready for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
 
 ### Added
-- **Grid Clock feed** (F6) — new *Tariff data source* with all-in buy and sell prices per quarter for your own
-  supplier, from the public files on `cdn.gridclock.eu`. No account, token or registration; only the zone and the
-  supplier's short name are in the request. Supplier and (Belgium) grid operator are chosen on the Timed/Dynamic
-  view and kept across restarts. New package `hbc_gridclock.yaml`, status in `sensor.hbc_grid_clock_feed`.
+- **Grid Clock feed** (F6) — the *Tariff data source* *Grid Clock* now has all-in buy and sell prices per quarter for
+  your own supplier, from the public files on `cdn.gridclock.eu`. No account, token or registration; only the zone and the
+  supplier's short name are in the request. Supplier and (Belgium) grid operator are chosen on the Prices view
+  and kept across restarts. New package `hbc_gridclock.yaml`, status in `sensor.hbc_grid_clock_feed`.
 - **Buy and sell prices** (F7) — every quarter carries a sell price next to the buy price. Dynamic values *Sell* at
   the sell price; new `sensor.hbc_energy_export_price_now`, *Sell now* tile and a sell line in the price chart.
 - **Price guard** (F8) — while prices are negative, stops exporting and charges instead (Off / Monitor / On, Off by
   default), with signals for a PV limiter (`binary_sensor.hbc_pv_curtail_advised`). New package
-  `hbc_price_guard.yaml`. *On* only with the Grid Clock feed; never overrides *Full stop* or the EV stop trigger.
+  `hbc_price_guard.yaml`. *On* only with the tariff source *Grid Clock*; never overrides *Full stop* or the EV stop trigger.
 
 ### Changed
 - Dynamic: *Price split* gives every source a sell list (sell = buy without the feed); marks carry `sell` and `neg`.
 - Start, Timed, Charge and Sell apply the price guard; Charge has a new *Price goal*.
 - All flow tabs are named *v1.2*; the *How this flow works* texts describe the v1.2 changes.
-- Dashboard: buy/sell tiles, sell line, price guard section, Home view price-guard card.
-
-### Removed
-- Tariff data source *Grid Clock* (prices from the Grid Clock integration) and its automation in `hbc_config.yaml`.
-  *Grid Clock feed* replaces it and needs no integration.
+- Dashboard: new tab layout in the order you use it: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard,
+  PID Control, Batteries, Settings and Logging; the view addresses stay the same. Buy/sell tiles, sell line, price
+  guard section and a price-guard alert on the Overview.
+- Tariff data source *Grid Clock* reads the Grid Clock feed instead of the Grid Clock integration; the integration and
+  its automation in `hbc_config.yaml` are no longer needed.
+- Charge Deadline: *Deadline required power* and *HBC battery fleet SoC* show *unknown* without a log error when they
+  have no value (before: *Received invalid sensor state: unknown … expected a number*).
+- `hbc_config.yaml`: clean P1 alias templates to uncomment (option A: other sensor names, option B: import and export per
+  phase, e.g. DSMR in kW); the update steps keep your own copy. Setup step 2 (Settings view) explains both.
 
 ### Updating from 1.1
-Copy all packages (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
-`node-red/hbc-plus-all-flows.json`, paste the dashboard again. Used *Grid Clock* as source? Choose your supplier
-under *Grid Clock feed*. Full steps: *Updating from v1.1* in the user guide.
+Copy all packages except your own `hbc_config.yaml` (new: `hbc_gridclock.yaml`, `hbc_price_guard.yaml`), delete the old HBC+ tabs and import
+`node-red/hbc-plus-all-flows.json`, paste the dashboard again (new tab layout). Used *Grid Clock* as source? It stays selected and
+now reads the feed: choose your supplier. Full steps: *Updating from v1.1* in the user guide.
 
 ## [1.1.0] – 16 November 2026
 

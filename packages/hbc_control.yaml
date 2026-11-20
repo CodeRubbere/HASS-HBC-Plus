@@ -783,11 +783,11 @@ input_select:
   # Dynamic strategy | energy suppliers
   house_battery_strategy_dynamic_data_source:
     name: Tariff data source
-    # Default = the first option: a new install starts on "Grid Clock feed". No `initial:`
+    # Default = the first option: a new install starts on "Grid Clock". No `initial:`
     # on purpose - HA restores the user's choice after a restart.
     options:
-      # HBC+ v1.2: "Grid Clock" (the Grid Clock integration) was replaced by "Grid Clock feed".
-      - Grid Clock feed # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
+      # HBC+ v1.2: "Grid Clock" reads the public Grid Clock feed (hbc_gridclock.yaml), no longer the Grid Clock integration.
+      - Grid Clock # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - None
       - Zonneplan
       - Amber Electric
@@ -1218,7 +1218,7 @@ template:
 ###########################################################################################################
 # Raised when the selected tariff source has delivered no valid prices for 30 minutes. Dynamic then runs its
 # baseline strategy and Charge Deadline has no cheap windows. Cleared again as soon as prices are back.
-# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Advanced settings view.
+# Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Settings view.
 automation:
   - id: hbc_price_data_alert
     alias: "HBC+: alert when the tariff source delivers no prices"
@@ -1294,7 +1294,7 @@ recorder:
     entity_globs:
       # PID control signals (updated every 2-40 seconds during operation)
       # HBC+ 2026-11-15: the P, I and D terms are recorded again: the 'PID analysis' graph on the
-      # Self-consumption view draws them, and Node-RED writes them at most once per 10 s (on change).
+      # PID Control view draws them, and Node-RED writes them at most once per 10 s (on change).
       # - input_number.house_battery_control_*_term
       - input_number.house_battery_control_*_deviation
       # - input_number.house_battery_control_error_signal

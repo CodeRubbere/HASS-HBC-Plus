@@ -22,16 +22,14 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="Setup Grid Power Sensor">Configure your P1 power
-              sensor</ha-alert>
+              <ha-alert title="Setup Grid Power Sensor">HBC+ needs sensor.p1_meter_power and
+              sensor.p1_meter_power_phase_1 … _3 (W, import positive).</ha-alert>
 
-              1. Edit the file
+              1. Edit the file `packages/hbc_config.yaml`
 
-              `packages/hbc_config.yaml` 
+              1. Uncomment option A or B: every line between BEGIN and END
 
-              1. Find the `<< YOUR GRID POWER SENSOR HERE` tag 
-
-              1. Enter your sensor indicating your grid power usage in Watts.
+              1. Replace each sensor marked `<< YOUR`, check the configuration and reload Template entities
             visibility:
               - condition: or
                 conditions:
@@ -1073,7 +1071,7 @@ views:
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_data_source
                 state:
-                  - Grid Clock feed
+                  - Grid Clock
           - type: distribution
             entities:
               - entity: sensor.charge_available_energy
@@ -1260,7 +1258,7 @@ views:
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_data_source
                 state:
-                  - Grid Clock feed
+                  - Grid Clock
           - type: heading
             icon: mdi:information-slab-circle
             heading: When done, switch to strategy
@@ -2415,7 +2413,7 @@ views:
             state_color: true
           - type: markdown
             content: >-
-              **On needs the Grid Clock feed.** With another tariff source the
+              **On needs the tariff source Grid Clock.** With another tariff source the
               price guard only shows what it would do (Monitor): only the feed
               has the real all-in buy and sell prices.
             visibility:
@@ -2424,7 +2422,7 @@ views:
                 state: 'On'
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_data_source
-                state_not: Grid Clock feed
+                state_not: Grid Clock
           - type: markdown
             content: >-
               **Import override stays in Monitor:** a phase carries two
@@ -2474,21 +2472,21 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: input_select.house_battery_gridclock_zone
                   name: Zone
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: input_select.house_battery_gridclock_provider
                   name: Supplier
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: input_select.house_battery_gridclock_zone
                     state: BE
                 row:
@@ -2497,7 +2495,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                 row:
                   entity: sensor.hbc_grid_clock_feed
                   name: Grid Clock feed
@@ -2505,7 +2503,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: sensor.hbc_grid_clock_feed
                     state: error
                 row:
@@ -2517,7 +2515,7 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_select.house_battery_strategy_dynamic_data_source
-                    state: Grid Clock feed
+                    state: Grid Clock
                   - entity: sensor.hbc_grid_clock_feed
                     state_not: error
                 row:
@@ -2835,8 +2833,7 @@ views:
           **Dynamic** picks a strategy from the energy prices, _e.g. Charge in
           the cheapest hours_.
 
-          _Prices come from your tariff data source, by default the Grid Clock
-          feed..._
+          _Prices come from your tariff data source, by default Grid Clock..._
         text_only: true
     max_columns: 4
   - type: sections
@@ -4041,6 +4038,10 @@ views:
               default(0) > 1 }} |
 
               {% endfor %}{% endif %}{% endif %}
+
+
+              Phase guard: **{{ states('input_select.house_battery_phase_guard_mode') }}** ·
+              {{ states('input_select.house_battery_phase_sharing') }}
           - type: button
             name: Apply phase map
             icon: mdi:sine-wave

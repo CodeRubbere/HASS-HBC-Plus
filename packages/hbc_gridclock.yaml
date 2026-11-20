@@ -1,7 +1,7 @@
 ###########################################################################################################
 # HBC+ v1.2 - Grid Clock feed (buy and sell prices)
 #
-# Tariff data source "Grid Clock feed" reads the public files on cdn.gridclock.eu:
+# Tariff data source "Grid Clock" reads the public files on cdn.gridclock.eu:
 #   v1/hbc/{zone}/index.json            suppliers (slug) and grid operators of a zone
 #   v1/hbc/{zone}/{slug}/latest.json    all-in buy and sell price per slot, today + tomorrow
 # No token and no registration. HBC+ sends nothing but the zone and the supplier's slug (in the
