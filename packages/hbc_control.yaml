@@ -666,7 +666,7 @@ input_text:
 
   # Dynamic strategy | price sensor (HBC+ v1.0)
   # Optional. Pins the price sensor the Cheapest Energy Hours macro reads, e.g. sensor.nordpool_kwh_nl_eur_3_10_021.
-  # Leave empty to let the macro auto-detect it. Not used by sources that pass their own list (Zonneplan, Grid Clock).
+  # Leave empty to let the macro auto-detect it. Not used by sources that pass their own list (Zonneplan).
   house_battery_strategy_dynamic_price_sensor:
     name: "[entity_id] price sensor (optional)"
     icon: mdi:identifier
@@ -782,14 +782,17 @@ input_select:
   # Dynamic strategy | energy suppliers
   house_battery_strategy_dynamic_data_source:
     name: Tariff data source
+    # Default = the first option: a new install starts on "Grid Clock". No `initial:`
+    # on purpose - HA restores the user's choice after a restart.
     options:
+      # HBC+ v1.2: "Grid Clock" reads the public Grid Clock feed (hbc_gridclock.yaml), no longer the Grid Clock integration.
+      - Grid Clock # HBC+ v1.2: buy and sell prices per supplier, see hbc_gridclock.yaml
       - None
       - Zonneplan
       - Amber Electric
       - EasyEnergy, EnergyZero (core)
       - ENTSO-E
       - Frank Energie
-      - Grid Clock
       - GE-Spot
       - Tibber (core)
       - Tibber (custom)
@@ -1288,7 +1291,7 @@ recorder:
     entity_globs:
       # PID control signals (updated every 2-40 seconds during operation)
       # HBC+ 2026-11-15: the P, I and D terms are recorded again: the 'PID analysis' graph on the
-      # Self-consumption view draws them, and Node-RED writes them at most once per 10 s (on change).
+      # PID Control view draws them, and Node-RED writes them at most once per 10 s (on change).
       # - input_number.house_battery_control_*_term
       - input_number.house_battery_control_*_deviation
       # - input_number.house_battery_control_error_signal

@@ -1,10 +1,10 @@
-# HBC+ v1.1 — User guide
+# HBC+ v1.2 — User guide
 
 *16 November 2026* · 🇳🇱 [Nederlandse versie](gebruikershandleiding.nl.md)
 
 ## What HBC+ is
 
-HBC+ (Home Battery Control Plus) v1.1 controls up to six home batteries from Home Assistant and Node-RED, and lets two batteries share one phase without overloading that phase's main fuse. With the phase guard in *Off* or *Monitor* the batteries are controlled without phase rules; only *Enforce* applies them.
+HBC+ (Home Battery Control Plus) v1.2 controls up to six home batteries from Home Assistant and Node-RED, and lets two batteries share one phase without overloading that phase's main fuse. With the phase guard in *Off* or *Monitor* the batteries are controlled without phase rules; only *Enforce* applies them.
 
 Besides the phase guard, HBC+ brings improvements in three areas:
 
@@ -25,7 +25,7 @@ What the phase guard adds:
 - **One active battery per phase** (default). The partner on that phase waits at 1 W idle and then stops, the same way HBC+ parks batteries it does not need.
 - **Two limits per phase.** The active battery only gets the room left under both the main (grid) fuse, after the house load on that phase, and the battery circuit the batteries of that phase share (default 16 A ≈ 3680 W each), recomputed every tick from the P1 meter.
 - **Correct planner ceiling.** The max power HBC+ reports to Charge Deadline is the sum per phase, not the sum of all batteries, so it books enough charge hours.
-- **A Phases dashboard** and an independent overload alarm in Home Assistant that works even when Node-RED is down.
+- **A Phase guard view** on the dashboard and an independent overload alarm in Home Assistant that works even when Node-RED is down.
 - **An optional *Shared headroom* mode** in which both batteries on a phase may run at once, as long as together they stay under the fuse.
 
 Net effect with two batteries per phase (6 × Marstek Venus E, 5.12 kWh each): usable capacity doubles to about 30.7 kWh, peak power stays 7.5 kW (3 × 2500 W).
@@ -49,7 +49,7 @@ flowchart LR
     P["hbc_phase_guard.yaml<br/>settings · phase map"]:::new
     T["Template sensors, alarm<br/>fuse room per phase · overload 10 s"]:::new
     Q["MQTT status sensors<br/>active battery and reason per phase"]:::new
-    D["Phases view<br/>HBC+ dashboard"]:::new
+    D["Phase guard view<br/>HBC+ dashboard"]:::new
     Q --> D
   end
   subgraph NR["Node-RED"]
@@ -201,7 +201,7 @@ The planner value follows the fuse room. On *Enforce*, *Batteries (totals)* subt
 - **Independent alarms.** `binary_sensor.hbc_phase_limit_exceeded` turns on when grid power on any phase exceeds the grid fuse for 10 s; `binary_sensor.hbc_phase_circuit_limit_exceeded` when the batteries on any phase draw more than the battery circuit for 10 s. Both are pure Home Assistant and work when Node-RED is down. When the batteries are part of the cause, HA switches to *Full stop* (R10).
 - **A heartbeat that means *working*.** The heartbeat only follows a good control cycle (R6). When it goes stale, Home Assistant stops every battery it hands back to its firmware, and the Master Switch flow waits for a fresh heartbeat before it turns RS485 on again (R5).
 - **No NaN towards the batteries.** One unavailable battery value no longer spreads to the other batteries, and *Set Batteries* checks every setpoint before it is written (R7).
-- **Errors are visible.** Warnings and errors always reach the Node-RED log and `sensor.hbc_health`, also with *Insight mode* off; HA notifies you when errors keep coming (R8).
+- **Errors are visible.** Warnings and errors always reach the Node-RED log and `sensor.hbc_health`, also with *Insights mode* off; HA notifies you when errors keep coming (R8).
 - **Changes are announced.** Every change of a phase guard safety setting gives a notification naming who made it (S2). How to keep the Node-RED editor, MQTT and the dashboard closed to others: see *Securing your setup*.
 
 ## Strategies and settings
@@ -259,7 +259,7 @@ The easiest way to tune is a preset in `input_select.house_battery_control_pid_p
 
 Start with *Safe*. Grid power that swings back and forth around 0 W means the control is too sharp: go one preset down, or lower Kp and Ki. A slow return to 0 W after a load step means it is too gentle: go one preset up. Change one thing at a time and watch for a few minutes. The *Battery Oscillation Guard* stops the batteries if they start to oscillate.
 
-Other settings on the Self-consumption view:
+Other settings (smoothing on the PID Control view, hysteresis on the Batteries view):
 
 - **Hysteresis** (`input_number.house_battery_control_hysteresis_in_w`, 0–200 W): the PID output must pass this before the batteries switch between charging and discharging.
 - **Error and output smoothing** (`…_error_signal_dampening`, `…_pid_output_dampening`, 0–90 %): moving averages on the input and output; more smoothing is calmer but slower.
@@ -279,7 +279,7 @@ Other settings on the Self-consumption view:
 
 When the goal is reached, the strategy in *Then use* runs (`…_charge_goal_reached` / `…_sell_goal_reached`, default *Charge PV*).
 
-**Power.** Without a grid limit, every battery charges or discharges at its maximum. With import (Charge) or export (Sell) peak shaving on, HBC+ regulates to that grid limit instead (see *Advanced settings*). On *Enforce* only the active battery per shared phase runs, within the phase's fuse room.
+**Power.** Without a grid limit, every battery charges or discharges at its maximum. With import (Charge) or export (Sell) peak shaving on, HBC+ regulates to that grid limit instead (see [Advanced settings](#advanced-settings); the limits are on the Phase guard view). On *Enforce* only the active battery per shared phase runs, within the phase's fuse room.
 
 **Solar forecast.** For the *solar forecast* goal, put the entity ids of your forecast sensors (kWh today and kWh tomorrow, for example from Forecast.Solar or Solcast) in `input_text.house_battery_strategy_solar_forecast_entity_id` and `…_solar_forecast_tomorrow_entity_id`. Set `input_number.house_battery_solar_reserved_for_house` to what the house uses from PV on a typical day.
 
@@ -300,7 +300,7 @@ Picks a strategy from the energy prices of today and tomorrow.
 1. Install the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS).
 2. Install a price integration and choose it in **Tariff data source** (`input_select.house_battery_strategy_dynamic_data_source`).
 3. If you have more than one price integration, pin the sensor in `input_text.house_battery_strategy_dynamic_price_sensor` (see R4).
-4. Check the *Price intervals* chart on the Timed/Dynamic view.
+4. Check the *Price intervals* chart on the Prices view.
 
 **How it decides.** Each day, HBC+ pairs the cheapest and the most expensive intervals, working inward from the extremes. A pair only counts when its price difference is at least **Minimum spread** (`input_number.house_battery_strategy_dynamic_threshold_delta`, in cents). Set that to cover your round-trip losses. **Cheapest hours** and **Expensive hours** cap the number of marked hours per day (0 = no cap). The current interval then decides the strategy:
 
@@ -312,12 +312,65 @@ Picks a strategy from the energy prices of today and tomorrow.
 
 Prices are refreshed at midnight, at 13:15 and 15:00, after a change of source, and until tomorrow's prices are in. If the source fails, Dynamic keeps the last valid prices or falls back to *Default to* (see R3). Other flows can fetch the same prices through the link call (see *Shared price fetch*).
 
+### Grid Clock feed
+
+*Tariff data source* **Grid Clock** (the Grid Clock feed, new in v1.2) reads all-in buy and sell prices per quarter for your own supplier from the public files of [Grid Clock](https://gridclock.eu). Grid Clock computes them from the supplier's formula, VAT and the country's energy tax. In the Netherlands it switches to separate sell prices by itself on 1 January 2027, when net metering ends. HBC+ has no tax or markup settings of its own.
+
+**Setup.**
+
+1. Check that **Tariff data source** (Prices view) is set to *Grid Clock*. It is the default on a new install; after an update from v1.1 your earlier choice stays.
+2. Choose your **Zone** (NL or BE) and your **Supplier**. Until you choose one, HBC+ uses the market price, with sell = buy.
+3. Belgium: choose your **Grid operator**. Its distribution and transport cost per kWh is added to the buy price.
+4. Check the line **Grid Clock feed** under the source: `ok` or `not modified` is good; `error` shows the reason.
+
+**What is sent.** No account, token or registration. HBC+ downloads `v1/hbc/<zone>/index.json` and `v1/hbc/<zone>/<supplier>/latest.json` from `cdn.gridclock.eu`; the zone and the supplier's short name (its *slug*, such as `frank-energie`) are in the address, nothing else. Like any web request it passes Cloudflare, which sees your IP address. Grid Clock stores nothing about HBC+ users. The supplier choice is kept in `input_text.house_battery_gridclock_provider_slug`.
+
+**When.** At the same moments as every other source: after midnight, at 13:15 and 15:00, every 15 minutes until tomorrow's prices are in, and straight after a change of zone or supplier. An unchanged file costs a `304`. If the feed fails, Dynamic keeps the last valid prices, as with every source (R3). The supplier list refreshes at start, after every restart of Home Assistant and daily at 00:10.
+
+**After a restart.** Zone, supplier and grid operator are remembered. Right after a restart of Home Assistant the dashboard may show *Market price (no supplier)* and *None* for a moment; once Node-RED has reloaded the supplier list (usually within seconds) it shows your choice again. Prices use your supplier throughout.
+
+To test against Grid Clock's staging files, set the environment variable `GRIDCLOCK_FEED_URL` on the *HBC+ Strategy Dynamic* tab (default `https://cdn.gridclock.eu/v1/hbc`).
+
+### Buy and sell prices
+
+From v1.2 every quarter has a **buy price** (what an imported kWh costs) and a **sell price** (what an exported kWh earns). With the Grid Clock feed they differ once net metering has ended; with every other source sell = buy, exactly how v1.1 valued a kWh.
+
+- Dynamic pairs cheap and expensive quarters as before. When *Strategy during expensive period* is **Sell**, an expensive quarter is valued at its sell price, so Dynamic only marks a Sell period when the sell price beats the buy price of a cheap quarter by at least *Minimum spread*. Without net metering that is rare, and the dashboard then suggests *Self-consumption*. With any other expensive strategy nothing changes.
+- `sensor.hbc_energy_price_now` stays the buy price; `sensor.hbc_energy_export_price_now` is the sell price now. Every entry of the `marks` attribute of `sensor.hbc_energy_prices_data` has `sell` and `neg` (`import`, `export` or null) next to `price`.
+- The *Price intervals* chart shows the sell price as a grey line over the buy bars. Purple bars are quarters where feeding in costs money; dark purple where you are paid to import.
+
+### Price guard
+
+The price guard changes what the batteries do while prices are negative. It is **Off** by default; **Monitor** only shows what it would do; **On** acts.
+
+| State (`sensor.hbc_price_state`) | When | What the guard does |
+| --- | --- | --- |
+| `export_negative` | Sell price below *Export threshold* (default 0 ct) | Sell → Charge PV, Zero import → Self-consumption, Standby / peak shave → Charge PV: surplus PV goes into the batteries instead of the grid |
+| `import_negative` | Buy price below *Import threshold* (default 0 ct) | Every strategy except Full stop → Charge, until the batteries are full |
+| `normal` | Otherwise | Nothing |
+
+The guard acts on the strategy that actually runs: the sub-strategy of Dynamic or Timed, and the follow-up after a Charge or Sell goal. Your own choice in `input_select.house_battery_strategy` never changes, and the swap ends at the first quarter with normal prices. `sensor.hbc_price_guard` shows what it did (`override`, `would` or `none`) and why.
+
+**Safety.**
+
+1. **On** only acts with *Tariff data source* = *Grid Clock*: only the feed has the real all-in prices. With another source a market price below zero looks negative while you still pay energy tax, so the guard stays in Monitor.
+2. **Full stop** is never changed (Oscillation Guard, phase-overload alarm, manual stop), and nothing changes while the EV stop trigger is on.
+3. **Import** at full power only on phase guard *Enforce*, or when no phase carries two batteries (`binary_sensor.hbc_phase_shared`). Otherwise that part stays in Monitor, so two batteries on one 16 A group never charge at full power together.
+4. A missing price-guard entity means no price guard: the control loop works as in v1.1.
+
+**For a PV limiter.** `binary_sensor.hbc_export_price_negative`, `binary_sensor.hbc_import_price_negative` and `binary_sensor.hbc_pv_curtail_advised` (feeding in costs money and the batteries are full). HBC+ itself never curtails PV. These are plain Home Assistant sensors and keep working when Node-RED is down.
+
+**Dashboard.** The *Price guard* section on the Prices view holds the mode, thresholds, state and action; the Overview shows an alert while the guard swaps a strategy. Start with **Monitor** for a few days.
+
 ### Advanced settings
+
+These settings are on the **Batteries** view; peak shaving is on the **Phase guard** view.
 
 - **Battery priority** (`input_select.house_battery_control_priority_change_interval`): Self-consumption uses the batteries in priority order, starting with `input_number.house_battery_control_prioritize_battery`. The priority moves to the next battery every 30 minutes (*Auto balance*), daily at 02:00 (*Daily*), on Sunday at 02:00 (*Weekly*), or not at all (*Never*). Except with *Auto balance*, discharging runs in the reverse order, so the battery that charges first is the last to discharge.
 - **Stop after idle** (`input_number.house_battery_control_idle_time`, 0–60 min): a battery that is not needed keeps 1 W (relay closed) for this long before it gets *stop*. This saves relay clicks when the load goes up and down.
 - **Peak shaving** (`input_boolean.house_battery_control_has_power_limit_import` / `_export` with `input_number.house_battery_control_power_limit_import` / `_export`): the batteries keep grid import or export below the limit, for example for a capacity tariff. Charge and Sell regulate to these limits instead of running at full power.
 - **Cutoff capacities** (`input_number.marstek_mN_charging_cutoff_capacity` 80–100 %, `…_discharging_cutoff_capacity` 11–80 %): the SoC limits written to each Marstek. HBC+ treats a battery at its limit as full or empty.
+- **Phase** (`input_select.marstek_mN_phase`: L1 · L2 · L3 · Own circuit): the phase each battery is physically connected to, used by the phase guard (see [Step 5 — Set your phase map and fuse](#step-5--set-your-phase-map-and-fuse)).
 
 ## Design background and decisions
 
@@ -353,6 +406,30 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 - **Signs:** battery power is positive while charging, P1 phase power is positive on import.
 - **Monitor first.** The phase guard can run with one battery per phase; then nothing changes and you test the plumbing for free, before a second battery joins a phase.
 
+## What's new in HBC+ v1.2
+
+*In development — release planned for 10 December 2026*
+
+v1.2 prepares HBC+ for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an imported kWh costs.
+
+- **F6 — Grid Clock feed.** The *Tariff data source* *Grid Clock* now reads all-in buy and sell prices per quarter for your own supplier from a public feed, without a token (see [Grid Clock feed](#grid-clock-feed)).
+- **F7 — Buy and sell prices.** Every quarter carries a sell price next to the buy price; Dynamic values *Sell* at the sell price; new `sensor.hbc_energy_export_price_now` and a sell line in the chart (see [Buy and sell prices](#buy-and-sell-prices)).
+- **Grid Clock integration no longer needed.** The option *Grid Clock* no longer reads the Grid Clock integration; it uses the Grid Clock feed instead.
+- **F8 — Price guard.** Stops exporting and charges instead while prices are negative, with signals for a PV limiter (see [Price guard](#price-guard)).
+- **New dashboard layout.** Nine views in the order you use them: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging (see [Dashboard](#dashboard)). The view addresses stay the same, so links and bookmarks keep working.
+- **Logo.** HBC+ has a logo, in the dashboard header and at the top of the README. Copy `www/hbc-plus/` into your HA `www/` folder (see [Step 2](#step-2--home-assistant-packages)); all logo files are in `assets/logo/`.
+
+With default settings v1.2 behaves exactly like v1.1. Checked offline: with sell = buy, Dynamic gives identical marks, strategy and spreads in 96 price lists, and with the guard Off the strategy choice is identical for every strategy.
+
+### Updating from v1.1
+
+1. **Back up** as in [Step 1](#step-1--back-up).
+2. **Packages:** copy all files from `packages/` except `hbc_config.yaml` (that one is yours). Two are new (`hbc_gridclock.yaml`, `hbc_price_guard.yaml`); `hbc_control.yaml` changed. New: copy `www/hbc-plus/` into your HA `www/` folder (the logo in the dashboard header). *Check configuration* and restart HA.
+3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc).
+4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor. The views are new (see [Dashboard](#dashboard)); your settings stay.
+5. **Used *Grid Clock* as tariff source?** It stays selected and now reads the Grid Clock feed. Choose your supplier. The Grid Clock integration is no longer needed.
+6. **Optional:** choose *Grid Clock* and your supplier, and run the price guard in *Monitor* first.
+
 ## What's new in HBC+ v1.1
 
 *16 November 2026*
@@ -381,7 +458,7 @@ v1.1 makes HBC+ safer when something goes wrong: the heartbeat now proves that c
 ### Updating from v1.0
 
 1. **Back up** as in [Step 1](#step-1--back-up).
-2. **Packages:** copy all files from `packages/` over the old ones; `hbc_control.yaml`, `hbc_heartbeat.yaml` and `hbc_phase_guard.yaml` changed. *Check configuration* and restart HA.
+2. **Packages:** copy all files from `packages/` over the old ones, except `hbc_config.yaml` (that one is yours); `hbc_control.yaml`, `hbc_heartbeat.yaml` and `hbc_phase_guard.yaml` changed. *Check configuration* and restart HA.
 3. **Notifications:** three new automations send a notification through `notify.notify`: errors in the control loop, a changed safety setting, and *Full stop* after a phase overload. Set your own notify action in them (see the table in [Step 6](#step-6--first-start)).
 4. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in [Updating HBC+](#updating-hbc). Do you run a real HELIOS flow in a tab of its own? Keep that tab, and delete the Helios placeholder after the import.
 5. **Palette:** `node-red-node-smooth` is no longer used; you can remove it under *Manage palette*.
@@ -601,7 +678,7 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 ### Known open points
 
-1. **`value_conversion` only reaches *Convert price*.** The macro ranks prices in the source's own unit; Zonneplan and Grid Clock therefore convert inside `template_prefix`.
+1. **`value_conversion` only reaches *Convert price*.** The macro ranks prices in the source's own unit; Zonneplan therefore converts inside `template_prefix`.
 
 ## Requirements
 
@@ -615,9 +692,8 @@ HBC+ is a complete, standalone installation: every package, flow and the dashboa
 | MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`) |
 | Batteries | Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP) | HBC+ reads SoC, power, limits and RS485 mode per battery |
 | Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
-| Dashboard | `custom:apexcharts-card` (HACS) | Price and history charts |
+| Dashboard | `custom:apexcharts-card` (HACS); optional: `card-mod` (HACS) | Price and history charts; card-mod gives the *Health* badge its green or red border |
 | Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS) and a price integration | Needed for Dynamic and Charge Deadline |
-| Optional | Grid Clock integration | Grid Clock as Dynamic price source |
 
 Sign conventions must match: `sensor.marstek_mN_battery_power` is positive while **charging**, `sensor.p1_meter_power_phase_N` is positive on **import**. If your meter uses the opposite sign, fix it with a template sensor before installing, or the fuse room is computed wrongly.
 
@@ -638,45 +714,55 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `.gitattributes` | Git setting: normalises line endings of text files |
 | `.gitignore` | Keeps macOS and editor files out of the repository |
 
-**packages/** — Home Assistant packages; copy all six into your HA `packages/` folder.
+**packages/** — Home Assistant packages; copy all eight into your HA `packages/` folder.
 
 | File | Contents |
 | --- | --- |
 | `hbc_control.yaml` | Core helpers and sensors: battery count, totals, PID settings, strategy selection, Timed and Dynamic settings, price-data alert |
-| `hbc_config.yaml` | Your installation-specific config: P1 alias (disabled) and the automation that refreshes prices when the Grid Clock zone changes |
+| `hbc_config.yaml` | Your installation-specific config: P1 aliases to uncomment when your meter uses other sensor names (option A: other names, option B: import and export per phase); updates never replace it |
 | `hbc_deadline_charge.yaml` | Charge Deadline helpers and sensors: target, deadline, plan and cheap windows |
 | `hbc_strategy_arbiter.yaml` | `input_text.hbc_strategy_arbiter`: the Strategy arbiter state, kept across restarts |
 | `hbc_heartbeat.yaml` | Phase-aware HA fallback when HBC+ stops: `sensor.hbc_last_run`, `binary_sensor.hbc_heartbeat_stale`, the automation that hands the batteries back to their firmware, and `sensor.hbc_health` with its error alert |
 | `hbc_phase_guard.yaml` | Phase guard: settings, phase map M1–M6, per-phase power and fuse headroom, overload alarm, MQTT status sensors, the defaults script and the notification when a safety setting changes |
+| `hbc_gridclock.yaml` | Grid Clock feed (v1.2): zone, supplier and grid-operator choice, feed status, sell price now |
+| `hbc_price_guard.yaml` | Price guard (v1.2): mode, thresholds, price state, signals for a PV limiter, shared-phase check |
 
 **dashboards/**
 
 | File | Contents |
 | --- | --- |
-| `hbc_plus.yaml` | The *Home Battery Control Plus* dashboard with the views Home, Self-consumption, Charge/Sell, Timed/Dynamic, Phases, Problem solver and Advanced settings |
+| `hbc_plus.yaml` | The *Home Battery Control Plus* dashboard with the views Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging |
 
 **node-red/** — import `hbc-plus-all-flows.json` (everything at once) or the separate files.
 
 | File | Tab | What it does |
 | --- | --- | --- |
 | `hbc-plus-all-flows.json` | All 15 below | One import file with every tab and the HA server node |
-| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.1 | Decides who controls the Marsteks (RS485, work mode); hands only one battery per shared phase back to the firmware |
-| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.1 | Applies a PID preset (Very safe, Safe, Regular) to the PID helpers |
-| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.1 | The control loop: reads the batteries, sums the totals, runs phase planner, strategy and phase guard, writes the setpoints and publishes the heartbeat |
-| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.1 | Charges from the grid up to a target (full, SoC, energy or solar forecast) |
-| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.1 | Charges to a target before a deadline, in the cheapest quarter-hours |
-| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.1 | Picks a strategy per price period (cheap, expensive, normal); contains the shared price fetch |
-| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.1 | Sets all batteries to stop |
-| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.1 | Runs *Full stop* when *Helios* is selected; delete it before importing a real HELIOS flow |
-| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.1 | Charge PV, Zero import and Standby / peak shave |
-| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.1 | PID controller that keeps grid power at the target; spreads the power over the batteries |
-| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.1 | Discharges to the grid down to a target |
-| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.1 | Runs a strategy per time slot (A to E) |
-| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.1 | Detects charge/discharge waves and holds Full stop through the arbiter |
-| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.1 | Read-only: publishes the phase status over MQTT for the dashboard |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.1 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
+| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2 | Decides who controls the Marsteks (RS485, work mode); hands only one battery per shared phase back to the firmware |
+| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2 | Applies a PID preset (Very safe, Safe, Regular) to the PID helpers |
+| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2 | The control loop: reads the batteries, sums the totals, runs phase planner, strategy and phase guard, writes the setpoints and publishes the heartbeat |
+| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.2 | Charges from the grid up to a target (full, SoC, energy or solar forecast) |
+| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.2 | Charges to a target before a deadline, in the cheapest quarter-hours |
+| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.2 | Picks a strategy per price period (cheap, expensive, normal); contains the shared price fetch |
+| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.2 | Sets all batteries to stop |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.2 | Runs *Full stop* when *Helios* is selected; delete it before importing a real HELIOS flow |
+| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.2 | Charge PV, Zero import and Standby / peak shave |
+| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.2 | PID controller that keeps grid power at the target; spreads the power over the batteries |
+| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2 | Discharges to the grid down to a target |
+| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | Runs a strategy per time slot (A to E) |
+| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | Detects charge/discharge waves and holds Full stop through the arbiter |
+| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | Read-only: publishes the phase status over MQTT for the dashboard |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
 | `README.md` | — | Overview of the Node-RED files and installation |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Example of the shared price fetch; not part of the all-flows file |
+
+**www/hbc-plus/** — copy into the `www/` folder of Home Assistant.
+
+| File | Contents |
+| --- | --- |
+| `hbc-plus-dashboard.svg` | The logo in the header of the dashboard, as `/local/hbc-plus/hbc-plus-dashboard.svg` |
+
+**assets/logo/** — the HBC+ logo for the README, GitHub and your own use (SVG and PNG): on light, on dark, one colour, app icon and GitHub social preview.
 
 **docs/**
 
@@ -693,10 +779,10 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all six files from `packages/` into your HA `packages/` folder (replace older copies). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them.
-2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, add template aliases in `hbc_config.yaml`.
+1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them. Copy the folder `www/hbc-plus/` into your HA `www/` folder too (create `www/` next to `packages/` if it is not there): it holds the logo for the dashboard header, which Home Assistant serves as `/local/hbc-plus/…`.
+2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, uncomment option A or B in `hbc_config.yaml` and replace the sensors marked `<< YOUR` (the comments in the file explain both).
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
-4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
+4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
 
 ### Step 3 — Node-RED flows
 
@@ -704,7 +790,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 2. Menu → *Import* → select `hbc-plus-all-flows.json` → *Import*. Already have HBC+ tabs from an earlier installation? Delete them first, as in [Updating HBC+](#updating-hbc): Node-RED cannot replace a flow tab on import, it skips it or imports a copy. If Node-RED reports that the *HA System* server node already exists, leave it unselected, so your own server node and its access token stay.
 3. Check the server node has **Expose to global context** on. *Read HA states (fast)*, the HBC+ planner and guard, and *Prepare request* in Dynamic all need it. The HBC+ files all carry the correct copy.
 4. *Deploy* → *Modified flows*, at a quiet moment. HBC+ rewrites battery mode and power once after a deploy; that is normal.
-5. Set your own notify action in the *Notify phone* node of *HBC+ Battery Oscillation Guard v1.1*; the default is `notify.notify`. Step 6 lists all six places that send notifications.
+5. Set your own notify action in the *Notify phone* node of *HBC+ Battery Oscillation Guard v1.2*; the default is `notify.notify`. Step 6 lists all six places that send notifications.
 
 **Flows of your own** can request a strategy through the *Strategy arbiter*: a link call to *Strategy request* with `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`. Give the requester a priority in the *Arbitrate* node; the Battery Oscillation Guard has 100, any other requester name gets 50, and on equal priority the hold that came first wins. A manual choice always wins and becomes the new base.
 
@@ -712,24 +798,24 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 
 1. *Settings* → *Dashboards* → *Add dashboard* → *New dashboard from scratch*, name it *Home Battery Control Plus*. Keep the URL Home Assistant fills in: `home-battery-control-plus`. The buttons that open other views link to that address, and a URL cannot be changed later.
 2. Open it → ⋮ → *Edit dashboard* → ⋮ → *Raw configuration editor*, paste the contents of `dashboards/hbc_plus.yaml`, save.
-3. Open the **Phases** view and check that every card shows values.
+3. Open the **Phase guard** view and check that every card shows values.
 
 ### Step 5 — Set your phase map and fuse
 
-On the Phases view, under *Which phase is each battery on?*, set the phase of every battery to the phase it is physically connected to. Set *Grid fuse per phase* to your main fuse and *Battery circuit per phase* to the group the batteries of one phase share (A × 230 V; 16 A → 3680 W, the default for both). No separate battery group? Set both to the main fuse. Then continue with commissioning below.
+On the **Batteries** view, under each *Marstek M1…M6*, set *Connected to phase* to the phase the battery is physically connected to. On the **Settings** view, under *Phase guard settings*, set *Grid fuse per phase* to your main fuse and *Battery circuit per phase* to the group the batteries of one phase share (A × 230 V; 16 A → 3680 W, the default for both). No separate battery group? Set both to the main fuse. Then continue with commissioning below.
 
 ### Step 6 — First start
 
-1. **Onboarding.** The top of the *Home Battery Control Plus* view has an onboarding checklist. Set **Number of batteries** (`input_number.house_battery_count`, 1–6). Check that *Grid Power Sensor* shows *Configured* and *Node-RED* shows *Configured and script deployed* (the Start flow turns `input_boolean.house_battery_control_has_node_red` on). Then hide the checklist with *Finish onboarding*.
-2. **Battery entities.** Every battery needs its `marstek_mN_*` entities, from M1 up to the number you set. Check on the Phases view that each battery shows SoC and power.
-3. **PID preset.** On the Self-consumption view, choose *Safe* (see *Self-consumption and PID tuning*).
+1. **Setup.** The **Settings** view has the *Setup* checklist; until you finish it, the Overview shows how many steps are done, with a link to it. Set **Number of batteries** (`input_number.house_battery_count`, 1–6). Check that *Grid Power Sensor* shows *Configured* and *Node-RED* shows *Configured and script deployed* (the Start flow turns `input_boolean.house_battery_control_has_node_red` on). Then hide the checklist with *Hide onboarding*; *Show/Hide onboarding* on the Settings view brings it back.
+2. **Battery entities.** Every battery needs its `marstek_mN_*` entities, from M1 up to the number you set. Check on the Overview, under *Batteries*, that each battery shows SoC and power.
+3. **PID preset.** On the PID Control view, choose *Safe* (see *Self-consumption and PID tuning*).
 4. **Strategy.** Choose a first strategy; *Self-consumption* or *Charge PV* is a safe start.
-5. **Master mode.** Set *Master Battery Mode* to **Full control**. Only now does HBC+ steer the batteries. To hand them back to their own firmware, choose *Marstek control*.
+5. **Master mode.** Set *Master Battery Mode* (*Control Mode* on the Overview) to **Full control**. Only now does HBC+ steer the batteries. To hand them back to their own firmware, choose *Marstek control*.
 6. **Notifications.** Set your own notify action (e.g. `notify.mobile_app_<phone>`) in the six places that send one; the default is `notify.notify`.
 
 | Where | Sends a notification when |
 | --- | --- |
-| Node-RED, *HBC+ Battery Oscillation Guard v1.1*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
+| Node-RED, *HBC+ Battery Oscillation Guard v1.2*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
 | `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped or no longer works, and the batteries went back to their firmware |
 | `packages/hbc_heartbeat.yaml`, automation *alert when the control loop keeps logging errors* | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes in a row |
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
@@ -772,21 +858,21 @@ A new HBC+ version comes as a new release on the [Releases page](https://github.
 
 1. **Back up** as in Step 1.
 2. **Read the release notes** for files that were renamed or removed, and delete those from your HA `packages/` folder (in v1.0: `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` and `nodered_heartbeat.yaml` became `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` and `hbc_heartbeat.yaml`).
-3. **Packages:** copy the new `packages/*.yaml` over the old ones. If you changed a package yourself (the P1 alias in `hbc_config.yaml`, a notify action), carry that change over into the new file. Then *Check configuration* and restart HA.
+3. **Packages:** copy the new `packages/*.yaml` over the old ones, except `hbc_config.yaml`: that one is yours and is never replaced. If you changed another package yourself, carry that change over into the new file. Then *Check configuration* and restart HA.
 4. **Flows:** Node-RED cannot replace a flow tab on import (it skips it or imports a copy), so delete the old tabs first. In the Node-RED editor, double-click each tab whose name starts with *HBC+* and choose *Delete*; leave your own flows alone and do not deploy yet. Then *Import* `node-red/hbc-plus-all-flows.json`; if Node-RED reports that the *HA System* server node already exists, leave it unselected. Then *Deploy*. The tabs come back with the same node ids; if a flow of your own links to an HBC+ tab, open its link node and check that it still points to the right target. Changes you made inside HBC+ tabs are gone, so set your notify action in *Notify phone* again.
-5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor.
+5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor. Copy `www/hbc-plus/` again as well when the release changed it.
 6. **New settings:** a helper that is new in a release starts at its minimum. Set it right after the update; the release notes name it (for example *Battery circuit per phase*). Running *HBC+ phase guard: apply defaults* also sets it, but resets the phase map too.
 
 ## Configuration reference
 
-The phase guard entities below come from `packages/hbc_phase_guard.yaml`; their settings are on the Phases view, and the defaults are what *HBC+ phase guard: apply defaults* sets. The other HBC+ entities are listed under *Other HBC+ entities*; the strategy settings are explained in *Strategies and settings*.
+The phase guard entities below come from `packages/hbc_phase_guard.yaml`; their settings are under *Phase guard settings* on the Settings view, their status on the Phase guard view, and the defaults are what *HBC+ phase guard: apply defaults* sets. The other HBC+ entities are listed under *Other HBC+ entities*; the strategy settings are explained in *Strategies and settings*.
 
 ### Settings
 
 | Entity | Options / range | Default | What it does |
 | --- | --- | --- | --- |
 | `input_select.house_battery_phase_guard_mode` | Off · Monitor · Enforce | Monitor | Whether the phase rules act |
-| `input_select.house_battery_phase_sharing` | One per phase · Shared headroom | One per phase | One battery per phase, or both within the fuse room |
+| `input_select.house_battery_phase_sharing` | One battery per phase · Shared headroom | One battery per phase | One battery per phase, or both within the fuse room |
 | `input_select.house_battery_phase_selection` | SoC balance · Fixed order · Rotate daily | SoC balance | How the active battery is chosen |
 | `input_number.house_battery_phase_limit_w` | 1000–17250 W | 3680 W | Grid fuse per phase (main fuse): house and batteries together, import and export, same for L1–L3 |
 | `input_number.house_battery_phase_circuit_limit_w` | 500–17250 W | 3680 W | Battery circuit per phase: the group the batteries of one phase share; only the batteries count |
@@ -806,12 +892,14 @@ The number of batteries still comes from `input_number.house_battery_count` (max
 | `sensor.hbc_phase_l1_battery_power` … `l3` | Template | Measured sum of battery power on that phase |
 | `sensor.hbc_phase_l1_charge_headroom` … `l3` | Template | Charge room under the grid fuse and the battery circuit (same formula as Node-RED) |
 | `sensor.hbc_phase_l1_discharge_headroom` … `l3` | Template | Discharge room under the grid fuse and the battery circuit |
+| `sensor.hbc_phase_l1_grid_load` … `l3` | Template | Grid power of the phase in % of the grid fuse, for the gauge |
+| `sensor.hbc_phase_l1_circuit_load` … `l3` | Template | Battery power on the phase in % of the battery circuit, for the gauge |
 | `sensor.house_battery_installed_max_charge_power` | Template | Plain sum of all batteries' max charge power, for comparison |
 | `binary_sensor.hbc_phase_limit_exceeded` | Template | On when grid power on any phase is above the grid fuse for 10 s |
 | `binary_sensor.hbc_phase_circuit_limit_exceeded` | Template | On when the batteries on any phase draw more than the battery circuit for 10 s |
 | `script.hbc_phase_guard_defaults` | Script | Resets all HBC+ settings and the phase map to the defaults |
 
-The template sensors and the alarm run in Home Assistant only, so they keep working when Node-RED is down. The MQTT status sensors are display-only and excluded from the recorder, and so are the per-phase battery power and headroom sensors: the Phases view only shows their current value (P5).
+The template sensors and the alarm run in Home Assistant only, so they keep working when Node-RED is down. The MQTT status sensors are display-only and excluded from the recorder, and so are the per-phase battery power and headroom sensors: the Phase guard view only shows their current value (P5).
 
 ### Other HBC+ entities
 
@@ -824,8 +912,27 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | `binary_sensor.hbc_price_data_missing` | `hbc_control.yaml` | On when a tariff source is chosen but no valid prices are available |
 | `input_text.house_battery_strategy_dynamic_price_sensor` | `hbc_control.yaml` | Optional: pins the price sensor for Dynamic (see R4) |
 | `input_text.hbc_strategy_arbiter` | `hbc_strategy_arbiter.yaml` | State of the Strategy arbiter, restored after a restart |
-| `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Turned on by the Start flow once it runs; used by the onboarding checklist |
+| `input_boolean.house_battery_control_has_node_red` | `hbc_control.yaml` | Turned on by the Start flow once it runs; used by the *Setup* checklist |
 | `sensor.hbc_time` | `hbc_control.yaml` | Local time (HH:MM) for the *Time* badge on the dashboard views |
+
+### Grid Clock feed and price guard (v1.2)
+
+| Entity | Package | What it is |
+| --- | --- | --- |
+| `input_select.house_battery_gridclock_zone` | `hbc_gridclock.yaml` | Zone of the Grid Clock feed (NL, BE) |
+| `input_select.house_battery_gridclock_provider` | `hbc_gridclock.yaml` | Supplier; options filled by Node-RED from `index.json` |
+| `input_select.house_battery_gridclock_grid_operator` | `hbc_gridclock.yaml` | BE grid operator; its ct/kWh is added to the buy price |
+| `input_text.house_battery_gridclock_provider_slug`, `…_grid_operator_name` | `hbc_gridclock.yaml` | The remembered choices (written by Node-RED) |
+| `sensor.hbc_grid_clock_feed` | `hbc_gridclock.yaml` | Last feed fetch: `ok`, `not modified` or `error`; attributes reason, supplier, net metering end, prices until |
+| `sensor.hbc_energy_export_price_now` | `hbc_gridclock.yaml` | Sell price of the current quarter |
+| `binary_sensor.hbc_sell_prices_separate` | `hbc_gridclock.yaml` | On when the price list has sell prices that differ from the buy prices |
+| `input_select.house_battery_price_guard_mode` | `hbc_price_guard.yaml` | Off (default) · Monitor · On |
+| `input_number.house_battery_price_guard_import_threshold`, `…_export_threshold` | `hbc_price_guard.yaml` | Thresholds in ct/kWh (0–20, default 0) |
+| `sensor.hbc_price_state` | `hbc_price_guard.yaml` | `normal`, `export_negative` or `import_negative`; attributes `until`, `next_negative`, `buy`, `sell` |
+| `sensor.hbc_price_guard` | `hbc_price_guard.yaml` | What the guard did last cycle: `override`, `would` or `none`; attributes `action`, `reason` |
+| `binary_sensor.hbc_export_price_negative`, `binary_sensor.hbc_import_price_negative` | `hbc_price_guard.yaml` | Price state as on/off, for automations and PV limiters |
+| `binary_sensor.hbc_pv_curtail_advised` | `hbc_price_guard.yaml` | Feeding in costs money and the batteries are full |
+| `binary_sensor.hbc_phase_shared` | `hbc_price_guard.yaml` | A phase carries two batteries in the phase map |
 
 ### Choosing values
 
@@ -839,11 +946,11 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 
 Run HBC+ in *Monitor* for a few days before any two batteries share a phase. With one battery per phase, Enforce changes nothing either, so you can test the plumbing for free.
 
-1. **Check the measurements.** On the Phases view, *Batteries* per phase must match each battery's own power sensor, and the grid gauge must match your meter. Check the signs: charging shows positive battery power, import shows positive grid power.
+1. **Check the measurements.** On the Phase guard view, *Batteries* per phase must match each battery's own power sensor, and *Grid vs fuse* × the fuse must match your meter (for example 10 % of 7360 W = 736 W). Check the signs: charging shows positive battery power, import shows positive grid power.
 2. **Watch Monitor for a few days.** In Node-RED, the status of *HBC+ phase planner* and *HBC+ phase guard* shows `would: …`. With one battery per phase, the active battery must always be that battery and `sensor.hbc_phase_findings` should stay at 0 except when the fuse room binds.
-3. **Switch to Enforce** on the Phases view. Nothing should change while each phase has one battery.
+3. **Switch to Enforce** under *Phase guard settings* on the Settings view. Nothing should change while each phase has one battery.
 4. **Add the second battery on a phase** (for example Marstek M4 on L1): create its `marstek_m4_*` entities, raise `input_number.house_battery_count`, set `input_select.marstek_m4_phase` = L1.
-5. **Test, in this order**, while watching the Phases view:
+5. **Test, in this order**, while watching the Phase guard view:
    - [ ] Charge at max power: one battery per phase charges, the partner idles at 1 W, then stops
    - [ ] Sell at max power: the fuller battery discharges
    - [ ] Self-consumption with a 4 kW load on one phase
@@ -853,67 +960,79 @@ Run HBC+ in *Monitor* for a few days before any two batteries share a phase. Wit
    - [ ] Unplug the active battery's network: the partner must stay blocked and the phase idles
 6. **After batteries 5 and 6**, check overnight that Charge Deadline books enough cheap slots for the per-phase max power.
 
-Always run the dashboard and the HA alarms while testing: `binary_sensor.hbc_phase_limit_exceeded` and `binary_sensor.hbc_phase_circuit_limit_exceeded` turn red on the Phases view after 10 s above their limit.
+Always run the dashboard and the HA alarms while testing: `binary_sensor.hbc_phase_limit_exceeded` and `binary_sensor.hbc_phase_circuit_limit_exceeded` show a red alert on the Phase guard view and the Overview after 10 s above their limit.
 
 ## Dashboard
 
-The *Home Battery Control Plus* dashboard has a **Phases** view, which answers three questions at a glance: which battery works on each phase, how close each phase is to its fuse, and why.
+The *Home Battery Control Plus* dashboard has nine views, in the order you use them: what happens now, the strategies, then the hardware and the settings. Every view shows the *Health* badge (`sensor.hbc_health`: green border on *ok*, red otherwise) and *Time*; all views except the Overview also show *Choose strategy* and *Executing* (the active sub-strategy).
 
 | View | What it is for |
 | --- | --- |
-| Home Battery Control Plus | Onboarding, master mode, strategy choice, battery overview |
-| Self-consumption | PID tuning and analysis |
-| Charge/Sell | Goals and limits for Charge, Sell and Charge Deadline |
-| Timed/Dynamic | Time periods, price source and cheap/expensive periods |
-| **Phases** (new) | Phase guard status, per-phase cards, settings and phase map |
-| Problem solver (spider icon) | *Flow trace* and *Insights*: the route the last tick took and the explanations of each node; switch on *Insight mode* (off again after 5 min) |
-| Advanced settings | Battery life, peak shaving, charge/discharge limits |
+| Overview | Status and control: alerts, *Control Mode* (master mode), strategy choice, grid and battery power now, the last 24 hours, and per battery SoC, power, max power and phase |
+| Prices | Price intervals chart, buy and sell price now, *Tariff data source* (with Grid Clock: zone, supplier and, in Belgium, grid operator), price marks (with *Insights mode* on) and the price guard |
+| Charge & Sell | Goals and follow-up strategy for Charge, Sell and Charge Deadline |
+| Timed & Dynamic | The Timed periods, and the strategies Dynamic uses in regular, cheap and expensive periods |
+| Phase guard | Phase guard status, the L1 · L2 · L3 cards, grid power limits and peak shaving |
+| PID Control | PID preset and tuning, and the PID history |
+| Batteries | Battery life (battery priority, stop after idle, hysteresis), and per battery: phase, cutoff capacities and max power |
+| Settings | The *Setup* checklist, the phase guard settings and the EV stop trigger |
+| Logging (spider icon) | *Flow trace* and *Insights*: the route the last tick took and the explanations of each node; switch on *Insights mode* (off again after 5 min) |
 
-On the Home view, warning cards appear only when something needs attention:
+On the Overview, alerts appear only when something needs attention:
 
-- **Onboarding** — the checklist (number of batteries, grid sensor, Node-RED, power limits), until you hide it.
+- **Setup: N of 5 steps done** — until you finish the *Setup* checklist; the link opens the Settings view.
+- **HBC+ is not steering the batteries** — no good control cycle while *Control Mode* is *Full control*: Home Assistant has handed the batteries back to their own firmware.
+- **HBC+ logged a problem** or **HBC+ keeps logging errors** — `sensor.hbc_health` is on *warning* or *error*; the alert shows the counts of the last 10 minutes and the latest message.
+- **Phase fuse overloaded** and **Battery circuit overloaded** — the same alarms as on the Phase guard view.
+- **EV is charging** — the EV stop trigger is active and overrules the strategy.
 - **No energy prices** — `binary_sensor.hbc_price_data_missing` is on; Dynamic runs its baseline strategy (see R3).
 - **Dynamic strategy: Full Stop** — Dynamic is chosen while *Tariff data source* is *None*.
+- **Price guard** — the price guard overrides a strategy; the alert names its action.
 
-The Phases view, top to bottom:
+The **Phase guard** view answers three questions at a glance: which battery works on each phase, how close each phase is to its fuse, and why. Top to bottom:
 
-- **Badges** — *Choose strategy*, *Executing* (the active sub-strategy) and *Time*, the same as on the other views.
-- **Alerts** — red cards, visible only while `binary_sensor.hbc_phase_limit_exceeded` (grid fuse) or `binary_sensor.hbc_phase_circuit_limit_exceeded` (battery circuit) is on.
-- **Phase guard** — tiles for guard mode, sharing, grid fuse, battery circuit, limit margin, and *Phase findings*: the number of phases where the batteries differ from the phase rules (in *Monitor*: what *Enforce* would correct; in *Enforce* it should stay 0).
-- **L1 · L2 · L3** — per phase: a gauge of grid power against the fuse, the active battery, measured battery power on the phase, charge room and discharge room, plus the planner's standby battery, setpoint and reason. A table lists every battery on the phase with SoC, power and role: *active · charge*, *active · discharge*, *active · idle*, or *standby*.
-- **Settings** — all HBC+ settings, and *Which phase is each battery on?* for M1–M6.
+- **Badges** — *Health*, *Insights mode*, *Choose strategy*, *Executing* and *Time*.
+- **Phase guard** — red alerts, visible only while `binary_sensor.hbc_phase_limit_exceeded` (grid fuse) or `binary_sensor.hbc_phase_circuit_limit_exceeded` (battery circuit) is on; a note while the guard is not on *Enforce*; the *Guard* tile and *Phase findings*: the number of phases where the batteries differ from the phase rules (in *Monitor*: what *Enforce* would correct; in *Enforce* it should stay 0). The *Phase guard settings* heading opens the Settings view.
+- **L1 · L2 · L3** — per phase: gauges of grid power against the fuse and of battery power against the battery circuit, the active battery, measured battery power on the phase, charge room and discharge room, plus the planner's standby battery, setpoint and reason. A table lists every battery on the phase with SoC, power and role: *active · charge*, *active · discharge*, *active · idle*, or *standby*.
+- **Grid power limits & peak shaving** — the grid power limit during import (capacity tariff) and during export, and *Home Energy Control*: keep the batteries available for peak shaving while the EV stop trigger is active.
 
-The gauge shows grid power against the grid fuse: import (positive) in light red and export (negative) in light green; orange from ±3200 W, red from ±3680 W. The bands and the ±4000 W range are fixed in the YAML: edit them if your grid fuse differs.
+The phase guard settings themselves are on the Settings view: guard mode, sharing, grid fuse, battery circuit, limit margin, battery selection, SoC delta, dwell time, the installed max charge and the max charge HBC+ reports to planners. Each battery's phase is set on the Batteries view, under *Marstek M1…M6* (only the batteries counted in *Number of batteries* are shown).
+
+Two gauges per phase follow the phase guard settings by themselves, in % of the limit: **Grid vs fuse** shows the phase's grid power against *Grid fuse per phase* (`sensor.hbc_phase_lN_grid_load`; import positive, export negative), and **Batteries vs circuit** shows the batteries on the phase against *Battery circuit per phase* (`sensor.hbc_phase_lN_circuit_load`; charge positive, discharge negative). Orange from ±95 %, red from ±100 %: at red the fuse or the battery group is overloaded. The guard itself already intervenes at the limit minus *Phase limit margin*.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Phases view shows *unknown* for the active battery | MQTT not set up, or Phase monitor tab disabled | Check the MQTT integration; enable *HBC+ Phase monitor v1.1* |
+| Phase guard view shows *unknown* for the active battery | MQTT not set up, or Phase monitor tab disabled | Check the MQTT integration; enable *HBC+ Phase monitor v1.2* |
 | *Read HA states (fast)* yellow: `fallback to old reads` | *Expose to global context* off on the server node | Turn it on in *HA System*, Deploy |
 | Planner status shows nothing or `guard off` | Guard mode is Off | Set Monitor or Enforce |
 | Charge room always 0 or far too low | Wrong sign on the P1 phase sensors or battery power | Make import and charging positive (Requirements) |
-| Both batteries on a phase run at once in *One per phase* | Guard on Off or Monitor, or the phase map is wrong | Set Enforce; check `input_select.marstek_mN_phase` |
+| Both batteries on a phase run at once in *One battery per phase* | Guard on Off or Monitor, or the phase map is wrong | Set Enforce; check `input_select.marstek_mN_phase` |
 | Partner never takes over | Old battery's read-back stale (break-before-make blocks on purpose) | Restore the old battery's Modbus connection |
 | Overload alarm fires briefly when a big load starts | Load step before the next tick | Normal for a few seconds; raise the margin if it lasts 10 s |
 | New settings start at their minimum after install | Defaults never applied | Run *HBC+ phase guard: apply defaults* |
 | Charge Deadline books too few hours | Guard not on Enforce with 6 batteries, so it counts 15000 W | Set Enforce |
 | After an update the HBC+ tabs are still the old version, or appear twice | The old tabs were not deleted before the import: Node-RED skips a flow that already exists, or imports a copy | Delete every HBC+ tab, import `hbc-plus-all-flows.json` again and deploy ([Updating HBC+](#updating-hbc)) |
 | A dashboard button does not open the right view | The dashboard URL is not `home-battery-control-plus` | Add a new dashboard named *Home Battery Control Plus*, paste `dashboards/hbc_plus.yaml`, and delete the old one (Step 4) |
+| The dashboard header shows a broken image instead of the logo | `www/hbc-plus/` is not in the HA `www/` folder, or that folder was created after the last restart | Copy `www/hbc-plus/` into the HA `www/` folder and restart Home Assistant (Step 2) |
 | Link call to *Dynamic Fetch from Data Source* times out | The timeout is shorter than the fetch, or the link call no longer points to the section (for example after a re-import) | Set the timeout to at least 30 s; open the link call and pick *Dynamic Fetch from Data Source* again |
 | Dashboard: *No energy prices*, or `binary_sensor.hbc_price_data_missing` on | The tariff source delivers no prices (integration down, sensor renamed, wrong sensor auto-detected) | Check the price integration; set `input_text.house_battery_strategy_dynamic_price_sensor` to the right sensor; the status of *Data source settings* in the Dynamic tab shows which sensor is used |
 | Dynamic status yellow: *(last prices)* | The last fetch failed; the previous prices of the same source are still in use | Nothing to do if it clears on the next run; otherwise as above |
 | Batteries suddenly run on their own firmware; notification *HBC stopped - batteries on firmware* | For 5 minutes there was no good control cycle (Node-RED down, deploy error, lost HA connection, P1 meter offline, a strategy failing on every tick, or every battery write failing), so the heartbeat fallback stopped the batteries and handed them back | Find the cause in the Node-RED log and `sensor.hbc_health` and fix it; as soon as the heartbeat is fresh again, the Master Switch flow takes over again in *Full control* |
 | Notification *HBC+: errors in the control loop*, or `sensor.hbc_health` on `error` | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes | The attribute `last_error` and the Node-RED log name the flow and node; a repeated *Modbus write failed* points at the battery connection |
 | *Batteries (totals)* red: `not driven: M2` | SoC or a power limit of that battery has been unavailable for more than 5 minutes | Restore the battery's Modbus connection; HBC+ drives it again as soon as the values are back |
-| Onboarding shows *Setup Node-RED* | The Start flow has not run yet | Import and deploy the flows (Step 3); check the *HA System* server node |
+| The *Setup* checklist shows *Setup Node-RED* | The Start flow has not run yet | Import and deploy the flows (Step 3); check the *HA System* server node |
 | The strategy you choose does not stick, or changes by itself | A hold in the Strategy arbiter (Oscillation Guard or a flow of your own) | Look at `input_text.hbc_strategy_arbiter` and the HA logbook; a manual choice becomes the new base, the hold ends when its requester releases it |
-| Strategy suddenly *Full stop*; notification *HBC+: phase overload - Full stop* | A phase stayed overloaded for 10 s with the batteries part of the cause (R10) | Check the Phases view and the limits; then choose your strategy again |
+| Strategy suddenly *Full stop*; notification *HBC+: phase overload - Full stop* | A phase stayed overloaded for 10 s with the batteries part of the cause (R10) | Check the Phase guard view and the limits; then choose your strategy again |
 | Warning *… keeps ignoring commands* | The battery does not follow HBC+ (RS485 switched off in the Marstek app, firmware mode, Modbus problem) | Check RS485 control and the work mode of that battery |
+| *Grid Clock feed* shows `error`, reason `HTTP 404` | No feed file for this zone or supplier (yet), or the supplier was removed | Choose another supplier; the list refreshes at start and daily at 00:10 |
+| The supplier list only shows *Market price (no supplier)* | The supplier index could not be loaded (no internet, or the Dynamic tab not deployed) | Check the status of the *Grid Clock suppliers* group in the Dynamic tab; it retries at start and daily |
+| Price guard on *On*, but it only shows *would* | The tariff source is not *Grid Clock*, or import with a shared phase and the phase guard not on *Enforce* | See the warnings in the *Price guard* section |
 
-To see what HBC+ decided and why, open the **Problem solver** view (spider icon) and switch on *Insight mode*. Warnings and errors do not need *Insight mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
+To see what HBC+ decided and why, open the **Logging** view (spider icon) and switch on *Insights mode*. Warnings and errors do not need *Insights mode*: they are always in the Node-RED log (the same message at most once a minute) and in `sensor.hbc_health`.
 
-Every tab has a **📖 How this flow works – HBC+ v1.1** comment: open it and read the Info sidebar. The last guard result is in Node-RED global context as `hbcplus_guard_last`; corrections also go to the HBC+ debug board.
+Every tab has a **📖 How this flow works – HBC+ v1.2** comment: open it and read the Info sidebar. The last guard result is in Node-RED global context as `hbcplus_guard_last`; corrections also go to the HBC+ debug board.
 
 ## Help and feedback
 

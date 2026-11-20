@@ -1,7 +1,7 @@
-# HBC+ - complete Node-RED flow set (v1.1, 2026-11-16)
+# HBC+ - complete Node-RED flow set (v1.2, release planned 2026-12-10)
 
 Everything Node-RED needs for HBC+ (Home Battery Control Plus), a standalone home battery controller with the phase guard for
-2 batteries per phase. All tabs are named `HBC+ ... v1.1`. Node-RED cannot replace a flow tab on import (it skips it or
+2 batteries per phase. All tabs are named `HBC+ ... v1.2`. Node-RED cannot replace a flow tab on import (it skips it or
 imports a copy), so delete the old HBC+ tabs before you import a new version (see *Install*).
 
 **Quickest install:** import `hbc-plus-all-flows.json` (all 15 tabs, HA server config node once).
@@ -11,23 +11,29 @@ Or import the files one by one.
 
 | File | Tab | HBC+ change |
 | --- | --- | --- |
-| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.1 | **changed** - hand-back to firmware: partner on a shared phase stays RS485 + stop (Enforce only); the periodic check skips *Full control* while `binary_sensor.hbc_heartbeat_stale` is on (*Skip while HBC heartbeat is stale*), *HBC heartbeat back* re-applies it once the heartbeat is fresh |
-| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.1 | unchanged |
-| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.1 | **changed** - new *HBC+ phase planner* and *HBC+ phase guard* nodes; *Batteries (totals)* per phase (Enforce only); heartbeat only after a good cycle (link *HBC+ cycle result*); *Batteries (totals)* also hands held values to the strategies and marks a battery without data as not driven; *Set Batteries* validates every solution and skips batteries with RS485 off; *Custom logger* always logs warnings and errors; *HBC+ health* publishes `hbc/health`; *Totals to HA (on change)* replaces five *On change* nodes (with a 30-min refresh); Enforce fail-safe and a warning for batteries that ignore commands in *Set Batteries* |
-| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.1 | **changed** - *Max power solution* respects phase roles and fuse room (Enforce only); threshold checks fixed for unavailable helpers |
-| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.1 | logic unchanged (uses Self-consumption + totals); documentation updated for HBC+ v1.0; *Trace* in JavaScript |
-| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.1 | **changed** - *API call to Data Source* is a link-call section: *Cache check* calls it with a link call and gets the prices back; any other flow can call it too (link call to *Dynamic Fetch from Data Source*, timeout >= 30 s; optional `msg.dynamic.data_source`, `msg.dynamic_use_cache`; reply in `msg.dynamic`); a failed fetch keeps the last valid prices of the same source, falls back to the baseline strategy when none are left, and raises `binary_sensor.hbc_price_data_missing`; an error inside the section is caught (*Catch fetch errors*) and handled the same way, so a caller always gets a reply; `input_text.house_battery_strategy_dynamic_price_sensor` pins the price sensor; test nodes removed (*Test*, *Fetch*, *Debug ON*); *User input* waits 3 s after the last change; *Trace* in JavaScript |
-| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.1 | *Trace* in JavaScript, logic unchanged |
-| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.1 | **new** - keeps the *Helios* strategy option safe until a HELIOS integration exists: runs *Full stop* and warns at most every 10 min; delete it before importing a real HELIOS flow (link in named *Helios*) |
-| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.1 | *Trace* in JavaScript, logic unchanged |
-| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.1 | **changed** - *Load distribution*: standby soft stop, fuse room per phase (Enforce only); a limit or PID output that is not a number counts as 0 W; *PID step* warns once (not every tick) when the output failsafe is inactive; disabled *smooth* nodes removed |
-| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.1 | **changed** - *Max power solution*, as Charge (Enforce only); threshold checks fixed for unavailable helpers |
-| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.1 | **changed** - test inject *Test* removed; *Trace* in JavaScript |
-| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.1 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*) |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.1 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*); test inject *TEST: simulate oscillation* removed |
-| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.1 | **new** - read-only, publishes `hbc/phase/*` for the dashboard; caught errors go to the HBC+ logger |
+| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2 | **changed** - hand-back to firmware: partner on a shared phase stays RS485 + stop (Enforce only); the periodic check skips *Full control* while `binary_sensor.hbc_heartbeat_stale` is on (*Skip while HBC heartbeat is stale*), *HBC heartbeat back* re-applies it once the heartbeat is fresh |
+| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2 | unchanged |
+| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2 | **changed** - new *HBC+ phase planner* and *HBC+ phase guard* nodes; *Batteries (totals)* per phase (Enforce only); heartbeat only after a good cycle (link *HBC+ cycle result*); *Batteries (totals)* also hands held values to the strategies and marks a battery without data as not driven; *Set Batteries* validates every solution and skips batteries with RS485 off; *Custom logger* always logs warnings and errors; *HBC+ health* publishes `hbc/health`; *Totals to HA (on change)* replaces five *On change* nodes (with a 30-min refresh); Enforce fail-safe and a warning for batteries that ignore commands in *Set Batteries* |
+| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.2 | **changed** - *Max power solution* respects phase roles and fuse room (Enforce only); threshold checks fixed for unavailable helpers |
+| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.2 | logic unchanged (uses Self-consumption + totals); documentation updated for HBC+ v1.0; *Trace* in JavaScript |
+| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.2 | **changed** - *API call to Data Source* is a link-call section: *Cache check* calls it with a link call and gets the prices back; any other flow can call it too (link call to *Dynamic Fetch from Data Source*, timeout >= 30 s; optional `msg.dynamic.data_source`, `msg.dynamic_use_cache`; reply in `msg.dynamic`); a failed fetch keeps the last valid prices of the same source, falls back to the baseline strategy when none are left, and raises `binary_sensor.hbc_price_data_missing`; an error inside the section is caught (*Catch fetch errors*) and handled the same way, so a caller always gets a reply; `input_text.house_battery_strategy_dynamic_price_sensor` pins the price sensor; test nodes removed (*Test*, *Fetch*, *Debug ON*); *User input* waits 3 s after the last change; *Trace* in JavaScript |
+| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.2 | *Trace* in JavaScript, logic unchanged |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.2 | **new** - keeps the *Helios* strategy option safe until a HELIOS integration exists: runs *Full stop* and warns at most every 10 min; delete it before importing a real HELIOS flow (link in named *Helios*) |
+| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.2 | *Trace* in JavaScript, logic unchanged |
+| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.2 | **changed** - *Load distribution*: standby soft stop, fuse room per phase (Enforce only); a limit or PID output that is not a number counts as 0 W; *PID step* warns once (not every tick) when the output failsafe is inactive; disabled *smooth* nodes removed |
+| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2 | **changed** - *Max power solution*, as Charge (Enforce only); threshold checks fixed for unavailable helpers |
+| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | **changed** - test inject *Test* removed; *Trace* in JavaScript |
+| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*) |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | **changed** - caught errors go to the HBC+ logger (*Log error (HBC+ logger)*); test inject *TEST: simulate oscillation* removed |
+| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | **new** - read-only, publishes `hbc/phase/*` for the dashboard; caught errors go to the HBC+ logger |
 | `hbc-plus-all-flows.json` | all of the above | one import file |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
+
+## Changes in v1.2
+- **Dynamic:** *Data source settings* has a second output for the source *Grid Clock* (the Grid Clock feed): *Grid Clock feed request* -> *Grid Clock feed* (http request, ETag) -> *Grid Clock feed parse* -> *Cleanup*; the status goes to the HA event `hbc_gridclock_status`. New *Price split* (before *Cache data source*) gives every source a sell list (sell = buy without the feed). *Determine dynamic strategy* adds `sell` and `neg` to every mark and values the HIGH side at the sell price when the expensive strategy is *Sell* (otherwise the v1.1 code runs unchanged). New group *Grid Clock suppliers* fills the supplier and grid-operator selects from `index.json`. *Selected* applies the price guard. *Index request* waits for HA's states and never guesses a zone; *HA (re)started* reloads the index after every (re)connect, so the chosen supplier and grid operator show again after a restart. The old *Grid Clock* (integration) case is gone.
+- **Start:** *Read HA states (fast)* reads the price-guard entities as optional (a missing one is never a fallback). *Strategy selection* builds `msg.price_override` once per tick and applies it to the top-level strategy; *HBC+ price guard status* fires `hbc_price_guard_status` when it changes.
+- **Timed** (*Pick period*), **Charge** (*Set reached strategy*, new *Price goal*), **Sell** (*Strategy after reached*): apply the price guard.
+- **All tabs:** names end in v1.2; the *How this flow works* texts of Start, Dynamic, Timed, Charge and Sell describe the v1.2 changes.
 
 ## Changes in v1.1
 The table above shows each tab's changes compared with HBC. New in v1.1 (details in the user guide, *What's new in HBC+ v1.1*):
@@ -44,7 +50,7 @@ The table above shows each tab's changes compared with HBC. New in v1.1 (details
 Flows of your own can request a strategy through the *Strategy arbiter* (link call to *Strategy request*, `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`); see the arbiter tab's Info.
 
 ## Documentation
-Every tab has a **📖 How this flow works - HBC+ v1.1** comment (open it and look in the Info sidebar):
+Every tab has a **📖 How this flow works - HBC+ v1.2** comment (open it and look in the Info sidebar):
 what the flow does, how it runs, and what HBC+ changes or does not change in it.
 
 ## Safety rules built in
@@ -73,7 +79,7 @@ All files carry the same copy of the *HA System* server node (`176d29a.6f648d6`)
 4. Home Assistant needs `packages/hbc_phase_guard.yaml` (restart HA) and the HBC+ dashboard
    (`dashboards/hbc_plus.yaml`). Run *HBC+ phase guard: apply defaults* once.
 5. Guard mode **Monitor** first: watch the node status of *HBC+ phase planner* / *HBC+ phase guard*
-   (`would: ...`) and the Phases view. Switch to **Enforce** only when that looks right.
+   (`would: ...`) and the Phase guard view. Switch to **Enforce** only when that looks right.
 
 ## Outside Node-RED
 - `packages/hbc_heartbeat.yaml` (HA fallback when HBC+ stops) is phase-aware: on Enforce only the lowest

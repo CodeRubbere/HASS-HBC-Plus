@@ -2,7 +2,7 @@
     {
         "id": "e31b0cf1ca8100ca",
         "type": "tab",
-        "label": "HBC+ Strategy Charge v1.1",
+        "label": "HBC+ Strategy Charge v1.2",
         "disabled": false,
         "info": "",
         "env": []
@@ -98,7 +98,8 @@
             "761c2d1574664007",
             "f0d1e7bc13fed412",
             "d5d2b2868aedf0b2",
-            "e1729c98ebfc4e78"
+            "e1729c98ebfc4e78",
+            "hbcp12c000000003"
         ],
         "x": 254,
         "y": 81,
@@ -719,7 +720,7 @@
         "z": "e31b0cf1ca8100ca",
         "g": "75c1fbefaf9d8881",
         "name": "Set reached strategy",
-        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\nreturn msg;",
+        "func": "// Which strategy to run after the goal is reached\nconst goal = msg.charge.goal_reached_strategy || \"Charge PV\";\nmsg.target = goal;\n// HBC+ v1.2 price guard: swap the strategy about to run while prices are below a threshold.\n// msg.price_override is built once per tick in 'Strategy selection' (Home Battery Start).\n// No override object = no change; Full stop is never changed. Monitor only records 'would'.\n{\n    const po = msg.price_override;\n    const to = po && po.map && msg.target !== 'Full stop' ? po.map[msg.target] : undefined;\n    if (to && to !== msg.target) {\n        const step = `${msg.target} → ${to}`;\n        if (po.active) { po.applied = step; msg.target = to; }\n        else if (po.mode !== 'Off') { po.would = step; }\n    }\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -891,7 +892,7 @@
         "y": 240,
         "wires": [
             [
-                "08f7ceb5e2233915"
+                "hbcp12c000000003"
             ]
         ]
     },
@@ -1349,11 +1350,32 @@
         "id": "hbcpdoc7f6e898b1",
         "type": "comment",
         "z": "e31b0cf1ca8100ca",
-        "name": "📖 How this flow works - HBC+ v1.1 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Charge v1.1 - how this flow works\n\nPart of **HBC+ v1.1** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the **Phases** view of the HBC+ dashboard.\n\nCharges the batteries from the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_charge_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are full | every battery is at its max SoC, or the energy is at about 99.9 % of the max |\n| state of charge | the average SoC reaches `input_number.house_battery_strategy_charge_target_soc` |\n| energy reserve | usable energy reaches `input_number.house_battery_strategy_charge_target_energy` |\n| solar forecast | usable energy reaches the max energy minus today's expected PV surplus (`sensor.solar_forecast_today` minus `input_number.house_battery_solar_reserved_for_house`) |\n| anything else | not recognised -> Full stop |\n\n`input_boolean.house_battery_strategy_charge_goal_reached` shows whether the goal is reached; once it is, the strategy in `input_select.house_battery_strategy_charge_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Import limit on** (`input_boolean.house_battery_control_has_power_limit_import`): *Regulated power* - Self-consumption is driven to grid import = the import limit, with discharging disabled. A feed-forward start jumps straight to the expected power for 10 s, then the PID trims the rest.\n- **No import limit**: *Max power solution* - every battery at its max charge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the lowest SoC) charges, at min(its max, the phase's fuse room). Its partner idles at 1 W. A battery alone on its phase is still capped at the fuse room, which takes the house load on that phase into account.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n",
+        "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Charge v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nCharges the batteries from the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_charge_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are full | every battery is at its max SoC, or the energy is at about 99.9 % of the max |\n| state of charge | the average SoC reaches `input_number.house_battery_strategy_charge_target_soc` |\n| energy reserve | usable energy reaches `input_number.house_battery_strategy_charge_target_energy` |\n| solar forecast | usable energy reaches the max energy minus today's expected PV surplus (`sensor.solar_forecast_today` minus `input_number.house_battery_solar_reserved_for_house`) |\n| anything else | not recognised -> Full stop |\n\n`input_boolean.house_battery_strategy_charge_goal_reached` shows whether the goal is reached; once it is, the strategy in `input_select.house_battery_strategy_charge_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Import limit on** (`input_boolean.house_battery_control_has_power_limit_import`): *Regulated power* - Self-consumption is driven to grid import = the import limit, with discharging disabled. A feed-forward start jumps straight to the expected power for 10 s, then the PID trims the rest.\n- **No import limit**: *Max power solution* - every battery at its max charge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the lowest SoC) charges, at min(its max, the phase's fuse room). Its partner idles at 1 W. A battery alone on its phase is still capped at the fuse room, which takes the house load on that phase into account.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n\n## HBC+ v1.2 - price guard\n\n- *Set reached strategy* applies the price guard (`msg.price_override`, see the Start tab) to the follow-up strategy after the goal is reached.\n- **Price goal** (new, between *Goal* and *Charge until*): with `import_negative` and the guard **On**, the goal is forced to *batteries are full*, so a negative import price fills the batteries completely. On *Monitor* only the status shows it.\n",
         "x": 250,
         "y": 40,
         "wires": []
+    },
+    {
+        "id": "hbcp12c000000003",
+        "type": "function",
+        "z": "e31b0cf1ca8100ca",
+        "g": "75c1fbefaf9d8881",
+        "name": "Price goal",
+        "func": "// HBC+ v1.2 price guard: while you are paid to import (import_negative, guard On),\n// charge until the batteries are full, whatever 'Charge until' says. Monitor: unchanged.\nconst po = msg.price_override;\nif (po && po.charge_full && po.active && msg.charge && msg.charge.goal !== 'batteries are full') {\n    po.applied = po.applied || `Charge until: ${msg.charge.goal} → batteries are full`;\n    msg.charge.goal = 'batteries are full';\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 280,
+        "wires": [
+            [
+                "08f7ceb5e2233915"
+            ]
+        ]
     },
     {
         "id": "176d29a.6f648d6",

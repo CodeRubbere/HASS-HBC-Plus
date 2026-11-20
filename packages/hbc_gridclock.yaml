@@ -1,0 +1,127 @@
+###########################################################################################################
+# HBC+ v1.2 - Grid Clock feed (buy and sell prices)
+#
+# Tariff data source "Grid Clock" reads the public files on cdn.gridclock.eu:
+#   v1/hbc/{zone}/index.json            suppliers (slug) and grid operators of a zone
+#   v1/hbc/{zone}/{slug}/latest.json    all-in buy and sell price per slot, today + tomorrow
+# No token and no registration. HBC+ sends nothing but the zone and the supplier's slug (in the
+# URL); the request passes Cloudflare, like any web request. Grid Clock computes the prices from
+# the supplier's formula, VAT and the country's energy tax, and switches NL to separate sell
+# prices on 1 January 2027 (end of net metering) by itself.
+#
+# Node-RED (tab "HBC+ Strategy Dynamic", group "Grid Clock suppliers") fills the supplier and
+# grid-operator selects from index.json and keeps the choice in the two input_texts below:
+# HA forgets runtime select options after a restart, so the select is only the dashboard
+# control and the input_text is what is remembered.
+###########################################################################################################
+
+input_select:
+  # Bidding zone of the feed. Zones with a supplier catalogue on Grid Clock.
+  house_battery_gridclock_zone:
+    name: Grid Clock zone
+    icon: mdi:map-marker-radius
+    options:
+      - NL
+      - BE
+
+  # Filled by Node-RED from index.json; the first option is always the market price.
+  house_battery_gridclock_provider:
+    name: Supplier
+    icon: mdi:domain
+    options:
+      - Market price (no supplier)
+
+  # BE only: distribution + transport per kWh of the chosen grid operator is added to the buy
+  # price. NL has no per-kWh grid cost, so the list there is just "None".
+  house_battery_gridclock_grid_operator:
+    name: Grid operator
+    icon: mdi:transmission-tower
+    options:
+      - None
+
+input_text:
+  # The chosen supplier's slug (empty = market price). Written by Node-RED, do not edit.
+  house_battery_gridclock_provider_slug:
+    name: Grid Clock supplier (slug)
+    icon: mdi:identifier
+    max: 80
+  # The chosen grid operator's name (empty = none). Written by Node-RED, do not edit.
+  house_battery_gridclock_grid_operator_name:
+    name: Grid Clock grid operator
+    icon: mdi:identifier
+    max: 100
+
+template:
+  # Status of the last feed fetch, from the event Node-RED fires after every fetch.
+  # Entity id: sensor.hbc_grid_clock_feed (HA derives it from the name below; keep the name).
+  - trigger:
+      - trigger: event
+        event_type: hbc_gridclock_status
+    sensor:
+      - name: "HBC Grid Clock feed"
+        unique_id: hbc_gridclock
+        icon: mdi:cloud-download-outline
+        state: "{{ trigger.event.data.state | default('unknown') }}"
+        attributes:
+          reason: "{{ trigger.event.data.reason | default('') }}"
+          zone: "{{ trigger.event.data.zone | default(none) }}"
+          slug: "{{ trigger.event.data.slug | default(none) }}"
+          supplier: "{{ trigger.event.data.supplier | default(none) }}"
+          grid_operator: "{{ trigger.event.data.grid_operator | default(none) }}"
+          grid_ct_kwh: "{{ trigger.event.data.grid_ct_kwh | default(0) }}"
+          net_metering_ends_on: "{{ trigger.event.data.net_metering_ends_on | default(none) }}"
+          # For the dashboard: "ends 1 Jan 2027" (first day without net metering) or "none"
+          # (no net metering in this zone, e.g. Belgium).
+          net_metering: >-
+            {%- set d = trigger.event.data.net_metering_ends_on | default(none) -%}
+            {%- if d -%}ends {{ strptime(d, '%Y-%m-%d').strftime('%-d %b %Y') }}{%- else -%}none{%- endif -%}
+          prices_until: "{{ trigger.event.data.prices_until | default(none) }}"
+          checked_at: "{{ trigger.event.data.checked_at | default(none) }}"
+
+  - sensor:
+      # The sell price of the interval we are in right now: what an exported kWh earns.
+      # Same source and same interval as sensor.hbc_energy_price_now (the buy price), from
+      # the `sell` field Dynamic adds to every mark. Equal to the buy price for every source
+      # without separate sell prices (net metering).
+      - name: "HBC energy export price now"
+        unique_id: hbc_energy_export_price_now
+        unit_of_measurement: "cents/kWh"
+        icon: mdi:transmission-tower-export
+        availability: "{{ has_value('sensor.hbc_energy_prices_data') }}"
+        state: >-
+          {%- set now_ts = as_timestamp(now()) -%}
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {%- set ns = namespace(p=none) -%}
+          {%- for iv in marks -%}
+            {%- if as_timestamp(iv.start, 0) > 0 and as_timestamp(iv.start, 0) <= now_ts
+                   and now_ts < as_timestamp(iv.end, 0) -%}
+              {%- set ns.p = iv.sell if iv.sell is defined else iv.price -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ (ns.p | float(0)) | round(2) if ns.p is not none else 'unknown' }}
+        attributes:
+          # true when this interval has a sell price that differs from the buy price
+          separate: >-
+            {%- set now_ts = as_timestamp(now()) -%}
+            {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+            {%- set ns = namespace(s=false) -%}
+            {%- for iv in marks -%}
+              {%- if as_timestamp(iv.start, 0) > 0 and as_timestamp(iv.start, 0) <= now_ts
+                     and now_ts < as_timestamp(iv.end, 0) and iv.sell is defined -%}
+                {%- set ns.s = (iv.sell | float(0)) != (iv.price | float(0)) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.s }}
+
+  - binary_sensor:
+      # Any interval in the current price list with a separate sell price. Drives the dashboard:
+      # the "Sell now" tile, the sell line in the chart and the "selling rarely pays" card.
+      - name: "HBC sell prices separate"
+        unique_id: hbc_sell_prices_separate
+        icon: mdi:scale-unbalanced
+        state: >-
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {{ marks | selectattr('sell', 'defined') | selectattr('sell', 'ne', none)
+             | map(attribute='sell') | list
+             != marks | selectattr('sell', 'defined') | selectattr('sell', 'ne', none)
+             | map(attribute='price') | list }}
