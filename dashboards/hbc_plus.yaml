@@ -680,15 +680,6 @@ views:
             tap_action:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#dynamic
-            visibility:
-              - condition: not
-                conditions:
-                  - condition: state
-                    entity: update.cheapest_energy_hours_update
-                    state: unavailable
-                  - condition: state
-                    entity: update.cheapest_energy_hours_update
-                    state: unknown
           - type: markdown
             content: >-
               <ha-alert alert-type="info">Cheapest Hours integration not
