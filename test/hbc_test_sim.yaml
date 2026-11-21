@@ -1,0 +1,900 @@
+###########################################################################################################
+# HBC+ test simulation: a P1 meter and 3 Marstek batteries (M1-M3) that do not exist        (TEST ONLY)
+#
+# ONLY for a separate TEST Home Assistant. Never put this file in the Home Assistant that controls your real
+# batteries, and never next to a real P1 or Marstek integration: it creates the same entity IDs
+# (sensor.p1_meter_power*, sensor/number/select.marstek_mN_*) and would hide or fight the real ones.
+# This is NOT one of the HBC+ packages: it lives in test/, so "copy all files from packages/" never takes it.
+#
+# Install on the test HA: copy this file into packages/ next to the HBC+ packages, leave hbc_config.yaml
+# as shipped (all commented out), Check configuration, restart. The first start sets the defaults below;
+# script "HBC sim: reset" sets them again. Then set Number of batteries to 3.
+#
+# What it simulates
+# - P1: per phase = house load - PV on that phase + the batteries physically on that phase (charging adds
+#   import). Updated every 2 s with a little noise (like a real meter), so the HBC+ control loop keeps
+#   ticking and its heartbeat stays fresh. sensor.p1_meter_power is the sum of the three phases.
+# - Each battery follows the commands HBC+ writes: forcible charge or discharge at the forcible power,
+#   capped by its max charge or discharge power, and stops at the HBC+ charge and discharge cutoffs.
+#   With RS485 control off (the firmware in charge) it simply idles at 0 W: a real Marstek would run its
+#   own work mode. The state of charge follows the power (5.12 kWh per battery); "Speed" makes it go faster.
+# - "Physical phase" is where the battery is really connected. Make it differ from the HBC+ phase map
+#   (input_select.marstek_mN_phase) to test the phase guard findings and the self-test (v1.4).
+# - "Online" off makes every entity of that battery unavailable (a lost Modbus connection).
+#
+# Sliders: Settings -> Devices & services -> Helpers, search "HBC sim", or put them on a dashboard.
+###########################################################################################################
+
+input_boolean:
+  hbc_sim_initialized:
+    name: "HBC sim: defaults set"
+    icon: mdi:flask-outline
+  hbc_sim_m1_online:
+    name: "HBC sim M1: online"
+    icon: mdi:lan-connect
+  hbc_sim_m2_online:
+    name: "HBC sim M2: online"
+    icon: mdi:lan-connect
+  hbc_sim_m3_online:
+    name: "HBC sim M3: online"
+    icon: mdi:lan-connect
+
+input_number:
+  hbc_sim_load_l1:
+    name: "HBC sim: house load L1"
+    min: 0
+    max: 8000
+    step: 10
+    unit_of_measurement: "W"
+    mode: slider
+    icon: mdi:home-lightning-bolt-outline
+  hbc_sim_load_l2:
+    name: "HBC sim: house load L2"
+    min: 0
+    max: 8000
+    step: 10
+    unit_of_measurement: "W"
+    mode: slider
+    icon: mdi:home-lightning-bolt-outline
+  hbc_sim_load_l3:
+    name: "HBC sim: house load L3"
+    min: 0
+    max: 8000
+    step: 10
+    unit_of_measurement: "W"
+    mode: slider
+    icon: mdi:home-lightning-bolt-outline
+  hbc_sim_pv:
+    name: "HBC sim: PV"
+    min: 0
+    max: 10000
+    step: 10
+    unit_of_measurement: "W"
+    mode: slider
+    icon: mdi:solar-power-variant-outline
+  hbc_sim_noise:
+    name: "HBC sim: meter noise"
+    min: 0
+    max: 200
+    step: 1
+    unit_of_measurement: "W"
+    mode: slider
+    icon: mdi:sine-wave
+  hbc_sim_speed:
+    name: "HBC sim: speed of charge"
+    min: 1
+    max: 120
+    step: 1
+    unit_of_measurement: "x"
+    mode: slider
+    icon: mdi:fast-forward-outline
+  hbc_sim_m1_soc:
+    name: "HBC sim M1: state of charge"
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-50
+  hbc_sim_m1_forcible_charge:
+    name: "HBC sim M1: forcible charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-up-outline
+  hbc_sim_m1_forcible_discharge:
+    name: "HBC sim M1: forcible discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down-outline
+  hbc_sim_m1_max_charge:
+    name: "HBC sim M1: max charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-charging-high
+  hbc_sim_m1_max_discharge:
+    name: "HBC sim M1: max discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down
+  hbc_sim_m2_soc:
+    name: "HBC sim M2: state of charge"
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-50
+  hbc_sim_m2_forcible_charge:
+    name: "HBC sim M2: forcible charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-up-outline
+  hbc_sim_m2_forcible_discharge:
+    name: "HBC sim M2: forcible discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down-outline
+  hbc_sim_m2_max_charge:
+    name: "HBC sim M2: max charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-charging-high
+  hbc_sim_m2_max_discharge:
+    name: "HBC sim M2: max discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down
+  hbc_sim_m3_soc:
+    name: "HBC sim M3: state of charge"
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "%"
+    mode: box
+    icon: mdi:battery-50
+  hbc_sim_m3_forcible_charge:
+    name: "HBC sim M3: forcible charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-up-outline
+  hbc_sim_m3_forcible_discharge:
+    name: "HBC sim M3: forcible discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down-outline
+  hbc_sim_m3_max_charge:
+    name: "HBC sim M3: max charge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-charging-high
+  hbc_sim_m3_max_discharge:
+    name: "HBC sim M3: max discharge power"
+    min: 0
+    max: 2500
+    step: 1
+    unit_of_measurement: "W"
+    mode: box
+    icon: mdi:battery-arrow-down
+
+input_select:
+  hbc_sim_pv_phase:
+    name: "HBC sim: PV phase"
+    options: ["L1", "L2", "L3", "3-phase"]
+    icon: mdi:solar-panel
+  hbc_sim_m1_phase:
+    name: "HBC sim M1: physical phase"
+    options: ["L1", "L2", "L3"]
+    icon: mdi:sine-wave
+  hbc_sim_m1_forcible:
+    name: "HBC sim M1: forcible mode"
+    options: ["stop", "charge", "discharge"]
+  hbc_sim_m1_rs485:
+    name: "HBC sim M1: RS485 control"
+    options: ["disable", "enable"]  # a fresh Marstek starts with RS485 control off
+  hbc_sim_m1_work_mode:
+    name: "HBC sim M1: work mode"
+    options: ["anti-feed", "manual", "ai"]
+  hbc_sim_m2_phase:
+    name: "HBC sim M2: physical phase"
+    options: ["L1", "L2", "L3"]
+    icon: mdi:sine-wave
+  hbc_sim_m2_forcible:
+    name: "HBC sim M2: forcible mode"
+    options: ["stop", "charge", "discharge"]
+  hbc_sim_m2_rs485:
+    name: "HBC sim M2: RS485 control"
+    options: ["disable", "enable"]  # a fresh Marstek starts with RS485 control off
+  hbc_sim_m2_work_mode:
+    name: "HBC sim M2: work mode"
+    options: ["anti-feed", "manual", "ai"]
+  hbc_sim_m3_phase:
+    name: "HBC sim M3: physical phase"
+    options: ["L1", "L2", "L3"]
+    icon: mdi:sine-wave
+  hbc_sim_m3_forcible:
+    name: "HBC sim M3: forcible mode"
+    options: ["stop", "charge", "discharge"]
+  hbc_sim_m3_rs485:
+    name: "HBC sim M3: RS485 control"
+    options: ["disable", "enable"]  # a fresh Marstek starts with RS485 control off
+  hbc_sim_m3_work_mode:
+    name: "HBC sim M3: work mode"
+    options: ["anti-feed", "manual", "ai"]
+
+template:
+  # P1 per phase: every 2 s, so the value changes like a real meter (a state that never changes would
+  # let the HBC+ heartbeat go stale)
+  - triggers:
+      - trigger: time_pattern
+        seconds: "/2"
+    sensor:
+      - name: "P1 meter power phase 1"
+        unique_id: hbc_sim_p1_meter_power_phase_1
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set ph = 'L1' -%}
+          {%- set load = states('input_number.hbc_sim_load_l1') | float(0) -%}
+          {%- set pv = states('input_number.hbc_sim_pv') | float(0) -%}
+          {%- set pvph = states('input_select.hbc_sim_pv_phase') -%}
+          {%- set pv_here = pv / 3 if pvph == '3-phase' else (pv if pvph == ph else 0) -%}
+          {%- set ns = namespace(b=0) -%}
+          {%- for i in [1, 2, 3] if states('input_select.hbc_sim_m' ~ i ~ '_phase') == ph -%}
+            {%- set ns.b = ns.b + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) -%}
+          {%- endfor -%}
+          {%- set n = states('input_number.hbc_sim_noise') | int(0) -%}
+          {{ (load - pv_here + ns.b + (range(-n, n + 1) | random)) | round(0) | int }}
+      - name: "P1 meter power phase 2"
+        unique_id: hbc_sim_p1_meter_power_phase_2
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set ph = 'L2' -%}
+          {%- set load = states('input_number.hbc_sim_load_l2') | float(0) -%}
+          {%- set pv = states('input_number.hbc_sim_pv') | float(0) -%}
+          {%- set pvph = states('input_select.hbc_sim_pv_phase') -%}
+          {%- set pv_here = pv / 3 if pvph == '3-phase' else (pv if pvph == ph else 0) -%}
+          {%- set ns = namespace(b=0) -%}
+          {%- for i in [1, 2, 3] if states('input_select.hbc_sim_m' ~ i ~ '_phase') == ph -%}
+            {%- set ns.b = ns.b + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) -%}
+          {%- endfor -%}
+          {%- set n = states('input_number.hbc_sim_noise') | int(0) -%}
+          {{ (load - pv_here + ns.b + (range(-n, n + 1) | random)) | round(0) | int }}
+      - name: "P1 meter power phase 3"
+        unique_id: hbc_sim_p1_meter_power_phase_3
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set ph = 'L3' -%}
+          {%- set load = states('input_number.hbc_sim_load_l3') | float(0) -%}
+          {%- set pv = states('input_number.hbc_sim_pv') | float(0) -%}
+          {%- set pvph = states('input_select.hbc_sim_pv_phase') -%}
+          {%- set pv_here = pv / 3 if pvph == '3-phase' else (pv if pvph == ph else 0) -%}
+          {%- set ns = namespace(b=0) -%}
+          {%- for i in [1, 2, 3] if states('input_select.hbc_sim_m' ~ i ~ '_phase') == ph -%}
+            {%- set ns.b = ns.b + states('sensor.marstek_m' ~ i ~ '_battery_power') | float(0) -%}
+          {%- endfor -%}
+          {%- set n = states('input_number.hbc_sim_noise') | int(0) -%}
+          {{ (load - pv_here + ns.b + (range(-n, n + 1) | random)) | round(0) | int }}
+  - sensor:
+      - name: "P1 meter power"
+        unique_id: hbc_sim_p1_meter_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {{ (states('sensor.p1_meter_power_phase_1') | float(0) + states('sensor.p1_meter_power_phase_2') | float(0)
+              + states('sensor.p1_meter_power_phase_3') | float(0)) | round(0) | int }}
+        availability: >-
+          {{ has_value('sensor.p1_meter_power_phase_1') and has_value('sensor.p1_meter_power_phase_2')
+             and has_value('sensor.p1_meter_power_phase_3') }}
+      # ---- Marstek M1
+      - name: "Marstek M1 battery power"
+        unique_id: hbc_sim_m1_battery_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set soc = states('input_number.hbc_sim_m1_soc') | float(0) -%}
+          {%- set hi = states('input_number.marstek_m1_charging_cutoff_capacity') | float(100) -%}
+          {%- set lo = states('input_number.marstek_m1_discharging_cutoff_capacity') | float(11) -%}
+          {%- set mode = states('input_select.hbc_sim_m1_forcible') -%}
+          {%- if not is_state('input_select.hbc_sim_m1_rs485', 'enable') or mode == 'stop' -%} 0
+          {%- elif mode == 'charge' and soc < hi -%}
+            {{ [states('input_number.hbc_sim_m1_forcible_charge') | float(0), states('input_number.hbc_sim_m1_max_charge') | float(0)] | min | round(0) | int }}
+          {%- elif mode == 'discharge' and soc > lo -%}
+            {{ -([states('input_number.hbc_sim_m1_forcible_discharge') | float(0), states('input_number.hbc_sim_m1_max_discharge') | float(0)] | min) | round(0) | int }}
+          {%- else -%} 0
+          {%- endif -%}
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 AC power"
+        unique_id: hbc_sim_m1_ac_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.marstek_m1_battery_power') | float(0) | round(0) | int }}"  # same sign as battery power
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 battery state of charge"
+        unique_id: hbc_sim_m1_battery_state_of_charge
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: "{{ states('input_number.hbc_sim_m1_soc') | float(0) | round(0) | int }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 battery total energy"
+        unique_id: hbc_sim_m1_battery_total_energy
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "5.12"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 battery remaining capacity"
+        unique_id: hbc_sim_m1_battery_remaining_capacity
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "{{ (states('input_number.hbc_sim_m1_soc') | float(0) * 5.12 / 100) | round(2) }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 inverter state"
+        unique_id: hbc_sim_m1_inverter_state
+        state: >-
+          {%- set p = states('sensor.marstek_m1_battery_power') | float(0) -%}
+          {{ 'charge' if p > 0 else ('discharge' if p < 0 else 'standby') }}
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 device name"
+        unique_id: hbc_sim_m1_device_name
+        state: "Venus E (sim M1)"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      # ---- Marstek M2
+      - name: "Marstek M2 battery power"
+        unique_id: hbc_sim_m2_battery_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set soc = states('input_number.hbc_sim_m2_soc') | float(0) -%}
+          {%- set hi = states('input_number.marstek_m2_charging_cutoff_capacity') | float(100) -%}
+          {%- set lo = states('input_number.marstek_m2_discharging_cutoff_capacity') | float(11) -%}
+          {%- set mode = states('input_select.hbc_sim_m2_forcible') -%}
+          {%- if not is_state('input_select.hbc_sim_m2_rs485', 'enable') or mode == 'stop' -%} 0
+          {%- elif mode == 'charge' and soc < hi -%}
+            {{ [states('input_number.hbc_sim_m2_forcible_charge') | float(0), states('input_number.hbc_sim_m2_max_charge') | float(0)] | min | round(0) | int }}
+          {%- elif mode == 'discharge' and soc > lo -%}
+            {{ -([states('input_number.hbc_sim_m2_forcible_discharge') | float(0), states('input_number.hbc_sim_m2_max_discharge') | float(0)] | min) | round(0) | int }}
+          {%- else -%} 0
+          {%- endif -%}
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 AC power"
+        unique_id: hbc_sim_m2_ac_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.marstek_m2_battery_power') | float(0) | round(0) | int }}"  # same sign as battery power
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 battery state of charge"
+        unique_id: hbc_sim_m2_battery_state_of_charge
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: "{{ states('input_number.hbc_sim_m2_soc') | float(0) | round(0) | int }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 battery total energy"
+        unique_id: hbc_sim_m2_battery_total_energy
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "5.12"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 battery remaining capacity"
+        unique_id: hbc_sim_m2_battery_remaining_capacity
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "{{ (states('input_number.hbc_sim_m2_soc') | float(0) * 5.12 / 100) | round(2) }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 inverter state"
+        unique_id: hbc_sim_m2_inverter_state
+        state: >-
+          {%- set p = states('sensor.marstek_m2_battery_power') | float(0) -%}
+          {{ 'charge' if p > 0 else ('discharge' if p < 0 else 'standby') }}
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 device name"
+        unique_id: hbc_sim_m2_device_name
+        state: "Venus E (sim M2)"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      # ---- Marstek M3
+      - name: "Marstek M3 battery power"
+        unique_id: hbc_sim_m3_battery_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {%- set soc = states('input_number.hbc_sim_m3_soc') | float(0) -%}
+          {%- set hi = states('input_number.marstek_m3_charging_cutoff_capacity') | float(100) -%}
+          {%- set lo = states('input_number.marstek_m3_discharging_cutoff_capacity') | float(11) -%}
+          {%- set mode = states('input_select.hbc_sim_m3_forcible') -%}
+          {%- if not is_state('input_select.hbc_sim_m3_rs485', 'enable') or mode == 'stop' -%} 0
+          {%- elif mode == 'charge' and soc < hi -%}
+            {{ [states('input_number.hbc_sim_m3_forcible_charge') | float(0), states('input_number.hbc_sim_m3_max_charge') | float(0)] | min | round(0) | int }}
+          {%- elif mode == 'discharge' and soc > lo -%}
+            {{ -([states('input_number.hbc_sim_m3_forcible_discharge') | float(0), states('input_number.hbc_sim_m3_max_discharge') | float(0)] | min) | round(0) | int }}
+          {%- else -%} 0
+          {%- endif -%}
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 AC power"
+        unique_id: hbc_sim_m3_ac_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.marstek_m3_battery_power') | float(0) | round(0) | int }}"  # same sign as battery power
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 battery state of charge"
+        unique_id: hbc_sim_m3_battery_state_of_charge
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: "{{ states('input_number.hbc_sim_m3_soc') | float(0) | round(0) | int }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 battery total energy"
+        unique_id: hbc_sim_m3_battery_total_energy
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "5.12"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 battery remaining capacity"
+        unique_id: hbc_sim_m3_battery_remaining_capacity
+        unit_of_measurement: "kWh"
+        device_class: energy_storage
+        state_class: measurement
+        state: "{{ (states('input_number.hbc_sim_m3_soc') | float(0) * 5.12 / 100) | round(2) }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 inverter state"
+        unique_id: hbc_sim_m3_inverter_state
+        state: >-
+          {%- set p = states('sensor.marstek_m3_battery_power') | float(0) -%}
+          {{ 'charge' if p > 0 else ('discharge' if p < 0 else 'standby') }}
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 device name"
+        unique_id: hbc_sim_m3_device_name
+        state: "Venus E (sim M3)"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+  - select:
+      - name: "Marstek M1 forcible charge discharge"
+        unique_id: hbc_sim_m1_forcible_charge_discharge
+        state: "{{ states('input_select.hbc_sim_m1_forcible') }}"
+        options: "{{ ['stop', 'charge', 'discharge'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m1_forcible
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 RS485 control mode"
+        unique_id: hbc_sim_m1_rs485_control_mode
+        state: "{{ states('input_select.hbc_sim_m1_rs485') }}"
+        options: "{{ ['disable', 'enable'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m1_rs485
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 user work mode"
+        unique_id: hbc_sim_m1_user_work_mode
+        state: "{{ states('input_select.hbc_sim_m1_work_mode') }}"
+        options: "{{ ['anti-feed', 'manual', 'ai'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m1_work_mode
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M2 forcible charge discharge"
+        unique_id: hbc_sim_m2_forcible_charge_discharge
+        state: "{{ states('input_select.hbc_sim_m2_forcible') }}"
+        options: "{{ ['stop', 'charge', 'discharge'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m2_forcible
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 RS485 control mode"
+        unique_id: hbc_sim_m2_rs485_control_mode
+        state: "{{ states('input_select.hbc_sim_m2_rs485') }}"
+        options: "{{ ['disable', 'enable'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m2_rs485
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 user work mode"
+        unique_id: hbc_sim_m2_user_work_mode
+        state: "{{ states('input_select.hbc_sim_m2_work_mode') }}"
+        options: "{{ ['anti-feed', 'manual', 'ai'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m2_work_mode
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M3 forcible charge discharge"
+        unique_id: hbc_sim_m3_forcible_charge_discharge
+        state: "{{ states('input_select.hbc_sim_m3_forcible') }}"
+        options: "{{ ['stop', 'charge', 'discharge'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m3_forcible
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 RS485 control mode"
+        unique_id: hbc_sim_m3_rs485_control_mode
+        state: "{{ states('input_select.hbc_sim_m3_rs485') }}"
+        options: "{{ ['disable', 'enable'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m3_rs485
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 user work mode"
+        unique_id: hbc_sim_m3_user_work_mode
+        state: "{{ states('input_select.hbc_sim_m3_work_mode') }}"
+        options: "{{ ['anti-feed', 'manual', 'ai'] }}"
+        select_option:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_sim_m3_work_mode
+            data:
+              option: "{{ option }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+  - number:
+      - name: "Marstek M1 forcible charge power"
+        unique_id: hbc_sim_m1_forcible_charge_power
+        state: "{{ states('input_number.hbc_sim_m1_forcible_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m1_forcible_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 forcible discharge power"
+        unique_id: hbc_sim_m1_forcible_discharge_power
+        state: "{{ states('input_number.hbc_sim_m1_forcible_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m1_forcible_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 max charge power"
+        unique_id: hbc_sim_m1_max_charge_power
+        state: "{{ states('input_number.hbc_sim_m1_max_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m1_max_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M1 max discharge power"
+        unique_id: hbc_sim_m1_max_discharge_power
+        state: "{{ states('input_number.hbc_sim_m1_max_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m1_max_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m1_online', 'on') }}"
+      - name: "Marstek M2 forcible charge power"
+        unique_id: hbc_sim_m2_forcible_charge_power
+        state: "{{ states('input_number.hbc_sim_m2_forcible_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m2_forcible_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 forcible discharge power"
+        unique_id: hbc_sim_m2_forcible_discharge_power
+        state: "{{ states('input_number.hbc_sim_m2_forcible_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m2_forcible_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 max charge power"
+        unique_id: hbc_sim_m2_max_charge_power
+        state: "{{ states('input_number.hbc_sim_m2_max_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m2_max_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M2 max discharge power"
+        unique_id: hbc_sim_m2_max_discharge_power
+        state: "{{ states('input_number.hbc_sim_m2_max_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m2_max_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m2_online', 'on') }}"
+      - name: "Marstek M3 forcible charge power"
+        unique_id: hbc_sim_m3_forcible_charge_power
+        state: "{{ states('input_number.hbc_sim_m3_forcible_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m3_forcible_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 forcible discharge power"
+        unique_id: hbc_sim_m3_forcible_discharge_power
+        state: "{{ states('input_number.hbc_sim_m3_forcible_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m3_forcible_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 max charge power"
+        unique_id: hbc_sim_m3_max_charge_power
+        state: "{{ states('input_number.hbc_sim_m3_max_charge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m3_max_charge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+      - name: "Marstek M3 max discharge power"
+        unique_id: hbc_sim_m3_max_discharge_power
+        state: "{{ states('input_number.hbc_sim_m3_max_discharge') | float(0) }}"
+        min: 0
+        max: 2500
+        step: 1
+        set_value:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hbc_sim_m3_max_discharge
+            data:
+              value: "{{ value }}"
+        availability: "{{ is_state('input_boolean.hbc_sim_m3_online', 'on') }}"
+
+script:
+  hbc_sim_reset:
+    alias: "HBC sim: reset"
+    icon: mdi:restore
+    description: Sets every simulation slider back to its default and puts all simulated batteries online.
+    sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_load_l1
+        data:
+          value: 300
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_load_l2
+        data:
+          value: 200
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_load_l3
+        data:
+          value: 250
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_pv
+        data:
+          value: 0
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_noise
+        data:
+          value: 15
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_speed
+        data:
+          value: 1
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_sim_pv_phase
+        data:
+          option: "L1"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m1_soc
+        data:
+          value: 50
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m1_max_charge
+        data:
+          value: 2500
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m1_max_discharge
+        data:
+          value: 2500
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_sim_m1_phase
+        data:
+          option: "L1"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m2_soc
+        data:
+          value: 60
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m2_max_charge
+        data:
+          value: 2500
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m2_max_discharge
+        data:
+          value: 2500
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_sim_m2_phase
+        data:
+          option: "L2"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m3_soc
+        data:
+          value: 70
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m3_max_charge
+        data:
+          value: 2500
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hbc_sim_m3_max_discharge
+        data:
+          value: 2500
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_sim_m3_phase
+        data:
+          option: "L3"
+      - action: input_boolean.turn_on
+        target:
+          entity_id:
+            - input_boolean.hbc_sim_m1_online
+            - input_boolean.hbc_sim_m2_online
+            - input_boolean.hbc_sim_m3_online
+            - input_boolean.hbc_sim_initialized
+
+automation:
+  - id: hbc_sim_defaults_on_first_start
+    alias: "HBC sim: defaults on the first start"
+    triggers:
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hbc_sim_initialized
+        state: "off"
+    actions:
+      - action: script.hbc_sim_reset
+
+  - id: hbc_sim_state_of_charge
+    alias: "HBC sim: state of charge follows the battery power"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        seconds: "/10"
+    actions:
+      - repeat:
+          for_each: [1, 2, 3]
+          sequence:
+            - if:
+                - condition: template
+                  value_template: "{{ is_state('input_boolean.hbc_sim_m' ~ repeat.item ~ '_online', 'on') }}"
+              then:
+                - variables:
+                    p: "{{ states('sensor.marstek_m' ~ repeat.item ~ '_battery_power') | float(0) }}"
+                    soc: "{{ states('input_number.hbc_sim_m' ~ repeat.item ~ '_soc') | float(0) }}"
+                    speed: "{{ states('input_number.hbc_sim_speed') | float(1) }}"
+                - action: input_number.set_value
+                  target:
+                    entity_id: "input_number.hbc_sim_m{{ repeat.item }}_soc"
+                  data:
+                    value: "{{ ([0, [100, soc + p * 10 / 3600 / 5120 * 100 * speed] | min] | max) | round(2) }}"
