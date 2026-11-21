@@ -461,6 +461,38 @@ script:
           entity_id: input_select.marstek_m6_phase
         data:
           option: "L3"
+      # PID preset 'Safe' (the same values the PID presets flow sets). Set directly as well, so the
+      # Self-consumption PID works on a fresh install even when Node-RED is not running yet.
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_control_pid_presets
+        data:
+          option: "Safe"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_control_kp
+        data:
+          value: 0.3
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_control_ki
+        data:
+          value: 0.3
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_control_kd
+        data:
+          value: 0.1
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_control_error_signal_dampening
+        data:
+          value: 20
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.house_battery_control_pid_output_dampening
+        data:
+          value: 0
 
 # Safety settings changed (HBC+ 2026-11-15). Home Assistant has no per-entity permissions: every user, also a
 # non-admin, and every automation can change these helpers. This cannot block that, but it makes every change

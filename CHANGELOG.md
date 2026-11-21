@@ -11,6 +11,9 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   (Logging *Live*) on. Copy `packages/hbc_control.yaml` again and paste the dashboard again.
 
 ### Fixed
+- Fresh install: Self-consumption logged *Controller disabled — all PID gains are 0* on every tick. The script
+  *HBC+ phase guard: apply defaults* now also selects the PID preset *Safe* and sets its gains (Kp 0.3, Ki 0.3,
+  Kd 0.1).
 - Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
   on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
   Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
