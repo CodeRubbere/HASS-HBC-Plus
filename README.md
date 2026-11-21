@@ -62,10 +62,23 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | `node-red/examples/` | Example tab for the shared price fetch |
 | `docs/` | User guide in English and Dutch |
 
+## Requirements
+
+- **Home Assistant** with packages enabled (`homeassistant: packages: !include_dir_named packages`).
+- **Node-RED** (add-on or standalone) with `node-red-contrib-home-assistant-websocket` 0.80 or newer.
+- **Node-RED palette** `node-red-contrib-time-range-switch`.
+- **MQTT**: the MQTT integration in HA with a broker.
+- **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP).
+- **Grid meter**: `sensor.p1_meter_power` and per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import.
+- **Dashboard**: `apexcharts-card` and `card-mod` (both Marketplace).
+- **Prices**: the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration, for Dynamic and Charge Deadline.
+
+Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#requirements).
+
 ## Quick start
 
 1. Download the [latest release](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) (*Assets* → *Source code (zip)*) and unzip it.
-2. Make sure Home Assistant (with packages and MQTT) and Node-RED (with the palettes listed under *Before you use it*) are running.
+2. Make sure Home Assistant (with packages and MQTT) and Node-RED (see *Requirements*) are running.
    From Marketplace, install **Cheapest Energy Hours**, **card-mod** and **apexcharts-card**, then restart HA and reload the browser.
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
 4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
@@ -83,7 +96,6 @@ Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues
 
 - All HBC+ notifications (Battery Oscillation Guard, heartbeat fallback, error alert, missing prices, phase guard) go through `script.hbc_notify` in `packages/hbc_notify.yaml`. Set where they go once, in *Notify targets* on the *Settings* view (e.g. `notify.mobile_app_<phone>`; empty = `notify.notify`), and press *Send a test notification*.
 - A Marstek over Modbus TCP works as well, as long as its entities follow the `marstek_mN_*` pattern.
-- Requirements: Home Assistant with packages, Node-RED with `node-red-contrib-home-assistant-websocket` (0.80 or newer), `node-red-contrib-time-range-switch`, MQTT, Marstek Venus E batteries (`marstek_mN_*` entities), a P1 meter with per-phase power, `apexcharts-card` and `card-mod` (Marketplace), and for Dynamic and Charge Deadline the Cheapest Energy Hours macro (Marketplace) with a price integration.
 - Always consult a qualified electrician about your installation and fuse ratings.
 
 ## License
