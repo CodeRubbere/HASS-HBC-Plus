@@ -743,7 +743,7 @@ HBC+ is een complete, zelfstandige installatie: alle packages, flows en het dash
 | MQTT | MQTT-integratie in HA met een broker | Status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`) |
 | Batterijen | Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP) | HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij |
 | Netmeter | Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import | De zekeringruimte wordt per fase uit P1 berekend |
-| Dashboard | `custom:apexcharts-card` (HACS); optioneel: `card-mod` (HACS) | Prijs- en historiegrafieken; card-mod geeft de badge *Health* zijn groene of rode rand |
+| Dashboard | `custom:apexcharts-card` en `card-mod` (beide HACS) | Prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*) |
 | Prijzen | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (HACS) en een prijsintegratie | Nodig voor Dynamic en Charge Deadline |
 
 De tekenconventies moeten kloppen: `sensor.marstek_mN_battery_power` is positief tijdens **laden**, `sensor.p1_meter_power_phase_N` is positief bij **import**. Gebruikt je meter het omgekeerde teken, corrigeer dat dan met een template-sensor vóór de installatie, anders wordt de zekeringruimte verkeerd berekend.
@@ -824,6 +824,16 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | --- | --- |
 | `user-guide.en.md` | Deze handleiding in het Engels |
 | `gebruikershandleiding.nl.md` | Deze handleiding in het Nederlands |
+
+### Voor je begint — installeren via HACS
+
+Installeer deze drie via HACS (*HACS* → zoeken → *Download*) vóór Stap 1. Zonder deze krijgen Dynamic en Charge Deadline geen prijsperiodes en toont het Prices-tabblad geen grafieken.
+
+1. **Cheapest Energy Hours** ([TheFes/cheapest-energy-hours](https://github.com/TheFes/cheapest-energy-hours)), type *Template*: de macro waarmee Dynamic en Charge Deadline de goedkope en dure periodes bepalen. Herstart daarna Home Assistant, zodat de macro geladen wordt.
+2. **card-mod** ([thomasloven/lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod)), type *Dashboard*: geeft het dashboard zijn opmaak, zoals de kaders rond de grafieken en de groene of rode rand van de badge *Health*.
+3. **apexcharts-card** ([RomRider/apexcharts-card](https://github.com/RomRider/apexcharts-card)), type *Dashboard*: tekent de prijs- en historiegrafieken.
+
+Herlaad na het installeren van card-mod en apexcharts-card de browser (in de Home Assistant-app: sluit en open hem opnieuw), zodat het dashboard ze vindt.
 
 ### Stap 1 — Back-up maken
 
