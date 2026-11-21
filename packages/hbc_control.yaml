@@ -54,6 +54,11 @@ input_boolean:
   house_battery_control_is_debug_mode:
     name: Insight mode
 
+  # Prices view: show the price list (Price marks visualisation). Display only, separate from Insight mode.
+  house_battery_control_show_price_list:
+    name: Pricing List
+    icon: mdi:format-list-bulleted
+
   # Onboarding
   house_battery_control_onboarding_finished:
     name: "Finish onboarding"

@@ -5,6 +5,11 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 
 ## [Unreleased]
 
+### Changed
+- Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
+  new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
+  (Logging *Live*) on. Copy `packages/hbc_control.yaml` again and paste the dashboard again.
+
 ### Fixed
 - Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
   on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
