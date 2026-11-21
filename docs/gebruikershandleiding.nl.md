@@ -741,6 +741,7 @@ HBC+ is een complete, zelfstandige installatie: alle packages, flows en het dash
 - **MQTT**: MQTT-integratie in HA met een broker. Voor de status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`).
 - **Batterijen**: Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP). HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij.
 - **Netmeter**: Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import. De zekeringruimte wordt per fase uit P1 berekend.
+- **Dashboard-URL**: `home-battery-control-plus`. De knoppen die een andere view openen linken naar dat adres; de naam van het dashboard zelf maakt niet uit (zie [Stap 4](#stap-4--dashboard)).
 - **Dashboard**: `custom:apexcharts-card` en `card-mod` (beide Marketplace). apexcharts-card tekent de prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*).
 - **Prijzen**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (Marketplace) en een prijsintegratie. Nodig voor Dynamic en Charge Deadline.
 
@@ -881,7 +882,7 @@ De scripts vuren de HA-gebeurtenis `hbc_arbiter_request`; de groep *Requests fro
 
 ### Stap 4 — Dashboard
 
-1. *Instellingen* → *Dashboards* → *Dashboard toevoegen* → *Nieuw dashboard vanaf nul*, noem het *Home Battery Control Plus*. Laat de URL staan die Home Assistant invult: `home-battery-control-plus`. De knoppen die een andere view openen linken naar dat adres, en een URL kun je later niet meer wijzigen.
+1. *Instellingen* → *Dashboards* → *Dashboard toevoegen* → *Nieuw dashboard vanaf nul*, noem het *Home Battery Control Plus*. **De URL moet `home-battery-control-plus` zijn.** Home Assistant vult hem in op basis van de naam; kies je een andere naam, verander het URL-veld dan in `home-battery-control-plus` voordat je opslaat. De knoppen die een andere view openen linken naar dat adres, dus met een andere URL leiden ze nergens heen. De naam kun je later wijzigen, de URL niet.
 2. Open het → ⋮ → *Dashboard bewerken* → ⋮ → *Ruwe configuratie-editor*, plak de inhoud van `dashboards/hbc_plus.yaml` en sla op.
 3. Open de view **Phase guard** en controleer of elke kaart waarden toont.
 
