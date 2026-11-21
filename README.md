@@ -11,7 +11,7 @@ This project is designed for hobbyists who want full control over their home bat
 ![License](https://img.shields.io/github/license/gitcodebob/marstek-venus-rs485-node-red)
 [![GitHub stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=flat)](https://github.com/CodeRubbere/HASS-HBC-Plus/stargazers)
 
-**Current version: v1.2** (20 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
+**Current version: v1.2.1** (21 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
 
 **Next: v1.3**, planned for 22 December 2026, ready for the end of Dutch net metering · [What's new in v1.3](https://github.com/CodeRubbere/HASS-HBC-Plus/blob/feature/v1.3/docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
 

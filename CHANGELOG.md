@@ -3,7 +3,9 @@
 All notable changes to HBC+ (Home Battery Control Plus). The user guide has the details: *What's new* and
 *Updating from …* per version ([English](docs/user-guide.en.md), [Nederlands](docs/gebruikershandleiding.nl.md)).
 
-## [Unreleased]
+## [1.2.1] – 21 November 2026
+
+Fixes for a fresh install, a separate *Pricing List* switch on the Prices view, and clearer installation steps.
 
 ### Changed
 - Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
@@ -17,6 +19,20 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
   on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
   Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+- Prices view: the price list and the *Using the dynamic strategy* link stayed hidden when the Marketplace reported
+  `update.cheapest_energy_hours_update` as unknown or unavailable, as it often does on a fresh install.
+
+### Documentation
+- Installation: new section *Before you start — install from Marketplace* (Cheapest Energy Hours, card-mod,
+  apexcharts-card); card-mod is now listed as required.
+- Requirements as a bullet list, in the user guide and in a new *Requirements* section of the README.
+- The dashboard URL must be `home-battery-control-plus`, or the buttons that open other views lead nowhere.
+
+### Updating from 1.2.0
+Copy `packages/hbc_control.yaml` and `packages/hbc_phase_guard.yaml` again, check the configuration and restart HA.
+Delete the old HBC+ tabs in Node-RED, import `node-red/hbc-plus-all-flows.json` and deploy. Paste
+`dashboards/hbc_plus.yaml` again. If Self-consumption logs *Controller disabled*, choose the PID preset *Safe* on the
+PID Control view.
 
 ## [1.2.0] – 20 November 2026
 

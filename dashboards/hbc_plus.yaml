@@ -36,7 +36,7 @@ views:
         content: >-
           <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.2"
           alt="HBC+ Home Battery Control Plus"
-          height="72"><br><b>v1.2</b></center>
+          height="72"><br><b>v1.2.1</b></center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
