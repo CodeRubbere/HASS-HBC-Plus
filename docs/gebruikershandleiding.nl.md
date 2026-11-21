@@ -735,16 +735,14 @@ Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtri
 
 HBC+ is een complete, zelfstandige installatie: alle packages, flows en het dashboard staan in deze repository. Je hebt alleen de onderdelen hieronder nodig.
 
-| Onderdeel | Vereiste | Waarom |
-| --- | --- | --- |
-| Home Assistant | Packages aan (`homeassistant: packages: !include_dir_named packages`) | Alle HBC+-helpers komen als packages |
-| Node-RED | Add-on of standalone, met `node-red-contrib-home-assistant-websocket` 0.80 of nieuwer | Draait de regellus |
-| Node-RED-palet | `node-red-contrib-time-range-switch` | Gebruikt door het Timed-tabblad (terugvalpad) |
-| MQTT | MQTT-integratie in HA met een broker | Status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`) |
-| Batterijen | Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP) | HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij |
-| Netmeter | Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import | De zekeringruimte wordt per fase uit P1 berekend |
-| Dashboard | `custom:apexcharts-card` en `card-mod` (beide Marketplace) | Prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*) |
-| Prijzen | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (Marketplace) en een prijsintegratie | Nodig voor Dynamic en Charge Deadline |
+- **Home Assistant**: Packages aan (`homeassistant: packages: !include_dir_named packages`). Alle HBC+-helpers komen als packages.
+- **Node-RED**: Add-on of standalone, met `node-red-contrib-home-assistant-websocket` 0.80 of nieuwer. Draait de regellus.
+- **Node-RED-palet**: `node-red-contrib-time-range-switch`. Gebruikt door het Timed-tabblad (terugvalpad).
+- **MQTT**: MQTT-integratie in HA met een broker. Voor de status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`).
+- **Batterijen**: Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP). HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij.
+- **Netmeter**: Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import. De zekeringruimte wordt per fase uit P1 berekend.
+- **Dashboard**: `custom:apexcharts-card` en `card-mod` (beide Marketplace). apexcharts-card tekent de prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*).
+- **Prijzen**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (Marketplace) en een prijsintegratie. Nodig voor Dynamic en Charge Deadline.
 
 De tekenconventies moeten kloppen: `sensor.marstek_mN_battery_power` is positief tijdens **laden**, `sensor.p1_meter_power_phase_N` is positief bij **import**. Gebruikt je meter het omgekeerde teken, corrigeer dat dan met een template-sensor vóór de installatie, anders wordt de zekeringruimte verkeerd berekend.
 
