@@ -40,7 +40,7 @@ Battery packages contributed by the community:
 
 With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without phase rules. Only *Enforce* applies them.
 
-**Coming in v1.3** (in development, planned for 20 December 2026, ready for the end of Dutch net metering on 1 January 2027):
+**Coming in v1.3** (in development, planned for 22 December 2026, ready for the end of Dutch net metering on 1 January 2027):
 
 - **Grid Clock feed** — the tariff source *Grid Clock* now has all-in buy and sell prices per quarter for your own supplier, public and without a token.
 - **Buy and sell prices** — Dynamic values *Sell* at the real sell price; a sell price sensor and a sell line in the price chart.
@@ -73,7 +73,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
 
-**Updating from v1.0?** Follow [Updating from v1.1](docs/user-guide.en.md#updating-from-v11): new packages and notifications, and the old HBC+ tabs are deleted before the import.
+**Updating from v1.1?** Follow [Updating from v1.1](docs/user-guide.en.md#updating-from-v11): new packages and notifications, and the old HBC+ tabs are deleted before the import.
 
 Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues).
 
