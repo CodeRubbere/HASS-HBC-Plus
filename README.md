@@ -13,7 +13,7 @@ This project is designed for hobbyists who want full control over their home bat
 
 **Current version: v1.2** (20 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
 
-**Next: v1.3**, planned for 22 December 2026, ready for the end of Dutch net metering · [What's new in v1.3](docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
+**Next: v1.3**, planned for 22 December 2026, ready for the end of Dutch net metering · [What's new in v1.3](https://github.com/CodeRubbere/HASS-HBC-Plus/blob/feature/v1.3/docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
 
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
@@ -42,10 +42,11 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 **Coming in v1.3** (in development, planned for 22 December 2026, ready for the end of Dutch net metering on 1 January 2027):
 
-- **Grid Clock feed** — the tariff source *Grid Clock* now has all-in buy and sell prices per quarter for your own supplier, public and without a token.
-- **Buy and sell prices** — Dynamic values *Sell* at the real sell price; a sell price sensor and a sell line in the price chart.
-- **Price guard** — while prices are negative, stop exporting and charge instead; signals for a PV limiter. Off by default.
-- **New dashboard layout** — nine views in the order you use them: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging.
+- **One notification setting** — every HBC+ notification goes through `script.hbc_notify`; set the targets once on the *Settings* view, with a test button.
+- **Strategy requests from Home Assistant** — automations can hold a strategy through the Strategy arbiter, with a time-out, without Node-RED (also via MQTT).
+- **Battery calibration** — a battery that has not been full for 14 days is charged to 100 % once, in the cheapest block after midnight.
+- **Savings** — a new *Savings* view: what your energy cost with the batteries compared with without them, per day, month and year.
+- **Measured round-trip efficiency** — measured over 7 days, with a suggested *Minimum spread* you can take over with one button.
 
 ## Repository layout
 

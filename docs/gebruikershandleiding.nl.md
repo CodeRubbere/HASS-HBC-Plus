@@ -408,7 +408,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 
 ## Nieuw in HBC+ v1.2
 
-*In ontwikkeling — release gepland op 10 december 2026*
+*20 november 2026*
 
 v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027: vanaf dan levert een teruggeleverde kWh minder op dan een afgenomen kWh kost.
 

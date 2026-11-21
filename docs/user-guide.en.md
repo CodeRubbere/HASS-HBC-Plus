@@ -408,7 +408,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 ## What's new in HBC+ v1.2
 
-*In development — release planned for 10 December 2026*
+*20 November 2026*
 
 v1.2 prepares HBC+ for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an imported kWh costs.
 
