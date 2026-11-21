@@ -22,6 +22,9 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   Active holds show on the Overview (`sensor.hbc_strategy_holds`).
 
 ### Changed
+- Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
+  new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
+  (Logging *Live*) on.
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
   *Held by* on the Overview while a strategy hold is active.
 

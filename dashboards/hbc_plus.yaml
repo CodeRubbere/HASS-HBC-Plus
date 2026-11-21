@@ -584,10 +584,11 @@ views:
         show_name: true
         show_state: false
         show_icon: true
-        entity: input_boolean.house_battery_control_is_debug_mode
+        entity: input_boolean.house_battery_control_show_price_list
+        icon: mdi:format-list-bulleted
         tap_action:
           action: toggle
-        name: Insights mode
+        name: Pricing List
       - type: entity
         show_name: true
         show_state: true
@@ -828,8 +829,8 @@ views:
             grid_options:
               rows: 1
           - type: heading
-            icon: mdi:spider
-            heading: Enable insights mode to view this data
+            icon: mdi:format-list-bulleted
+            heading: Today and tomorrow per interval
             heading_style: subtitle
           - type: markdown
             content: |-
@@ -872,7 +873,7 @@ views:
               </small></small>
         visibility:
           - condition: state
-            entity: input_boolean.house_battery_control_is_debug_mode
+            entity: input_boolean.house_battery_control_show_price_list
             state: 'on'
       - type: grid
         cards:
