@@ -25,6 +25,11 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
   *Held by* on the Overview while a strategy hold is active.
 
+### Fixed
+- Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
+  on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
+  Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+
 ### Updating from 1.2
 Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml` and `hbc_savings.yaml`), delete the old
 HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard again. Had you set your own notify

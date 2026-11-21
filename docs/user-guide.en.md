@@ -447,6 +447,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 - **F1 — Savings.** A new *Savings* view: what your energy cost with the batteries compared with without them, per day, month and year, split into stored PV and charging from the grid (see [Savings and round-trip efficiency](#savings-and-round-trip-efficiency)).
 - **Dashboard.** A new *Savings* view; *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and *Held by* on the Overview while a hold is active.
 - **F2 — Measured round-trip efficiency.** `sensor.hbc_round_trip_efficiency` over 7 days, and a suggested *Minimum spread* you can take over with one button. Optionally Dynamic pairs on what a kWh really earns after losses (*Dynamic uses measured efficiency*, off by default).
+- **Fix: Node-RED step on a fresh install.** The dashboard could keep showing *Step 3 — Setup Node-RED* after the flows were deployed, because Node-RED was not yet connected to Home Assistant 2 seconds after the first deploy. HBC+ now reports Node-RED as ready each time it connects to Home Assistant.
 
 ### Updating from v1.2
 

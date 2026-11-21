@@ -919,12 +919,14 @@
         "nodes": [
             "ec52ad041f1a124c",
             "7c1400bf4aed420d",
-            "2ac016c72e7fcc64"
+            "2ac016c72e7fcc64",
+            "hbcp13c000000001",
+            "hbcp13c000000002"
         ],
         "x": 1154,
-        "y": 79,
+        "y": 39,
         "w": 592,
-        "h": 82
+        "h": 122
     },
     {
         "id": "a0371c54d70c4c4f",
@@ -4890,6 +4892,61 @@
         "y": 1667,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "hbcp13c000000001",
+        "type": "server-events",
+        "z": "61557a1c3e5f5404",
+        "g": "a83de050fed57ff3",
+        "name": "HA connected",
+        "server": "176d29a.6f648d6",
+        "version": 3,
+        "exposeAsEntityConfig": "",
+        "eventType": "home_assistant_client",
+        "eventData": "",
+        "waitForRunning": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "$outputData(\"eventData\").event_type",
+                "valueType": "jsonata"
+            }
+        ],
+        "x": 1270,
+        "y": 80,
+        "wires": [
+            [
+                "hbcp13c000000002"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13c000000002",
+        "type": "function",
+        "z": "61557a1c3e5f5404",
+        "g": "a83de050fed57ff3",
+        "name": "Once per (re)connect",
+        "func": "// HBC+: turn on input_boolean.house_battery_control_has_node_red whenever Node-RED\n// (re)connects to Home Assistant, not only 2 s after deploy. On a fresh install the connection is\n// often not up yet at that moment: the call failed silently and the dashboard kept showing\n// 'Step 3 - Setup Node-RED' although the flows were deployed.\n// Client events come in bursts (states_loaded, services_loaded, running, ...): once per 30 s.\nconst what = typeof msg.payload === 'string' ? msg.payload : JSON.stringify(msg.payload || msg.event_type || '');\nif (!/running|ready/i.test(what)) return null;\nconst now = Date.now();\nif (now - (context.get('last') || 0) < 30000) return null;\ncontext.set('last', now);\nreturn { topic: 'ha_connected', payload: now };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1460,
+        "y": 80,
+        "wires": [
+            [
+                "ec52ad041f1a124c"
+            ]
         ]
     },
     {
