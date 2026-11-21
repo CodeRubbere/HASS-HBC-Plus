@@ -684,16 +684,14 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 HBC+ is a complete, standalone installation: every package, flow and the dashboard is in this repository. You only need the components below.
 
-| Component | Requirement | Why |
-| --- | --- | --- |
-| Home Assistant | Packages enabled (`homeassistant: packages: !include_dir_named packages`) | All HBC+ helpers come as packages |
-| Node-RED | Add-on or standalone, with `node-red-contrib-home-assistant-websocket` 0.80 or newer | Runs the control loop |
-| Node-RED palette | `node-red-contrib-time-range-switch` | Used by the Timed tab (fallback path) |
-| MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`) |
-| Batteries | Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP) | HBC+ reads SoC, power, limits and RS485 mode per battery |
-| Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
-| Dashboard | `custom:apexcharts-card` and `card-mod` (both Marketplace) | Price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border) |
-| Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration | Needed for Dynamic and Charge Deadline |
+- **Home Assistant**: Packages enabled (`homeassistant: packages: !include_dir_named packages`). All HBC+ helpers come as packages.
+- **Node-RED**: Add-on or standalone, with `node-red-contrib-home-assistant-websocket` 0.80 or newer. Runs the control loop.
+- **Node-RED palette**: `node-red-contrib-time-range-switch`. Used by the Timed tab (fallback path).
+- **MQTT**: MQTT integration in HA with a broker. Used for the phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`).
+- **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP). HBC+ reads SoC, power, limits and RS485 mode per battery.
+- **Grid meter**: Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import. The fuse room is computed per phase from P1.
+- **Dashboard**: `custom:apexcharts-card` and `card-mod` (both Marketplace). apexcharts-card draws the price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border).
+- **Prices**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration. Needed for Dynamic and Charge Deadline.
 
 Sign conventions must match: `sensor.marstek_mN_battery_power` is positive while **charging**, `sensor.p1_meter_power_phase_N` is positive on **import**. If your meter uses the opposite sign, fix it with a template sensor before installing, or the fuse room is computed wrongly.
 
