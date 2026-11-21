@@ -1942,7 +1942,7 @@ views:
               This strategy uses [the Cheapest Hours integration from
               TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
 
-              Please install via HACS or follow his instructions.
+              Please install via Marketplace or follow his instructions.
             text_only: true
             visibility:
               - condition: or

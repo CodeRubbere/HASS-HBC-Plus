@@ -54,7 +54,38 @@ HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard aga
 action? Put it in *Notify targets* and press *Send a test notification*. Full steps: *Updating from v1.2* in the user
 guide.
 
-## [1.2.0] – planned 10 December 2026
+## [1.2.1] – 21 November 2026
+
+Fixes for a fresh install, a separate *Pricing List* switch on the Prices view, and clearer installation steps.
+
+### Changed
+- Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
+  new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
+  (Logging *Live*) on. Copy `packages/hbc_control.yaml` again and paste the dashboard again.
+
+### Fixed
+- Fresh install: Self-consumption logged *Controller disabled — all PID gains are 0* on every tick. The script
+  *HBC+ phase guard: apply defaults* now also selects the PID preset *Safe* and sets its gains (Kp 0.3, Ki 0.3,
+  Kd 0.1).
+- Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
+  on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
+  Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+- Prices view: the price list and the *Using the dynamic strategy* link stayed hidden when the Marketplace reported
+  `update.cheapest_energy_hours_update` as unknown or unavailable, as it often does on a fresh install.
+
+### Documentation
+- Installation: new section *Before you start — install from Marketplace* (Cheapest Energy Hours, card-mod,
+  apexcharts-card); card-mod is now listed as required.
+- Requirements as a bullet list, in the user guide and in a new *Requirements* section of the README.
+- The dashboard URL must be `home-battery-control-plus`, or the buttons that open other views lead nowhere.
+
+### Updating from 1.2.0
+Copy `packages/hbc_control.yaml` and `packages/hbc_phase_guard.yaml` again, check the configuration and restart HA.
+Delete the old HBC+ tabs in Node-RED, import `node-red/hbc-plus-all-flows.json` and deploy. Paste
+`dashboards/hbc_plus.yaml` again. If Self-consumption logs *Controller disabled*, choose the PID preset *Safe* on the
+PID Control view.
+
+## [1.2.0] – 20 November 2026
 
 Ready for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.

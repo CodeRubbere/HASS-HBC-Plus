@@ -328,7 +328,7 @@ Kiest een strategie op basis van de energieprijzen van vandaag en morgen.
 
 **Instellen.**
 
-1. Installeer de macro [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) (HACS).
+1. Installeer de macro [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) (Marketplace).
 2. Installeer een prijsintegratie en kies die bij **Tariff data source** (`input_select.house_battery_strategy_dynamic_data_source`).
 3. Heb je meer dan één prijsintegratie, leg de sensor dan vast in `input_text.house_battery_strategy_dynamic_price_sensor` (zie R4).
 4. Controleer de grafiek *Price intervals* op de view Prices.
@@ -789,16 +789,15 @@ Op een drukke Node-RED gaat elke extra node-hop opnieuw door de berichtenwachtri
 
 HBC+ is een complete, zelfstandige installatie: alle packages, flows en het dashboard staan in deze repository. Je hebt alleen de onderdelen hieronder nodig.
 
-| Onderdeel | Vereiste | Waarom |
-| --- | --- | --- |
-| Home Assistant | Packages aan (`homeassistant: packages: !include_dir_named packages`) | Alle HBC+-helpers komen als packages |
-| Node-RED | Add-on of standalone, met `node-red-contrib-home-assistant-websocket` 0.80 of nieuwer | Draait de regellus |
-| Node-RED-palet | `node-red-contrib-time-range-switch` | Gebruikt door het Timed-tabblad (terugvalpad) |
-| MQTT | MQTT-integratie in HA met een broker | Status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`) |
-| Batterijen | Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP) | HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij |
-| Netmeter | Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import | De zekeringruimte wordt per fase uit P1 berekend |
-| Dashboard | `custom:apexcharts-card` (HACS); optioneel: `card-mod` (HACS) | Prijs- en historiegrafieken; card-mod geeft de badge *Health* zijn groene of rode rand |
-| Prijzen | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (HACS) en een prijsintegratie | Nodig voor Dynamic en Charge Deadline |
+- **Home Assistant**: Packages aan (`homeassistant: packages: !include_dir_named packages`). Alle HBC+-helpers komen als packages.
+- **Node-RED**: Add-on of standalone, met `node-red-contrib-home-assistant-websocket` 0.80 of nieuwer. Draait de regellus.
+- **Node-RED-palet**: `node-red-contrib-time-range-switch`. Gebruikt door het Timed-tabblad (terugvalpad).
+- **MQTT**: MQTT-integratie in HA met een broker. Voor de status van de Phase monitor (`hbc/phase/*`), de HBC+-heartbeat (`hbc/heartbeat`) en HBC+ health (`hbc/health`).
+- **Batterijen**: Marstek Venus E, maximaal 6, entiteiten `marstek_mN_*` (RS485 of Modbus TCP). HBC+ leest SoC, vermogen, limieten en RS485-modus per batterij.
+- **Netmeter**: Totaalvermogen `sensor.p1_meter_power` **en** vermogen per fase `sensor.p1_meter_power_phase_1` … `_3`, positief bij import. De zekeringruimte wordt per fase uit P1 berekend.
+- **Dashboard-URL**: `home-battery-control-plus`. De knoppen die een andere view openen linken naar dat adres; de naam van het dashboard zelf maakt niet uit (zie [Stap 4](#stap-4--dashboard)).
+- **Dashboard**: `custom:apexcharts-card` en `card-mod` (beide Marketplace). apexcharts-card tekent de prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*).
+- **Prijzen**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (Marketplace) en een prijsintegratie. Nodig voor Dynamic en Charge Deadline.
 
 De tekenconventies moeten kloppen: `sensor.marstek_mN_battery_power` is positief tijdens **laden**, `sensor.p1_meter_power_phase_N` is positief bij **import**. Gebruikt je meter het omgekeerde teken, corrigeer dat dan met een template-sensor vóór de installatie, anders wordt de zekeringruimte verkeerd berekend.
 
@@ -882,6 +881,16 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `user-guide.en.md` | Deze handleiding in het Engels |
 | `gebruikershandleiding.nl.md` | Deze handleiding in het Nederlands |
 
+### Voor je begint — installeren via Marketplace
+
+Installeer deze drie via Marketplace (*Marketplace* → zoeken → *Download*) vóór Stap 1. Zonder deze krijgen Dynamic en Charge Deadline geen prijsperiodes en toont het Prices-tabblad geen grafieken.
+
+1. **Cheapest Energy Hours** ([TheFes/cheapest-energy-hours](https://github.com/TheFes/cheapest-energy-hours)), type *Template*: de macro waarmee Dynamic en Charge Deadline de goedkope en dure periodes bepalen. Herstart daarna Home Assistant, zodat de macro geladen wordt.
+2. **card-mod** ([thomasloven/lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod)), type *Dashboard*: geeft het dashboard zijn opmaak, zoals de kaders rond de grafieken en de groene of rode rand van de badge *Health*.
+3. **apexcharts-card** ([RomRider/apexcharts-card](https://github.com/RomRider/apexcharts-card)), type *Dashboard*: tekent de prijs- en historiegrafieken.
+
+Herlaad na het installeren van card-mod en apexcharts-card de browser (in de Home Assistant-app: sluit en open hem opnieuw), zodat het dashboard ze vindt.
+
 ### Stap 1 — Back-up maken
 
 1. Node-RED: menu → *Export* → *All flows* → *Download*.
@@ -893,7 +902,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 1. Kopieer alle dertien bestanden uit `packages/` naar de map `packages/` van HA (vervang oudere kopieën, maar houd je eigen `hbc_config.yaml` als je die al hebt). Kom je van een eerdere versie? Verwijder dan de oude bestanden die HBC+ v1.0 hernoemde: `house_battery_control.yaml` (nu `hbc_control.yaml`), `house_battery_control_config.yaml` (nu `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (nu `hbc_deadline_charge.yaml`) en `nodered_heartbeat.yaml` (nu `hbc_heartbeat.yaml`). Met beide versies ziet HA dubbele ids en weigert hij ze. Kopieer ook de map `www/hbc-plus/` naar de map `www/` van HA (maak `www/` naast `packages/` aan als die er nog niet is): daarin staat het logo voor de dashboardkop, dat Home Assistant aanbiedt als `/local/hbc-plus/…`.
 2. Controleer of de namen van je P1-sensoren kloppen (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). Zo niet, haal dan het commentaar weg bij optie A of B in `hbc_config.yaml` en vervang de sensoren met `<< YOUR` (de uitleg staat in het bestand).
 3. *Ontwikkelhulpmiddelen* → *Configuratie controleren*, en herstart Home Assistant.
-4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One battery per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, en de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA herstelt de waarden na elke volgende herstart.
+4. Voer het script **HBC+ phase guard: apply defaults** één keer uit (*Instellingen* → *Automatiseringen & scènes* → *Scripts*). Nieuwe helpers zonder `initial:` starten op hun minimum of eerste optie; het script zet guard-modus *Monitor*, *One battery per phase*, *SoC balance*, 3680 W netzekering, 3680 W batterijgroep, 200 W marge, 5 % wisseldelta, 15 min verblijftijd, de fasekaart M1/M4 = L1, M2/M5 = L2, M3/M6 = L3, en de PID-preset *Safe* (Kp 0.3, Ki 0.3, Kd 0.1), zonder welke Self-consumption niets doet. HA herstelt de waarden na elke volgende herstart.
 
 ### Stap 3 — Node-RED-flows
 
@@ -930,7 +939,7 @@ De scripts vuren de HA-gebeurtenis `hbc_arbiter_request`; de groep *Requests fro
 
 ### Stap 4 — Dashboard
 
-1. *Instellingen* → *Dashboards* → *Dashboard toevoegen* → *Nieuw dashboard vanaf nul*, noem het *Home Battery Control Plus*. Laat de URL staan die Home Assistant invult: `home-battery-control-plus`. De knoppen die een andere view openen linken naar dat adres, en een URL kun je later niet meer wijzigen.
+1. *Instellingen* → *Dashboards* → *Dashboard toevoegen* → *Nieuw dashboard vanaf nul*, noem het *Home Battery Control Plus*. **De URL moet `home-battery-control-plus` zijn.** Home Assistant vult hem in op basis van de naam; kies je een andere naam, verander het URL-veld dan in `home-battery-control-plus` voordat je opslaat. De knoppen die een andere view openen linken naar dat adres, dus met een andere URL leiden ze nergens heen. De naam kun je later wijzigen, de URL niet.
 2. Open het → ⋮ → *Dashboard bewerken* → ⋮ → *Ruwe configuratie-editor*, plak de inhoud van `dashboards/hbc_plus.yaml` en sla op.
 3. Open de view **Phase guard** en controleer of elke kaart waarden toont.
 

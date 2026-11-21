@@ -328,7 +328,7 @@ Picks a strategy from the energy prices of today and tomorrow.
 
 **Setup.**
 
-1. Install the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS).
+1. Install the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace).
 2. Install a price integration and choose it in **Tariff data source** (`input_select.house_battery_strategy_dynamic_data_source`).
 3. If you have more than one price integration, pin the sensor in `input_text.house_battery_strategy_dynamic_price_sensor` (see R4).
 4. Check the *Price intervals* chart on the Prices view.
@@ -789,16 +789,15 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 HBC+ is a complete, standalone installation: every package, flow and the dashboard is in this repository. You only need the components below.
 
-| Component | Requirement | Why |
-| --- | --- | --- |
-| Home Assistant | Packages enabled (`homeassistant: packages: !include_dir_named packages`) | All HBC+ helpers come as packages |
-| Node-RED | Add-on or standalone, with `node-red-contrib-home-assistant-websocket` 0.80 or newer | Runs the control loop |
-| Node-RED palette | `node-red-contrib-time-range-switch` | Used by the Timed tab (fallback path) |
-| MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`) |
-| Batteries | Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP) | HBC+ reads SoC, power, limits and RS485 mode per battery |
-| Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
-| Dashboard | `custom:apexcharts-card` (HACS); optional: `card-mod` (HACS) | Price and history charts; card-mod gives the *Health* badge its green or red border |
-| Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS) and a price integration | Needed for Dynamic and Charge Deadline |
+- **Home Assistant**: Packages enabled (`homeassistant: packages: !include_dir_named packages`). All HBC+ helpers come as packages.
+- **Node-RED**: Add-on or standalone, with `node-red-contrib-home-assistant-websocket` 0.80 or newer. Runs the control loop.
+- **Node-RED palette**: `node-red-contrib-time-range-switch`. Used by the Timed tab (fallback path).
+- **MQTT**: MQTT integration in HA with a broker. Used for the phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`).
+- **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP). HBC+ reads SoC, power, limits and RS485 mode per battery.
+- **Grid meter**: Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import. The fuse room is computed per phase from P1.
+- **Dashboard URL**: `home-battery-control-plus`. The buttons that open other views link to that address; the dashboard name itself does not matter (see [Step 4](#step-4--dashboard)).
+- **Dashboard**: `custom:apexcharts-card` and `card-mod` (both Marketplace). apexcharts-card draws the price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border).
+- **Prices**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration. Needed for Dynamic and Charge Deadline.
 
 Sign conventions must match: `sensor.marstek_mN_battery_power` is positive while **charging**, `sensor.p1_meter_power_phase_N` is positive on **import**. If your meter uses the opposite sign, fix it with a template sensor before installing, or the fuse room is computed wrongly.
 
@@ -882,6 +881,16 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `user-guide.en.md` | This guide in English |
 | `gebruikershandleiding.nl.md` | This guide in Dutch |
 
+### Before you start — install from Marketplace
+
+Install these three from Marketplace (*Marketplace* → search → *Download*) before Step 1. Without them Dynamic and Charge Deadline get no price periods and the Prices view shows no charts.
+
+1. **Cheapest Energy Hours** ([TheFes/cheapest-energy-hours](https://github.com/TheFes/cheapest-energy-hours)), type *Template*: the macro Dynamic and Charge Deadline use to find the cheap and expensive periods. Restart Home Assistant afterwards, so it loads the macro.
+2. **card-mod** ([thomasloven/lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod)), type *Dashboard*: styles the dashboard, such as the frames around the charts and the green or red border of the *Health* badge.
+3. **apexcharts-card** ([RomRider/apexcharts-card](https://github.com/RomRider/apexcharts-card)), type *Dashboard*: draws the price and history charts.
+
+After installing card-mod and apexcharts-card, reload the browser (in the Home Assistant app: close and reopen it), so the dashboard finds them.
+
 ### Step 1 — Back up
 
 1. Node-RED: menu → *Export* → *All flows* → *Download*.
@@ -893,7 +902,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 1. Copy all thirteen files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them. Copy the folder `www/hbc-plus/` into your HA `www/` folder too (create `www/` next to `packages/` if it is not there): it holds the logo for the dashboard header, which Home Assistant serves as `/local/hbc-plus/…`.
 2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, uncomment option A or B in `hbc_config.yaml` and replace the sensors marked `<< YOUR` (the comments in the file explain both).
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
-4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3. HA restores the values after every later restart.
+4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3, and the PID preset *Safe* (Kp 0.3, Ki 0.3, Kd 0.1), without which Self-consumption does nothing. HA restores the values after every later restart.
 
 ### Step 3 — Node-RED flows
 
@@ -930,7 +939,7 @@ The scripts fire the HA event `hbc_arbiter_request`; the group *Requests from Ho
 
 ### Step 4 — Dashboard
 
-1. *Settings* → *Dashboards* → *Add dashboard* → *New dashboard from scratch*, name it *Home Battery Control Plus*. Keep the URL Home Assistant fills in: `home-battery-control-plus`. The buttons that open other views link to that address, and a URL cannot be changed later.
+1. *Settings* → *Dashboards* → *Add dashboard* → *New dashboard from scratch*, name it *Home Battery Control Plus*. **The URL must be `home-battery-control-plus`.** Home Assistant fills it in from the name; with another name, change the URL field to `home-battery-control-plus` before you save. The buttons that open other views link to that address, so with another URL they lead nowhere. You can rename the dashboard later, but not change its URL.
 2. Open it → ⋮ → *Edit dashboard* → ⋮ → *Raw configuration editor*, paste the contents of `dashboards/hbc_plus.yaml`, save.
 3. Open the **Phase guard** view and check that every card shows values.
 

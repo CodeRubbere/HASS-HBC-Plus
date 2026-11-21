@@ -630,10 +630,11 @@ views:
         show_name: true
         show_state: false
         show_icon: true
-        entity: input_boolean.house_battery_control_is_debug_mode
+        entity: input_boolean.house_battery_control_show_price_list
+        icon: mdi:format-list-bulleted
         tap_action:
           action: toggle
-        name: Insights mode
+        name: Pricing List
       - type: entity
         show_name: true
         show_state: true
@@ -689,15 +690,6 @@ views:
             tap_action:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#dynamic
-            visibility:
-              - condition: not
-                conditions:
-                  - condition: state
-                    entity: update.cheapest_energy_hours_update
-                    state: unavailable
-                  - condition: state
-                    entity: update.cheapest_energy_hours_update
-                    state: unknown
           - type: markdown
             content: >-
               <ha-alert alert-type="info">Cheapest Hours integration not
@@ -895,8 +887,8 @@ views:
             grid_options:
               rows: 1
           - type: heading
-            icon: mdi:spider
-            heading: Enable insights mode to view this data
+            icon: mdi:format-list-bulleted
+            heading: Today and tomorrow per interval. Turn off Pricing List to hide
             heading_style: subtitle
           - type: markdown
             content: >-
@@ -957,16 +949,8 @@ views:
 
               </small></small>
         visibility:
-          - condition: not
-            conditions:
-              - condition: state
-                entity: update.cheapest_energy_hours_update
-                state: unavailable
-              - condition: state
-                entity: update.cheapest_energy_hours_update
-                state: unknown
           - condition: state
-            entity: input_boolean.house_battery_control_is_debug_mode
+            entity: input_boolean.house_battery_control_show_price_list
             state: 'on'
       - type: grid
         cards:
@@ -2207,7 +2191,7 @@ views:
               This strategy uses [the Cheapest Hours integration from
               TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
 
-              Please install via HACS or follow his instructions.
+              Please install via Marketplace or follow his instructions.
             text_only: true
             visibility:
               - condition: or
