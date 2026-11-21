@@ -328,7 +328,7 @@ Picks a strategy from the energy prices of today and tomorrow.
 
 **Setup.**
 
-1. Install the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS).
+1. Install the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace).
 2. Install a price integration and choose it in **Tariff data source** (`input_select.house_battery_strategy_dynamic_data_source`).
 3. If you have more than one price integration, pin the sensor in `input_text.house_battery_strategy_dynamic_price_sensor` (see R4).
 4. Check the *Price intervals* chart on the Prices view.
@@ -743,8 +743,8 @@ HBC+ is a complete, standalone installation: every package, flow and the dashboa
 | MQTT | MQTT integration in HA with a broker | Phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`) |
 | Batteries | Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP) | HBC+ reads SoC, power, limits and RS485 mode per battery |
 | Grid meter | Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import | The fuse room is computed per phase from P1 |
-| Dashboard | `custom:apexcharts-card` and `card-mod` (both HACS) | Price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border) |
-| Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (HACS) and a price integration | Needed for Dynamic and Charge Deadline |
+| Dashboard | `custom:apexcharts-card` and `card-mod` (both Marketplace) | Price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border) |
+| Prices | [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration | Needed for Dynamic and Charge Deadline |
 
 Sign conventions must match: `sensor.marstek_mN_battery_power` is positive while **charging**, `sensor.p1_meter_power_phase_N` is positive on **import**. If your meter uses the opposite sign, fix it with a template sensor before installing, or the fuse room is computed wrongly.
 
@@ -825,9 +825,9 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `user-guide.en.md` | This guide in English |
 | `gebruikershandleiding.nl.md` | This guide in Dutch |
 
-### Before you start — install from HACS
+### Before you start — install from Marketplace
 
-Install these three from HACS (*HACS* → search → *Download*) before Step 1. Without them Dynamic and Charge Deadline get no price periods and the Prices view shows no charts.
+Install these three from Marketplace (*Marketplace* → search → *Download*) before Step 1. Without them Dynamic and Charge Deadline get no price periods and the Prices view shows no charts.
 
 1. **Cheapest Energy Hours** ([TheFes/cheapest-energy-hours](https://github.com/TheFes/cheapest-energy-hours)), type *Template*: the macro Dynamic and Charge Deadline use to find the cheap and expensive periods. Restart Home Assistant afterwards, so it loads the macro.
 2. **card-mod** ([thomasloven/lovelace-card-mod](https://github.com/thomasloven/lovelace-card-mod)), type *Dashboard*: styles the dashboard, such as the frames around the charts and the green or red border of the *Health* badge.

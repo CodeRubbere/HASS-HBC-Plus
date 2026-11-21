@@ -697,7 +697,7 @@ input_select:
       - Full stop # Stop (dis)charging and disengage grid relay
       - Self-consumption # Use your own solar production. Don't buy or sell. Target grid consumption = 0, e.g. "Nul op de meter (NoM)" in Dutch.
       - Timed # Configure which strategy should be active during given periods of the day.
-      - Dynamic # Requires a dynamic tariff contract and the Cheapest Hours HACS add-on
+      - Dynamic # Requires a dynamic tariff contract and the Cheapest Hours Marketplace add-on
       - Charge # Uses self-consumption strategy with smart settings and target grid consumption > 0
       - Charge PV # Charge when surplus PV is available, batteries will not discharge
       - Charge Deadline # Requires SoC and window to be set!
