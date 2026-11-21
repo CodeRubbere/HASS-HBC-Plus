@@ -690,6 +690,7 @@ HBC+ is a complete, standalone installation: every package, flow and the dashboa
 - **MQTT**: MQTT integration in HA with a broker. Used for the phase monitor status (`hbc/phase/*`), the HBC+ heartbeat (`hbc/heartbeat`) and HBC+ health (`hbc/health`).
 - **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP). HBC+ reads SoC, power, limits and RS485 mode per battery.
 - **Grid meter**: Total power `sensor.p1_meter_power` **and** per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import. The fuse room is computed per phase from P1.
+- **Dashboard URL**: `home-battery-control-plus`. The buttons that open other views link to that address; the dashboard name itself does not matter (see [Step 4](#step-4--dashboard)).
 - **Dashboard**: `custom:apexcharts-card` and `card-mod` (both Marketplace). apexcharts-card draws the price and history charts; card-mod styles the dashboard (chart frames, the *Health* badge border).
 - **Prices**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration. Needed for Dynamic and Charge Deadline.
 
@@ -804,7 +805,7 @@ After installing card-mod and apexcharts-card, reload the browser (in the Home A
 
 ### Step 4 — Dashboard
 
-1. *Settings* → *Dashboards* → *Add dashboard* → *New dashboard from scratch*, name it *Home Battery Control Plus*. Keep the URL Home Assistant fills in: `home-battery-control-plus`. The buttons that open other views link to that address, and a URL cannot be changed later.
+1. *Settings* → *Dashboards* → *Add dashboard* → *New dashboard from scratch*, name it *Home Battery Control Plus*. **The URL must be `home-battery-control-plus`.** Home Assistant fills it in from the name; with another name, change the URL field to `home-battery-control-plus` before you save. The buttons that open other views link to that address, so with another URL they lead nowhere. You can rename the dashboard later, but not change its URL.
 2. Open it → ⋮ → *Edit dashboard* → ⋮ → *Raw configuration editor*, paste the contents of `dashboards/hbc_plus.yaml`, save.
 3. Open the **Phase guard** view and check that every card shows values.
 

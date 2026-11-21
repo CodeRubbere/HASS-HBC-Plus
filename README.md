@@ -70,6 +70,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 - **MQTT**: the MQTT integration in HA with a broker.
 - **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP).
 - **Grid meter**: `sensor.p1_meter_power` and per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import.
+- **Dashboard URL**: `home-battery-control-plus`, so the buttons that open other views work. The name does not matter; the URL cannot be changed later.
 - **Dashboard**: `apexcharts-card` and `card-mod` (both Marketplace).
 - **Prices**: the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration, for Dynamic and Charge Deadline.
 
@@ -83,7 +84,7 @@ Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
 4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
 5. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
-6. Add a dashboard named *Home Battery Control Plus* (keep the URL `home-battery-control-plus`) with the contents of `dashboards/hbc_plus.yaml`, set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
+6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml`, set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
 7. Run in **Monitor** for a few days, then switch to **Enforce**.
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
