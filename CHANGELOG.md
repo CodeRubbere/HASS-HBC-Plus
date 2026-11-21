@@ -3,7 +3,14 @@
 All notable changes to HBC+ (Home Battery Control Plus). The user guide has the details: *What's new* and
 *Updating from …* per version ([English](docs/user-guide.en.md), [Nederlands](docs/gebruikershandleiding.nl.md)).
 
-## [1.2.0] – planned 10 December 2026
+## [Unreleased]
+
+### Fixed
+- Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
+  on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
+  Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+
+## [1.2.0] – 20 November 2026
 
 Ready for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.
