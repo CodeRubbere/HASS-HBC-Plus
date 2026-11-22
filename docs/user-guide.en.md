@@ -788,7 +788,7 @@ After installing card-mod and apexcharts-card, reload the browser (in the Home A
 
 ### Step 2 — Home Assistant packages
 
-1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them. Copy the folder `www/hbc-plus/` into your HA `www/` folder too (create `www/` next to `packages/` if it is not there): it holds the logo for the dashboard header, which Home Assistant serves as `/local/hbc-plus/…`.
+1. Copy all eight files from `packages/` into your HA `packages/` folder (replace older copies, but keep your own `hbc_config.yaml` if you already have one). Coming from an earlier version? Delete the old files that HBC+ v1.0 renamed: `house_battery_control.yaml` (now `hbc_control.yaml`), `house_battery_control_config.yaml` (now `hbc_config.yaml`), `house_battery_deadline_charge.yaml` (now `hbc_deadline_charge.yaml`) and `nodered_heartbeat.yaml` (now `hbc_heartbeat.yaml`). With both versions present HA sees duplicate ids and refuses them. Coming from HBC by CodeBob? Follow [Migrating from HBC](#migrating-from-hbc) instead. Copy the folder `www/hbc-plus/` into your HA `www/` folder too (create `www/` next to `packages/` if it is not there): it holds the logo for the dashboard header, which Home Assistant serves as `/local/hbc-plus/…`.
 2. Check that your P1 sensor names match (`sensor.p1_meter_power`, `sensor.p1_meter_power_phase_1` … `_3`). If not, uncomment option A or B in `hbc_config.yaml` and replace the sensors marked `<< YOUR` (the comments in the file explain both).
 3. *Developer tools* → *Check configuration*, then restart Home Assistant.
 4. Run the script **HBC+ phase guard: apply defaults** once (*Settings* → *Automations & scenes* → *Scripts*). New helpers without `initial:` start at their minimum or first option; the script sets guard mode *Monitor*, *One battery per phase*, *SoC balance*, 3680 W grid fuse, 3680 W battery circuit, 200 W margin, 5 % swap delta, 15 min dwell, and the phase map M1/M4 = L1, M2/M5 = L2, M3/M6 = L3, and the PID preset *Safe* (Kp 0.3, Ki 0.3, Kd 0.1), without which Self-consumption does nothing. HA restores the values after every later restart.
@@ -871,6 +871,56 @@ A new HBC+ version comes as a new release on the [Releases page](https://github.
 4. **Flows:** Node-RED cannot replace a flow tab on import (it skips it or imports a copy), so delete the old tabs first. In the Node-RED editor, double-click each tab whose name starts with *HBC+* and choose *Delete*; leave your own flows alone and do not deploy yet. Then *Import* `node-red/hbc-plus-all-flows.json`; if Node-RED reports that the *HA System* server node already exists, leave it unselected. Then *Deploy*. The tabs come back with the same node ids; if a flow of your own links to an HBC+ tab, open its link node and check that it still points to the right target. Changes you made inside HBC+ tabs are gone, so set your notify action in *Notify phone* again.
 5. **Dashboard:** if the release changed `dashboards/hbc_plus.yaml`, paste it again in the raw configuration editor. Copy `www/hbc-plus/` again as well when the release changed it.
 6. **New settings:** a helper that is new in a release starts at its minimum. Set it right after the update; the release notes name it (for example *Battery circuit per phase*). Running *HBC+ phase guard: apply defaults* also sets it, but resets the phase map too.
+
+### Migrating from HBC
+
+Coming from House Battery Control (HBC) by CodeBob? HBC+ started from HBC v4.15.1 and keeps its helper names, so you do not have to start over. These steps are for HBC v4.x; with an older HBC, update to v4.15.1 first or install HBC+ as new.
+
+**What carries over and what changes**
+
+| | HBC | HBC+ |
+| --- | --- | --- |
+| Settings (strategy, Timed, Dynamic, Charge, Sell, PID, battery count) | `input_*.house_battery_*` | Same entities: your values stay |
+| Packages | `house_battery_control.yaml`, `house_battery_control_config.yaml` | Seven `hbc_*.yaml` packages from this repository, plus your own `house_battery_control_config.yaml`, renamed to `hbc_config.yaml` |
+| Grid meter | `sensor.p1_meter_power` | The same, **plus** per phase `sensor.p1_meter_power_phase_1` … `_3` |
+| Batteries | `marstek_mN_*` | The same, up to 6, plus a phase per battery (phase map) |
+| Node-RED | Tabs *Home Battery …* and *Strategy … v4.x* | Tabs *HBC+ …*; the HBC tabs are deleted |
+| Palette | `time-range-switch`, `node-red-node-smooth` | `time-range-switch` only |
+| Requirements | apexcharts-card, Cheapest Energy Hours | Also **MQTT** and **card-mod** |
+| Dashboard | URL `home-battery` | New dashboard, URL `home-battery-control-plus` |
+| Strategy changes from your own flows | Write `input_select.house_battery_strategy` | Through the *Strategy arbiter* (link call *Strategy request*) |
+
+**Step by step**
+
+1. **Back up.** Node-RED: *Export* → *All flows* → *Download*. Home Assistant: a full backup. Keep both until HBC+ has run well for a week: they are your way back.
+2. **Write down your PID values.** On the HBC dashboard: Kp, Ki, Kd and output dampening. Step 5 sets the preset *Safe*, which overwrites them.
+3. **Hand the batteries to their firmware.** Set *Master Battery Mode* to *Marstek control*. The batteries now run on their own firmware while you switch, and nothing writes to them twice.
+4. **Check the requirements** (see [Requirements](#requirements)):
+   - MQTT: the MQTT integration with a broker (for example the Mosquitto add-on).
+   - Grid meter per phase: HBC only needed `sensor.p1_meter_power`; HBC+ also reads `sensor.p1_meter_power_phase_1` … `_3`, in W, positive on import. A HomeWizard P1 provides these names already.
+   - From Marketplace: **card-mod** (new). apexcharts-card and Cheapest Energy Hours you already have from HBC. Reload the browser afterwards.
+5. **Packages.**
+   1. **Rename** your own `house_battery_control_config.yaml` to `hbc_config.yaml`, in your HA `packages/` folder. It keeps your P1 alias with its `unique_id: p1_meter_power`, so the entity id stays `sensor.p1_meter_power`. The `hbc_config.yaml` in this repository is for new HBC+ installations: do not copy it over your renamed file.
+   2. **Add the phase sensors** to your renamed `hbc_config.yaml`. Take the three *phase* aliases (`P1 meter power phase 1` … `3`) from option A (or option B) of the repository's `hbc_config.yaml`, put them under the `- sensor:` list of your existing `template:` block, and fill in your own sensors. Do not take the first alias of option A (`P1 meter power`): you already have it, and a second one would become `sensor.p1_meter_power_2`.
+   3. **Delete** `house_battery_control.yaml` from your HA `packages/` folder. With both HBC and HBC+ packages present, Home Assistant sees duplicate ids and refuses them.
+   4. **Copy** the other seven files from `packages/` (all except `hbc_config.yaml`) and the folder `www/hbc-plus/` as in [Step 2](#step-2--home-assistant-packages). *Check configuration* and restart Home Assistant.
+   5. Run the script **HBC+ phase guard: apply defaults** once. Then put back the PID values you wrote down in step 2 (*PID Control* view, preset *Custom*).
+6. **Node-RED.**
+   1. Delete **every HBC tab**: *Home Battery Master Switch*, *Home Battery PID presets*, *Home Battery Start v4.x* (and *Home Battery Start - deprecated*, if present), and *Strategy Charge / Dynamic / Full stop / Partials / Self-consumption / Sell / Timed v4.x*. Double-click each tab → *Delete*; do not deploy yet. Disabling is not enough: the HBC and HBC+ Start tabs share node ids, so Node-RED would import copies, and two control loops would write to the same batteries.
+   2. *Import* `node-red/hbc-plus-all-flows.json` as in [Step 3](#step-3--node-red-flows). Node-RED reports that the HA server node already exists (HBC uses the same id): leave it unselected, so your own server node and its access token stay. Check that **Expose to global context** is on.
+   3. *Deploy*. Then, under *Manage palette*, you can remove `node-red-node-smooth`.
+   4. Set your own notify action in the six places listed in [Step 6](#step-6--first-start).
+7. **Flows of your own.** Did a flow of your own link to an HBC tab, or set `input_select.house_battery_strategy` itself (for example HBC's *super-strategy* or *custom strategy* examples)? Link it to the HBC+ tab again, and let it request strategies through the *Strategy arbiter* (see [Step 3](#step-3--node-red-flows)). The arbiter is the only writer of the strategy selection; a flow that writes it directly is overruled.
+8. **Dashboard.** Add a new dashboard named *Home Battery Control Plus* with **URL `home-battery-control-plus`** and paste `dashboards/hbc_plus.yaml`, as in [Step 4](#step-4--dashboard). HBC's dashboard used another URL, so it cannot be reused. Delete the old HBC dashboard once the new one works.
+9. **Phase map and fuses.** Set each battery's phase on the **Batteries** view, and the grid fuse and battery circuit on the **Settings** view, as in [Step 5](#step-5--set-your-phase-map-and-fuse).
+10. **Back to Full control.** Go through the *Setup* checklist on the Settings view, check on the Overview that every battery shows SoC and power, and set *Control Mode* to **Full control**. Your strategy is the one you had in HBC.
+11. **Commission.** Leave the phase guard on *Monitor* for a few days, then switch to *Enforce* (see [Commissioning](#commissioning-from-monitor-to-enforce)).
+
+**Good to know**
+
+- **Tariff source.** Your Dynamic data source stays as it was. *Grid Clock* (buy and sell prices for your own supplier, no extra integration) is optional; see [Grid Clock feed](#grid-clock-feed).
+- **New strategies.** *Charge Deadline* is added to the strategy lists; nothing uses it until you choose it.
+- **Way back to HBC.** Set *Marstek control*, delete the HBC+ tabs, the other HBC+ packages (every `hbc_*.yaml` except `hbc_config.yaml`) and the HBC+ dashboard, rename `hbc_config.yaml` back to `house_battery_control_config.yaml` (the phase sensors may stay), put back `house_battery_control.yaml` and import your exported HBC flows. Your settings survive both ways.
 
 ## Configuration reference
 
