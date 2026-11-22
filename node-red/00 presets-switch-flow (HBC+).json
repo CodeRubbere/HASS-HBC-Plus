@@ -2,7 +2,7 @@
     {
         "id": "a1a9363231783de9",
         "type": "tab",
-        "label": "HBC+ Home Battery PID presets v1.2",
+        "label": "HBC+ Home Battery PID presets v1.3",
         "disabled": false,
         "info": "",
         "env": []
@@ -301,8 +301,8 @@
         "id": "f5d2af16c76727a8",
         "type": "comment",
         "z": "a1a9363231783de9",
-        "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
-        "info": "# HBC+ Home Battery PID presets v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nApplies a **PID preset** to the Self-consumption controller when `input_select.house_battery_control_pid_presets` changes. The preset is written to five helpers that the Self-consumption flow reads:\n\n| Preset | Kp | Ki | Kd | Input smoothing | Output smoothing |\n|---|---|---|---|---|---|\n| Very safe | 0.1 | 0.1 | 0 | 0 % | 10 % |\n| Safe | 0.3 | 0.3 | 0.1 | 20 % | 0 % |\n| Regular | 0.3 | 0.4 | 0.8 | 50 % | 10 % |\n\nHelpers: `input_number.house_battery_control_kp`, `_ki`, `_kd`, `_error_signal_dampening` (input smoothing) and `_pid_output_dampening` (output smoothing). Any other option leaves the values unchanged, so manual tuning survives.\n\n## HBC+ v1.0\n\nNo change. On Enforce the PID output is spread over fewer batteries per phase (one active battery, within the fuse room), but the control loop and its tuning are the same.\n",
+        "name": "📖 How this flow works - HBC+ v1.3 (open the Info sidebar)",
+        "info": "# HBC+ Home Battery PID presets v1.3 - how this flow works\n\nPart of **HBC+ v1.3** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nApplies a **PID preset** to the Self-consumption controller when `input_select.house_battery_control_pid_presets` changes. The preset is written to five helpers that the Self-consumption flow reads:\n\n| Preset | Kp | Ki | Kd | Input smoothing | Output smoothing |\n|---|---|---|---|---|---|\n| Very safe | 0.1 | 0.1 | 0 | 0 % | 10 % |\n| Safe | 0.3 | 0.3 | 0.1 | 20 % | 0 % |\n| Regular | 0.3 | 0.4 | 0.8 | 50 % | 10 % |\n\nHelpers: `input_number.house_battery_control_kp`, `_ki`, `_kd`, `_error_signal_dampening` (input smoothing) and `_pid_output_dampening` (output smoothing). Any other option leaves the values unchanged, so manual tuning survives.\n\n## HBC+ v1.0\n\nNo change. On Enforce the PID output is spread over fewer batteries per phase (one active battery, within the fuse room), but the control loop and its tuning are the same.\n",
         "x": 250,
         "y": 40,
         "wires": []

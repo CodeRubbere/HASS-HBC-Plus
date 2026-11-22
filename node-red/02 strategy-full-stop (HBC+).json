@@ -2,7 +2,7 @@
     {
         "id": "c6efb67773d1041c",
         "type": "tab",
-        "label": "HBC+ Strategy Full stop v1.2",
+        "label": "HBC+ Strategy Full stop v1.3",
         "disabled": false,
         "info": "",
         "env": []
@@ -234,8 +234,8 @@
         "id": "hbcpdoc76701e602",
         "type": "comment",
         "z": "c6efb67773d1041c",
-        "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Full stop v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nStops every battery: mode *stop*, 0 W. A Marstek opens its relay on stop, so there is no standby power draw. Used directly, as the fallback of other strategies (unknown goal, the Helios placeholder), and by the Battery Oscillation Guard through the Strategy arbiter.\n\n## HBC+ v1.0\n\nNo change. Stopping every battery is always within the phase fuse limits.\n",
+        "name": "📖 How this flow works - HBC+ v1.3 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Full stop v1.3 - how this flow works\n\nPart of **HBC+ v1.3** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nStops every battery: mode *stop*, 0 W. A Marstek opens its relay on stop, so there is no standby power draw. Used directly, as the fallback of other strategies (unknown goal, the Helios placeholder), and by the Battery Oscillation Guard through the Strategy arbiter.\n\n## HBC+ v1.0\n\nNo change. Stopping every battery is always within the phase fuse limits.\n",
         "x": 230,
         "y": 34,
         "wires": []

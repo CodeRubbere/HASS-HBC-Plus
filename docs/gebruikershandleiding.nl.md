@@ -797,21 +797,21 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | Bestand | Tabblad | Wat het doet |
 | --- | --- | --- |
 | `hbc-plus-all-flows.json` | Alle 15 hieronder | Eén importbestand met alle tabbladen en de HA-servernode |
-| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2 | Bepaalt wie de Marsteks aanstuurt (RS485, werkmodus); geeft per gedeelde fase maar één batterij terug aan de firmware |
-| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2 | Zet een PID-preset (Very safe, Safe, Regular) op de PID-helpers |
-| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2 | De regellus: leest de batterijen, telt de totalen, draait phase planner, strategie en phase guard, schrijft de setpoints, en publiceert de heartbeat |
-| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.2 | Laadt van het net tot een doel (vol, SoC, energie of zonneverwachting) |
-| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.2 | Laadt tot een doel vóór een deadline, in de goedkoopste kwartieren |
-| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.2 | Kiest een strategie per prijsperiode (goedkoop, duur, normaal); bevat de gedeelde prijsophaling |
-| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.2 | Zet alle batterijen op stop |
-| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.2 | Draait *Full stop* als *Helios* gekozen is; verwijder het vóór je een echte HELIOS-flow importeert |
-| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.2 | Charge PV, Zero import en Standby / peak shave |
-| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.2 | PID-regelaar die het netvermogen op het doel houdt; verdeelt het vermogen over de batterijen |
-| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2 | Ontlaadt naar het net tot een doel |
-| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | Draait een strategie per tijdvak (A t/m E) |
-| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | Herkent laad/ontlaad-golven en houdt via de arbiter Full stop vast |
-| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | Alleen-lezen: publiceert de fasestatus via MQTT voor het dashboard |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | Enige schrijver van de strategiekeuze; kiest tussen je eigen keuze, eigen flows en de Oscillation Guard |
+| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.3 | Bepaalt wie de Marsteks aanstuurt (RS485, werkmodus); geeft per gedeelde fase maar één batterij terug aan de firmware |
+| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.3 | Zet een PID-preset (Very safe, Safe, Regular) op de PID-helpers |
+| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.3 | De regellus: leest de batterijen, telt de totalen, draait phase planner, strategie en phase guard, schrijft de setpoints, en publiceert de heartbeat |
+| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.3 | Laadt van het net tot een doel (vol, SoC, energie of zonneverwachting) |
+| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.3 | Laadt tot een doel vóór een deadline, in de goedkoopste kwartieren |
+| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.3 | Kiest een strategie per prijsperiode (goedkoop, duur, normaal); bevat de gedeelde prijsophaling |
+| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.3 | Zet alle batterijen op stop |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.3 | Draait *Full stop* als *Helios* gekozen is; verwijder het vóór je een echte HELIOS-flow importeert |
+| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.3 | Charge PV, Zero import en Standby / peak shave |
+| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.3 | PID-regelaar die het netvermogen op het doel houdt; verdeelt het vermogen over de batterijen |
+| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.3 | Ontlaadt naar het net tot een doel |
+| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.3 | Draait een strategie per tijdvak (A t/m E) |
+| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.3 | Herkent laad/ontlaad-golven en houdt via de arbiter Full stop vast |
+| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.3 | Alleen-lezen: publiceert de fasestatus via MQTT voor het dashboard |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.3 | Enige schrijver van de strategiekeuze; kiest tussen je eigen keuze, eigen flows en de Oscillation Guard |
 | `README.md` | — | Overzicht van de Node-RED-bestanden en installatie |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Voorbeeld van de gedeelde prijsophaling; zit niet in het all-flows-bestand |
 
@@ -907,7 +907,7 @@ Zet op de view **Batteries**, onder elke *Marstek M1…M6*, *Connected to phase*
 
 | Waar | Stuurt een melding als |
 | --- | --- |
-| Node-RED, *HBC+ Battery Oscillation Guard v1.2*, node *Notify phone* | De batterijen slingeren en op *Full stop* worden gehouden |
+| Node-RED, *HBC+ Battery Oscillation Guard v1.3*, node *Notify phone* | De batterijen slingeren en op *Full stop* worden gehouden |
 | `packages/hbc_heartbeat.yaml`, automatisering *hand batteries back to firmware when the HBC heartbeat is stale* | De regellus stopte of niet meer werkte, en de batterijen teruggingen naar hun firmware |
 | `packages/hbc_heartbeat.yaml`, automatisering *alert when the control loop keeps logging errors* | HBC+ 5 minuten lang 3 of meer fouten in 10 minuten logde |
 | `packages/hbc_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
@@ -1166,7 +1166,7 @@ Twee meters per fase volgen vanzelf de instellingen van de fasebewaking, in % va
 
 | Symptoom | Waarschijnlijke oorzaak | Oplossing |
 | --- | --- | --- |
-| View Phase guard toont *unknown* bij de actieve batterij | MQTT niet ingesteld, of Phase monitor-tabblad uitgeschakeld | Controleer de MQTT-integratie; schakel *HBC+ Phase monitor v1.2* in |
+| View Phase guard toont *unknown* bij de actieve batterij | MQTT niet ingesteld, of Phase monitor-tabblad uitgeschakeld | Controleer de MQTT-integratie; schakel *HBC+ Phase monitor v1.3* in |
 | *Read HA states (fast)* geel: `fallback to old reads` | *Expose to global context* staat uit op de servernode | Zet het aan in *HA System*, Deploy |
 | Plannerstatus toont niets of `guard off` | Guard-modus staat op Off | Zet Monitor of Enforce |
 | Laadruimte altijd 0 of veel te laag | Verkeerd teken op de P1-fasesensoren of het batterijvermogen | Maak import en laden positief (Vereisten) |
