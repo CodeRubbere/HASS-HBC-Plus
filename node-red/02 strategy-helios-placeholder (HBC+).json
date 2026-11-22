@@ -2,7 +2,7 @@
     {
         "id": "hbcp0helios0tab01",
         "type": "tab",
-        "label": "HBC+ Strategy Helios (placeholder) v1.2",
+        "label": "HBC+ Strategy Helios (placeholder) v1.4",
         "disabled": false,
         "info": "Placeholder for a future HELIOS integration: runs Full stop. See the How this flow works comment.",
         "env": []
@@ -204,8 +204,8 @@
         "id": "hbcp0helios0cmt1",
         "type": "comment",
         "z": "hbcp0helios0tab01",
-        "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
-        "info": "# Strategy Helios (placeholder) - HBC+ v1.1\n\n**What it is.** HBC+ keeps *Helios* in `input_select.house_battery_strategy` so a HELIOS integration can be added later. The HELIOS flow itself is not part of HBC+; this tab only makes the option safe to select.\n\n**How it runs.**\n1. **Helios** (link in) is called by *Home Battery Start* when the strategy is *Helios*.\n2. **Trace** adds this flow to `msg.strategy.trace`.\n3. **Fall back to Full stop** sets `msg.target = \"Full stop\"`, shows *Helios (not installed)* on the strategy display, and logs a warning at most every 10 minutes.\n4. **Run Full stop** (dynamic link call) runs *Full stop*: every battery on stop, 0 W.\n5. **Return** hands the message back to *Home Battery Start*.\n\nErrors are caught by the tab's catch node and returned to the caller, as in the other strategy tabs.\n\n**Installing a real HELIOS flow.** Delete this tab first. The real flow needs a link-in node named exactly *Helios* with a return at the end; two link-in nodes with that name make the dynamic link call from *Home Battery Start* fail.\n",
+        "name": "📖 How this flow works - HBC+ v1.4 (open the Info sidebar)",
+        "info": "# Strategy Helios (placeholder) - HBC+ v1.4\n\n**What it is.** HBC+ keeps *Helios* in `input_select.house_battery_strategy` so a HELIOS integration can be added later. The HELIOS flow itself is not part of HBC+; this tab only makes the option safe to select.\n\n**How it runs.**\n1. **Helios** (link in) is called by *Home Battery Start* when the strategy is *Helios*.\n2. **Trace** adds this flow to `msg.strategy.trace`.\n3. **Fall back to Full stop** sets `msg.target = \"Full stop\"`, shows *Helios (not installed)* on the strategy display, and logs a warning at most every 10 minutes.\n4. **Run Full stop** (dynamic link call) runs *Full stop*: every battery on stop, 0 W.\n5. **Return** hands the message back to *Home Battery Start*.\n\nErrors are caught by the tab's catch node and returned to the caller, as in the other strategy tabs.\n\n**Installing a real HELIOS flow.** Delete this tab first. The real flow needs a link-in node named exactly *Helios* with a return at the end; two link-in nodes with that name make the dynamic link call from *Home Battery Start* fail.\n",
         "x": 240,
         "y": 320,
         "wires": []
