@@ -29,6 +29,10 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   tabs, or flows and packages, are of different HBC+ versions, or a tab is missing.
 
 ### Changed
+- **Problem alert** — the Overview alert *HBC+ keeps logging errors* shows how long ago the latest message
+  was and a *Fix* line for known problems (new attribute `hint` on `sensor.hbc_health`, also in the
+  notification). About 90 s after the last message it turns blue with the time it clears, instead of staying
+  red for the full 10-minute window after the cause is fixed.
 - Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
   new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
   (Logging *Live*) on.

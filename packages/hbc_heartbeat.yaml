@@ -22,7 +22,8 @@
 # as soon as it is fresh again ('HBC heartbeat back'), it sets RS485 to 'enable' and HBC takes over again.
 #
 # HBC+ health (2026-11-15): the Start flow also publishes hbc/health (retained JSON) -> sensor.hbc_health:
-# ok / warning / error, with the counts of the last 10 minutes and the last error. Warnings and errors from
+# ok / warning / error, with the counts of the last 10 minutes and the last error; since v1.3 also 'hint',
+# what to do about the latest problem for known messages. Warnings and errors from
 # every HBC+ flow are counted and written to the Node-RED log, also when Insight mode is off. The automation
 # hbc_health_alert below notifies when the status stays 'error' (3+ errors in 10 minutes) for 5 minutes.
 #
@@ -199,7 +200,8 @@ automation:
                     HBC+ logged {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in the last 10 minutes.
                     Last error ({{ as_timestamp(state_attr('sensor.hbc_health', 'last_error_at'), 0) | timestamp_custom('%H:%M') }}):
                     {{ state_attr('sensor.hbc_health', 'last_error') }}
-                    Details are in the Node-RED log.
+                    {% if state_attr('sensor.hbc_health', 'hint') %}Fix: {{ state_attr('sensor.hbc_health', 'hint') }}{% endif %}
+                    Details are in the Node-RED log. Fixed the cause? This clears by itself after 10 minutes without new errors.
               - action: script.hbc_notify
                 continue_on_error: true
                 data:
@@ -207,6 +209,7 @@ automation:
                   message: >-
                     {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in 10 min. Last:
                     {{ state_attr('sensor.hbc_health', 'last_error') }}
+                    {% if state_attr('sensor.hbc_health', 'hint') %}Fix: {{ state_attr('sensor.hbc_health', 'hint') }}{% endif %}
           - conditions:
               - condition: trigger
                 id: ok
