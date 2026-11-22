@@ -43,6 +43,13 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - **Strategy requests from Home Assistant** (F5) — `script.hbc_strategy_hold` and `script.hbc_strategy_release` hold
   a strategy through the Strategy arbiter, with a time-out, without Node-RED; also via MQTT (`hbc/arbiter/request`).
   Active holds show on the Overview (`sensor.hbc_strategy_holds`).
+- **Version check** (F7) — every HBC+ tab registers its version and the packages have `sensor.hbc_package_version`;
+  *HBC+ health* warns (*HBC+ version mismatch*, `sensor.hbc_health` attributes `version_ok`, `version_issues`) when
+  tabs, or flows and packages, are of different HBC+ versions, or a tab is missing.
+
+### Fixed
+- Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
+  gave no prices; it now reads the Grid Clock feed.
 
 ### Changed
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
