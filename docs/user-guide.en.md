@@ -737,21 +737,21 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | File | Tab | What it does |
 | --- | --- | --- |
 | `hbc-plus-all-flows.json` | All 15 below | One import file with every tab and the HA server node |
-| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2 | Decides who controls the Marsteks (RS485, work mode); hands only one battery per shared phase back to the firmware |
-| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2 | Applies a PID preset (Very safe, Safe, Regular) to the PID helpers |
-| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2 | The control loop: reads the batteries, sums the totals, runs phase planner, strategy and phase guard, writes the setpoints and publishes the heartbeat |
-| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.2 | Charges from the grid up to a target (full, SoC, energy or solar forecast) |
-| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.2 | Charges to a target before a deadline, in the cheapest quarter-hours |
-| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.2 | Picks a strategy per price period (cheap, expensive, normal); contains the shared price fetch |
-| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.2 | Sets all batteries to stop |
-| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.2 | Runs *Full stop* when *Helios* is selected; delete it before importing a real HELIOS flow |
-| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.2 | Charge PV, Zero import and Standby / peak shave |
-| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.2 | PID controller that keeps grid power at the target; spreads the power over the batteries |
-| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2 | Discharges to the grid down to a target |
-| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2 | Runs a strategy per time slot (A to E) |
-| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2 | Detects charge/discharge waves and holds Full stop through the arbiter |
-| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2 | Read-only: publishes the phase status over MQTT for the dashboard |
-| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
+| `00 master-switch-flow (HBC+).json` | HBC+ Home Battery Master Switch v1.2.1 | Decides who controls the Marsteks (RS485, work mode); hands only one battery per shared phase back to the firmware |
+| `00 presets-switch-flow (HBC+).json` | HBC+ Home Battery PID presets v1.2.1 | Applies a PID preset (Very safe, Safe, Regular) to the PID helpers |
+| `01 start-flow (HBC+).json` | HBC+ Home Battery Start v1.2.1 | The control loop: reads the batteries, sums the totals, runs phase planner, strategy and phase guard, writes the setpoints and publishes the heartbeat |
+| `02 strategy-charge (HBC+).json` | HBC+ Strategy Charge v1.2.1 | Charges from the grid up to a target (full, SoC, energy or solar forecast) |
+| `02 strategy-charge-deadline (HBC+).json` | HBC+ Strategy Charge Deadline v1.2.1 | Charges to a target before a deadline, in the cheapest quarter-hours |
+| `02 strategy-dynamic (HBC+).json` | HBC+ Strategy Dynamic v1.2.1 | Picks a strategy per price period (cheap, expensive, normal); contains the shared price fetch |
+| `02 strategy-full-stop (HBC+).json` | HBC+ Strategy Full stop v1.2.1 | Sets all batteries to stop |
+| `02 strategy-helios-placeholder (HBC+).json` | HBC+ Strategy Helios (placeholder) v1.2.1 | Runs *Full stop* when *Helios* is selected; delete it before importing a real HELIOS flow |
+| `02 strategy-partials (HBC+).json` | HBC+ Strategy Partials v1.2.1 | Charge PV, Zero import and Standby / peak shave |
+| `02 strategy-self-consumption (HBC+).json` | HBC+ Strategy Self-consumption v1.2.1 | PID controller that keeps grid power at the target; spreads the power over the batteries |
+| `02 strategy-sell (HBC+).json` | HBC+ Strategy Sell v1.2.1 | Discharges to the grid down to a target |
+| `02 strategy-timed (HBC+).json` | HBC+ Strategy Timed v1.2.1 | Runs a strategy per time slot (A to E) |
+| `03 battery-oscillation-guard (HBC+).json` | HBC+ Battery Oscillation Guard v1.2.1 | Detects charge/discharge waves and holds Full stop through the arbiter |
+| `03 phase-monitor (HBC+).json` | HBC+ Phase monitor v1.2.1 | Read-only: publishes the phase status over MQTT for the dashboard |
+| `03 strategy-arbiter (HBC+).json` | HBC+ Strategy arbiter v1.2.1 | Sole writer of the strategy selection; chooses between your own choice, flows of your own and the Oscillation Guard |
 | `README.md` | — | Overview of the Node-RED files and installation |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | Example of the shared price fetch; not part of the all-flows file |
 
@@ -799,7 +799,7 @@ After installing card-mod and apexcharts-card, reload the browser (in the Home A
 2. Menu → *Import* → select `hbc-plus-all-flows.json` → *Import*. Already have HBC+ tabs from an earlier installation? Delete them first, as in [Updating HBC+](#updating-hbc): Node-RED cannot replace a flow tab on import, it skips it or imports a copy. If Node-RED reports that the *HA System* server node already exists, leave it unselected, so your own server node and its access token stay.
 3. Check the server node has **Expose to global context** on. *Read HA states (fast)*, the HBC+ planner and guard, and *Prepare request* in Dynamic all need it. The HBC+ files all carry the correct copy.
 4. *Deploy* → *Modified flows*, at a quiet moment. HBC+ rewrites battery mode and power once after a deploy; that is normal.
-5. Set your own notify action in the *Notify phone* node of *HBC+ Battery Oscillation Guard v1.2*; the default is `notify.notify`. Step 6 lists all six places that send notifications.
+5. Set your own notify action in the *Notify phone* node of *HBC+ Battery Oscillation Guard v1.2.1*; the default is `notify.notify`. Step 6 lists all six places that send notifications.
 
 **Flows of your own** can request a strategy through the *Strategy arbiter*: a link call to *Strategy request* with `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`. Give the requester a priority in the *Arbitrate* node; the Battery Oscillation Guard has 100, any other requester name gets 50, and on equal priority the hold that came first wins. A manual choice always wins and becomes the new base.
 
@@ -824,7 +824,7 @@ On the **Batteries** view, under each *Marstek M1…M6*, set *Connected to phase
 
 | Where | Sends a notification when |
 | --- | --- |
-| Node-RED, *HBC+ Battery Oscillation Guard v1.2*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
+| Node-RED, *HBC+ Battery Oscillation Guard v1.2.1*, node *Notify phone* | The batteries oscillate and are held on *Full stop* |
 | `packages/hbc_heartbeat.yaml`, automation *hand batteries back to firmware when the HBC heartbeat is stale* | The control loop stopped or no longer works, and the batteries went back to their firmware |
 | `packages/hbc_heartbeat.yaml`, automation *alert when the control loop keeps logging errors* | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes in a row |
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
@@ -1063,7 +1063,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Phase guard view shows *unknown* for the active battery | MQTT not set up, or Phase monitor tab disabled | Check the MQTT integration; enable *HBC+ Phase monitor v1.2* |
+| Phase guard view shows *unknown* for the active battery | MQTT not set up, or Phase monitor tab disabled | Check the MQTT integration; enable *HBC+ Phase monitor v1.2.1* |
 | *Read HA states (fast)* yellow: `fallback to old reads` | *Expose to global context* off on the server node | Turn it on in *HA System*, Deploy |
 | Planner status shows nothing or `guard off` | Guard mode is Off | Set Monitor or Enforce |
 | Charge room always 0 or far too low | Wrong sign on the P1 phase sensors or battery power | Make import and charging positive (Requirements) |
