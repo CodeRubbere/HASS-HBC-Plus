@@ -52,6 +52,10 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   gave no prices; it now reads the Grid Clock feed.
 
 ### Changed
+- **Problem alert** — the Overview alert *HBC+ keeps logging errors* shows how long ago the latest message
+  was and a *Fix* line for known problems (new attribute `hint` on `sensor.hbc_health`, also in the
+  notification). About 90 s after the last message it turns blue with the time it clears, instead of staying
+  red for the full 10-minute window after the cause is fixed.
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
   *Held by* on the Overview while a strategy hold is active.
 
