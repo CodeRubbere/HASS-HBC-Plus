@@ -20,6 +20,13 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - **Strategy requests from Home Assistant** (F5) — `script.hbc_strategy_hold` and `script.hbc_strategy_release` hold
   a strategy through the Strategy arbiter, with a time-out, without Node-RED; also via MQTT (`hbc/arbiter/request`).
   Active holds show on the Overview (`sensor.hbc_strategy_holds`).
+- **Power setpoint for Charge and Sell** (F6) — a flow that calls *Charge* or *Sell* can pass a total power in
+  `msg.power_setpoint = { for, w, by }`; the batteries then run at that power instead of their maximum, within the
+  phase rules and the grid limit. For a HELIOS flow that runs the power Helios planned. Without a setpoint nothing
+  changes.
+- **Version check** (F7) — every HBC+ tab registers its version and the packages have `sensor.hbc_package_version`;
+  *HBC+ health* warns (*HBC+ version mismatch*, `sensor.hbc_health` attributes `version_ok`, `version_issues`) when
+  tabs, or flows and packages, are of different HBC+ versions, or a tab is missing.
 
 ### Changed
 - Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
@@ -29,6 +36,8 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   *Held by* on the Overview while a strategy hold is active.
 
 ### Fixed
+- Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
+  gave no prices; it now reads the Grid Clock feed.
 - Fresh install: Self-consumption logged *Controller disabled — all PID gains are 0* on every tick. The script
   *HBC+ phase guard: apply defaults* now also selects the PID preset *Safe* and sets its gains (Kp 0.3, Ki 0.3,
   Kd 0.1).

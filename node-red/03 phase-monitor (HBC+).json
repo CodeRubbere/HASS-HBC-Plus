@@ -8,6 +8,22 @@
         "env": []
     },
     {
+        "id": "686b3d4c18972cb3",
+        "type": "function",
+        "z": "hbcp0phase0tab01",
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 160,
+        "y": 280,
+        "wires": []
+    },
+    {
         "id": "hbcp0phase0cmt01",
         "type": "comment",
         "z": "hbcp0phase0tab01",

@@ -886,6 +886,14 @@ input_select:
 # TEMPLATE SENSORS
 ###########################################################################################################
 template:
+  # HBC+ version of these packages. Node-RED compares its flows with it (version check in
+  # 'HBC+ health', Start tab) and warns in sensor.hbc_health when they differ. Bump on a release.
+  - sensor:
+      - name: "HBC package version"
+        unique_id: hbc_package_version
+        icon: mdi:tag-outline
+        state: "1.3.0"
+
   # HBC+ v1.0: local time for the dashboard badges (re-rendered every minute through now()),
   # so the dashboard needs no extra integration.
   - sensor:

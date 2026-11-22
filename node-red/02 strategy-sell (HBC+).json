@@ -8,6 +8,22 @@
         "env": []
     },
     {
+        "id": "929f37aa1c6067c6",
+        "type": "function",
+        "z": "17d7519059560984",
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 160,
+        "y": 700,
+        "wires": []
+    },
+    {
         "id": "2107815757999873",
         "type": "group",
         "z": "17d7519059560984",
@@ -229,7 +245,7 @@
         "z": "17d7519059560984",
         "g": "cb55caed48fda19c",
         "name": "Max power solution",
-        "func": "// Logger, usage: log(this, \"\");\nconst log = (global.get('logger') || (() => {}));\nlog(this, \"Discharge at **max. power**\");\n\n// INPUT\nlet batteries = msg.batteries;\nlet solution_array = [];\n\n// HBC+ phase guard (2026-11-14), only when msg.phase_plus.mode === 'Enforce':\n// on a shared phase only the planner-active battery runs (others idle at 1 W, relay stays\n// engaged) and the total stays within the fuse room. Otherwise: every battery at max, as before.\nconst pp = msg.phase_plus;\nconst enforce = !!(pp && pp.mode === 'Enforce' && pp.phases);\nconst left = {};\nif (enforce) for (const [ph, e] of Object.entries(pp.phases)) left[ph] = Number(e.room && e.room.discharge) || 0;\n\n// build solution\nmsg.batteries.forEach(battery => {\n    let calculatedPower = Number(battery.discharging_max);\n\n    const ph = enforce ? pp.phase_of[battery.id] : null;\n    if (ph) {\n        const allowed = (pp.phases[ph].active && pp.phases[ph].active.discharge) || [];\n        if (!allowed.includes(battery.id)) {\n            calculatedPower = 1;\n            log(this, `Battery ${battery.id}: HBC+ phase standby on ${ph} (idle 1 W)`);\n        } else {\n            calculatedPower = Math.max(1, Math.min(calculatedPower, left[ph]));\n            left[ph] -= calculatedPower;\n            log(this, `Battery ${battery.id}: ${calculatedPower} W (HBC+ fuse room ${ph})`);\n        }\n    }\n\n    solution_array.push({\n        id: battery.id,\n        mode: \"discharge\",\n        power: calculatedPower\n    });\n\n});\n\n// return solution\nmsg.solutions = solution_array;\nreturn msg;\n",
+        "func": "// Logger, usage: log(this, \"\");\nconst log = (global.get('logger') || (() => {}));\n\n// HBC+ v1.3 power setpoint (F6). Optional: msg.power_setpoint = { for: \"Sell\", w: <total W>, by: \"<caller>\" }\n// Set by a flow that calls this strategy and wants a given total power instead of the max\n// (for example a HELIOS flow). Only used when 'for' is \"Sell\", so a follow-up strategy in the\n// same tick (after the goal is reached) never inherits it. Without it: max power, as before.\nconst STRATEGY = \"Sell\";\nconst sp = msg.power_setpoint;\nconst spW = (sp && sp.for === STRATEGY && sp.w !== null && sp.w !== undefined && sp.w !== '') ? Number(sp.w) : NaN;\nlet useSetpoint = Number.isFinite(spW) && spW >= 0;\n\n// INPUT\nlet batteries = msg.batteries;\nlet solution_array = [];\n\n// HBC+ phase guard (2026-11-14), only when msg.phase_plus.mode === 'Enforce':\n// on a shared phase only the planner-active battery runs (others idle at 1 W, relay stays\n// engaged) and the total stays within the fuse room. Otherwise: every battery at max, as before.\nconst pp = msg.phase_plus;\nconst enforce = !!(pp && pp.mode === 'Enforce' && pp.phases);\nconst left = {};\nif (enforce) for (const [ph, e] of Object.entries(pp.phases)) left[ph] = Number(e.room && e.room.discharge) || 0;\n\n// build solution (max power per battery, within the phase rules)\nconst standby = new Set();\nmsg.batteries.forEach(battery => {\n    let calculatedPower = Number(battery.discharging_max);\n\n    const ph = enforce ? pp.phase_of[battery.id] : null;\n    if (ph) {\n        const allowed = (pp.phases[ph].active && pp.phases[ph].active.discharge) || [];\n        if (!allowed.includes(battery.id)) {\n            calculatedPower = 1;\n            standby.add(battery.id);\n            log(this, `Battery ${battery.id}: HBC+ phase standby on ${ph} (idle 1 W)`);\n        } else {\n            calculatedPower = Math.max(1, Math.min(calculatedPower, left[ph]));\n            left[ph] -= calculatedPower;\n            log(this, `Battery ${battery.id}: ${calculatedPower} W (HBC+ fuse room ${ph})`);\n        }\n    }\n\n    solution_array.push({\n        id: battery.id,\n        mode: \"discharge\",\n        power: calculatedPower\n    });\n\n});\n\nif (!useSetpoint) {\n    log(this, \"Discharge at **max. power**\");\n    node.status({});\n} else {\n    // HBC+ v1.3 (F6): scale the max-power solution down to the setpoint. Every running battery gets\n    // the same share of its own max (keeps the SoCs together); never above the max or the fuse\n    // room above; at least 1 W (relay stays engaged, as the phase standby). The grid limit still\n    // counts when it is on: export = setpoint minus house load stays\n    // within the export limit.\n    let target = spW;\n    let limitNote = '';\n    if (msg.grid_power_has_limit_export === true) {\n        const limit = Number(msg.grid_power_limit_export);\n        const houseNet = Number(msg.grid_power) - Number(msg.batteries_total_power); // house load minus PV, import +\n        if (Number.isFinite(limit) && Number.isFinite(houseNet)) {\n            const room = Math.max(0, limit + houseNet);\n            if (room < target) { target = room; limitNote = ` (export limit ${Math.round(limit)} W)`; }\n        }\n    }\n    const running = solution_array.filter(s => !standby.has(s.id) && Number.isFinite(s.power) && s.power > 0);\n    const total = running.reduce((sum, s) => sum + s.power, 0);\n    if (total > 0 && target < total) {\n        const share = target / total;\n        running.forEach(s => { s.power = Math.max(1, Math.round(s.power * share)); });\n    }\n    const applied = running.reduce((sum, s) => sum + s.power, 0);\n    const by = sp.by ? ` by ${sp.by}` : '';\n    log(this, `Discharge at **setpoint** ${Math.round(spW)} W${by}: ${applied} W${limitNote}`);\n    node.status({ fill: 'blue', shape: 'dot', text: `setpoint ${Math.round(spW)} W -> ${applied} W${limitNote}` });\n}\n\n// return solution\nmsg.solutions = solution_array;\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -264,23 +280,17 @@
     },
     {
         "id": "5ca130f9ce1564c5",
-        "type": "switch",
+        "type": "function",
         "z": "17d7519059560984",
         "g": "cb55caed48fda19c",
-        "name": "Export at max power",
-        "property": "grid_power_has_limit_export",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "false"
-            },
-            {
-                "t": "else"
-            }
-        ],
-        "checkall": "false",
-        "repair": false,
+        "name": "Export at max power / setpoint",
+        "func": "// HBC+ v1.3 (F6): was a switch node on msg.grid_power_has_limit_export (false -> max power, else -> regulated).\n// A power setpoint for this strategy (msg.power_setpoint, see 'Max power solution') always goes\n// to 'Max power solution', which also keeps the export limit. Without one: exactly as before.\nconst sp = msg.power_setpoint;\nconst spW = (sp && sp.for === \"Sell\" && sp.w !== null && sp.w !== undefined && sp.w !== '') ? Number(sp.w) : NaN;\nlet useSetpoint = Number.isFinite(spW) && spW >= 0;\nif (useSetpoint) return [msg, null];\nreturn msg.grid_power_has_limit_export === false ? [msg, null] : [null, msg];\n",
         "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 380,
         "y": 500,
         "wires": [
@@ -1064,7 +1074,7 @@
         "type": "comment",
         "z": "17d7519059560984",
         "name": "📖 How this flow works - HBC+ v1.2 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Sell v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nDischarges the batteries to the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_sell_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are empty | usable energy is 0 kWh (all batteries at their min SoC) |\n| state of charge | the average SoC drops to `input_number.house_battery_strategy_sell_target_soc` |\n| energy reserve | usable energy drops to `input_number.house_battery_strategy_sell_target_energy` |\n| anything else | not recognised -> Full stop |\n\nWhen the goal is reached, the strategy in `input_select.house_battery_strategy_sell_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Export limit on** (`input_boolean.house_battery_control_has_power_limit_export`): *Regulated power* - Self-consumption is driven to grid export = the export limit, with charging disabled.\n- **No export limit**: *Max power solution* - every battery at its max discharge power.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the highest SoC) discharges, at min(its max, the phase's discharge room). Its partner idles at 1 W. The discharge room shrinks when PV is already exporting on that phase.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n\n## HBC+ v1.2 - price guard\n\n*Strategy after reached* applies the price guard (`msg.price_override`, see the Start tab) to the follow-up strategy after the sell goal is reached. *Sell* itself is swapped to *Charge PV* by the caller (Start, Dynamic or Timed) while exporting costs money.\n",
+        "info": "# HBC+ Strategy Sell v1.2 - how this flow works\n\nPart of **HBC+ v1.2** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nDischarges the batteries to the grid **until a goal is reached**, then hands over to the *goal reached* strategy.\n\n## Goal (`input_select.house_battery_strategy_sell_goal`)\n\n| Goal | Reached when |\n|---|---|\n| batteries are empty | usable energy is 0 kWh (all batteries at their min SoC) |\n| state of charge | the average SoC drops to `input_number.house_battery_strategy_sell_target_soc` |\n| energy reserve | usable energy drops to `input_number.house_battery_strategy_sell_target_energy` |\n| anything else | not recognised -> Full stop |\n\nWhen the goal is reached, the strategy in `input_select.house_battery_strategy_sell_goal_reached` runs (default *Charge PV*).\n\n## Power\n\n- **Export limit on** (`input_boolean.house_battery_control_has_power_limit_export`): *Regulated power* - Self-consumption is driven to grid export = the export limit, with charging disabled.\n- **No export limit**: *Max power solution* - every battery at its max discharge power.\n- **Power setpoint** (HBC+ v1.3, optional): a flow that calls *Sell* can set `msg.power_setpoint = { for: \"Sell\", w: <total W>, by: \"<name>\" }`. *Export at max power / setpoint* then always takes *Max power solution*, which scales the max-power solution down to `w` (same share of its max for every running battery, at least 1 W; phase rules as below). With the export limit on, it also keeps export = setpoint - house load within the limit. Only used when `for` is *Sell*, so the strategy after the goal is reached never inherits it. Without it, nothing changes. The HELIOS flow uses it to sell at the power Helios planned.\n\n## HBC+ v1.0 - two batteries per phase\n\nThe phase rules only act when `input_select.house_battery_phase_guard_mode` is **Enforce**. On **Off** and **Monitor** this flow works without phase rules.\n\n- *Max power solution*: on a shared phase only the active battery (by default the one with the highest SoC) discharges, at min(its max, the phase's discharge room). Its partner idles at 1 W. The discharge room shrinks when PV is already exporting on that phase.\n- *Regulated power* goes through Self-consumption, which applies the same rules.\n\n## HBC+ v1.2 - price guard\n\n*Strategy after reached* applies the price guard (`msg.price_override`, see the Start tab) to the follow-up strategy after the sell goal is reached. *Sell* itself is swapped to *Charge PV* by the caller (Start, Dynamic or Timed) while exporting costs money.\n",
         "x": 250,
         "y": 40,
         "wires": []

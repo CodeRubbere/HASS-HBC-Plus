@@ -93,6 +93,18 @@ Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
 
 Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues).
 
+## Coming from HBC?
+
+Already running House Battery Control (HBC) by CodeBob? You can switch to HBC+ without starting over: HBC+ uses the same helper names, so your strategy, Timed, Dynamic, Charge, Sell and PID settings carry over. What changes:
+
+- **Packages:** `house_battery_control.yaml` is replaced by the `hbc_*.yaml` packages; rename your own `house_battery_control_config.yaml` to `hbc_config.yaml` (the `hbc_config.yaml` in this repository is for new installations).
+- **Grid meter:** HBC+ also needs per-phase power (`sensor.p1_meter_power_phase_1` … `_3`).
+- **New requirements:** MQTT and `card-mod`; `node-red-node-smooth` is no longer needed.
+- **Flows:** all HBC tabs are deleted and replaced by the HBC+ tabs; never run both.
+- **Dashboard:** a new dashboard with the URL `home-battery-control-plus`.
+
+The switch takes about 45 minutes and the batteries stay on their own firmware until you set *Full control* again. Step by step: **[Migrating from HBC](docs/user-guide.en.md#migrating-from-hbc)** · 🇳🇱 [Overstappen van HBC](docs/gebruikershandleiding.nl.md#overstappen-van-hbc).
+
 ## Before you use it
 
 - All HBC+ notifications (Battery Oscillation Guard, heartbeat fallback, error alert, missing prices, phase guard) go through `script.hbc_notify` in `packages/hbc_notify.yaml`. Set where they go once, in *Notify targets* on the *Settings* view (e.g. `notify.mobile_app_<phone>`; empty = `notify.notify`), and press *Send a test notification*.
