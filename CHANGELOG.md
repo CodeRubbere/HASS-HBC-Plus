@@ -40,6 +40,9 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   view the *Buy now* and *Sell now* tiles are *Buy price* and *Sell price*. New full-width *Executing now* card below
   the price chart (Prices and Timed & Dynamic views) with the sub-strategy HBC+ runs now
   (`input_text.house_battery_strategy_active_sub_strategy`).
+- Dashboard: *Price intervals: HBC+* (Prices and Timed & Dynamic views) has a legend like the Batterijplan and HELIOS
+  charts: Cheap, Regular, Expensive (the current mark in bold), the negative-price colours when they occur, the current
+  quarter and, with separate sell prices, the sell-price line.
 - Self-test: with the phase guard on *Enforce*, the *HBC+ phase planner* makes the battery under test the charger on its
   phase, also when the phase map puts another battery there (before, that battery could stay idle: *did not charge*).
   *Did not charge* now names the likely cause; the *Phase detection* card shows the phase guard mode.
