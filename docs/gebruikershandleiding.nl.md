@@ -234,7 +234,7 @@ Kies de strategie in `input_select.house_battery_strategy`. De *Strategy arbiter
 | Timed | Een andere strategie per tijdvak (A t/m E) |
 | Dynamic | Een andere strategie voor goedkope, dure en normale prijsperiodes |
 | Full stop | Alle batterijen op stop, 0 W; het relais gaat open, dus geen sluimerverbruik |
-| Helios | Gereserveerd voor een toekomstige HELIOS-integratie (hoort niet bij HBC+). Tot die flow geïnstalleerd is, draait een placeholder-tabblad *Full stop* en logt een waarschuwing |
+| Helios | Gereserveerd voor een toekomstige HELIOS-integratie (hoort niet bij HBC+). Tot die flow geïnstalleerd is, draait een placeholder-tabblad *Full stop* en logt een waarschuwing. Zolang *Helios* gekozen is, tonen de views Overview, Prices en Timed & Dynamic een banner *Managed by HELIOS*, en toont de grafiek *Price intervals* het HELIOS-plan (de HBC+-substrategie per kwartier, uit `input_number.helios_optimizer_energy_plan`) |
 
 **EV-stoptrigger.** Zet het entity-id van een "EV laadt"-sensor of -boolean in `input_text.house_battery_strategy_ev_sensor_entity_id`. Zolang die `on` is, draait HBC+ de strategie uit `input_select.house_battery_strategy_ev_stop_trigger_strategy` (*Full stop* of *Standby / peak shave*), zodat de batterijen niet in de auto ontladen.
 
@@ -357,6 +357,17 @@ De prijzen worden ververst om middernacht, om 13:15 en 15:00, na een bronwissel,
 - de dure strategie niet *Sell* is (verkopen maakt de batterijen leeg, los van het huis).
 
 Anders, en met de schakelaar uit, werkt Dynamic precies zoals in v1.3. Een grote verandering in huis (warmtepomp, EV, iemand die erbij komt wonen) maakt het oude profiel onjuist: druk op *Forget the learned profile* en zet de schakelaar uit tot het opnieuw geleerd heeft. Met *Self-consumption* als normale strategie ontladen de batterijen ook buiten de dure kwartieren; een grotere marge vangt dat op.
+
+### Aangestuurd door Batterijplan
+
+*Nieuw in v1.4.* [Batterijplan](https://github.com/satscan1/hbc-batterijplan) is een Home Assistant-integratie die HBC+ kan aansturen. Met HBC+ op **Dynamic** en de schakelaar **Live** van Batterijplan aan, zet Batterijplan elk kwartier de Dynamic-modus van de prijsklasse van het komende kwartier (*Default to*, de goedkope en de dure strategie), en vervangt het eventueel de zonverwachting van HBC+ door een laaddoel. Je eigen modi komen terug als Live uitgaat of je Dynamic verlaat. De eigen markeringen van HBC+ bepalen dan niet meer wat de batterijen doen, dus het dashboard laat zien dat Batterijplan aan het stuur zit (`packages/hbc_batterijplan.yaml`):
+
+- **Overview**: *Dynamic · managed by Batterijplan (Live)* onder *Choose strategy*.
+- **Prices** en **Timed & Dynamic**: een banner met de actie van Batterijplan voor dit kwartier (laden van het net, ontladen, vasthouden, terugleveren, alleen zon), en een melding als de zonverwachting vervangen is. Tik erop om Batterijplan te openen.
+- Grafiek **Price intervals**: met de titel *Price intervals: Batterijplan*; de komende kwartieren krijgen de kleur van de geplande actie van Batterijplan (blauw laden van het net, groen ontladen, oranje vasthouden, roze terugleveren, grijs alleen zon), met een legenda boven de grafiek (de huidige actie vetgedrukt); tik op een staaf of beweeg erover om de actie in de tooltip te zien. Voorbije kwartieren worden donkergrijs, zodat de eigen goedkoop- en duurkleuren van HBC+ niet met het plan verward worden; het huidige kwartier blijft lichtblauw.
+- **Timed & Dynamic**: de drie Dynamic-modi zijn alleen-lezen, met *(set by Batterijplan)*. *Min. price difference* en de goedkope en dure uren blijven instelbaar: HBC+ gebruikt ze nog steeds om de kwartieren te markeren waarop Batterijplan stuurt.
+
+De aanwijzer is `binary_sensor.hbc_managed_by_batterijplan`: aan als de strategie Dynamic is, `switch.batterijplan_live` aan staat en `sensor.batterijplan` zijn plan als live meldt. Zonder Batterijplan blijft hij uit en ziet het dashboard eruit zoals voorheen. Het package toont alleen; het verandert niets aan de aansturing.
 
 ### Grid Clock-feed
 
@@ -485,10 +496,11 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 
 - **F1 — Zelftest bij installatie.** Eén knop op de view *Batteries* controleert de installatie (P1, batterij-entiteiten, mastermodus, heartbeat, Node-RED, prijssensor, meldingsdoelen) en meet per batterij op welke fase ze is aangesloten. Een gemeten fase die afwijkt van de fasekaart wordt getoond, en pas toegepast als je op *Apply phase map* drukt (zie [Zelftest bij installatie](#zelftest-bij-installatie)).
 - **F2 — Voorspelling huisverbruik.** HBC+ leert per kwartier hoeveel het huis gebruikt (werkdagen en weekenddagen apart) en voorspelt de komende 24 uur. Optioneel laadt Dynamic alleen wat de dure kwartieren nodig hebben, in de goedkoopste kwartieren ervóór (*Dynamic uses load forecast*, standaard uit; zie [Voorspelling huisverbruik](#voorspelling-huisverbruik)).
+- **F3 — Aangestuurd door Batterijplan.** Als Batterijplan (Live) Dynamic aanstuurt, laat het dashboard dat zien: een banner met de actie van Batterijplan, de prijsgrafiek in de kleuren van zijn plan, en de Dynamic-modi alleen-lezen (zie [Aangestuurd door Batterijplan](#aangestuurd-door-batterijplan)). Nieuw package `hbc_batterijplan.yaml`; zonder Batterijplan verandert er niets.
 ### Bijwerken vanaf v1.3
 
 1. **Back-up maken** zoals in [Stap 1](#stap-1--back-up-maken).
-2. **Packages:** kopieer alle bestanden uit `packages/` behalve `hbc_config.yaml` (dat is van jou). `hbc_selftest.yaml` en `hbc_load_forecast.yaml` zijn nieuw; `hbc_control.yaml` is gewijzigd (strategie-optie *Self-test*, attribuut `load_forecast`). *Configuratie controleren* en HA herstarten.
+2. **Packages:** kopieer alle bestanden uit `packages/` behalve `hbc_config.yaml` (dat is van jou). `hbc_selftest.yaml`, `hbc_load_forecast.yaml` en `hbc_batterijplan.yaml` zijn nieuw; `hbc_control.yaml` is gewijzigd (strategie-optie *Self-test*, attribuut `load_forecast`). *Configuratie controleren* en HA herstarten.
 3. **Flows:** verwijder elk tabblad waarvan de naam met *HBC+* begint, importeer `node-red/hbc-plus-all-flows.json` en deploy, zoals in [HBC+ bijwerken](#hbc-bijwerken). Nieuw tabblad *HBC+ Self-test v1.4*; de Strategy arbiter kent de aanvrager `selftest` (prioriteit 90).
 4. **Dashboard:** plak `dashboards/hbc_plus.yaml` opnieuw in de raw-configuratie-editor.
 5. **Draai de zelftest** één keer: *Batteries* → *Battery phase test* → *Run self-test*.
@@ -837,6 +849,7 @@ Download de nieuwste release van de [Releases-pagina](https://github.com/CodeRub
 | `hbc_calibration.yaml` | Batterijkalibratie (v1.3): instellingen, laatste volle lading per batterij, automatiseringen voor plannen, starten en afronden |
 | `hbc_savings.yaml` | Besparing en rendement (v1.3): gesplitst vermogen, energietellers, afrekening per kwartier, utility meters, rendement en voorgestelde spread |
 | `hbc_selftest.yaml` | Zelftest bij installatie (v1.4): `script.hbc_selftest_run`, `_abort`, `_apply_phase_map` en de uitslagsensoren |
+| `hbc_batterijplan.yaml` | Batterijplan-aanwijzer (v1.4): `binary_sensor.hbc_managed_by_batterijplan` voor het dashboard; verandert niets aan de aansturing |
 | `hbc_load_forecast.yaml` | Voorspelling huisverbruik (v1.4): geleerd profiel per kwartier, voorspellingssensoren, schakelaar en marge voor Dynamic, resetscript. Heeft `hbc_savings.yaml` nodig |
 
 **dashboards/**
@@ -1118,6 +1131,7 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | `sensor.hbc_load_profile` | `hbc_load_forecast.yaml` | Geleerde dagen; attributen `wd` / `we` (96 kwartiergemiddelden, W), `days_wd`, `days_we` |
 | `sensor.hbc_load_forecast` | `hbc_load_forecast.yaml` | Verwacht verbruik, komende 24 uur (kWh); attribuut `forecast` (96 × W vanaf `start`), `learned` |
 | `sensor.hbc_load_forecast_expensive` | `hbc_load_forecast.yaml` | Verwacht verbruik in de komende dure kwartieren (kWh) |
+| `binary_sensor.hbc_managed_by_batterijplan` | `hbc_batterijplan.yaml` | Aan als Batterijplan (Live) Dynamic aanstuurt; attributen `action_now` (L, O, H, V, Z), `solar_override` |
 | `input_boolean.house_battery_dynamic_use_load_forecast`, `input_number.house_battery_load_forecast_margin`, `script.hbc_load_profile_reset` | `hbc_load_forecast.yaml` | Dynamic gebruikt de voorspelling (standaard uit), marge (standaard 15 %), profiel vergeten |
 
 ### Grid Clock-feed en prijsbewaking (v1.2)
@@ -1204,7 +1218,7 @@ Het dashboard *Home Battery Control Plus* heeft tien views, in de volgorde waari
 Op de Overview verschijnen meldingen alleen als er iets aandacht nodig heeft:
 
 - **Setup: N of 6 steps done** — tot je de checklist *Setup* afrondt; de link opent de view Settings.
-- **HBC+ is not steering the batteries** — geen goede regelcyclus terwijl *Control Mode* op *Full control* staat: Home Assistant heeft de batterijen teruggegeven aan hun eigen firmware.
+- **HBC+ is not steering the batteries** — geen goede regelcyclus terwijl *Control Mode* op *Full control* staat: Home Assistant heeft de batterijen teruggegeven aan hun eigen firmware. HBC+ draait een regelcyclus bij elke update van `sensor.p1_meter_power`; is de P1-meter niet beschikbaar of kwam er al meer dan 5 minuten geen nieuwe waarde, dan zegt de melding dat: controleer de P1-meter en zijn integratie in Home Assistant (herlaad die). Anders: controleer of Node-RED draait. Zolang deze melding staat, zijn de banners van Batterijplan en HELIOS verborgen.
 - **HBC+ logged a problem** of **HBC+ keeps logging errors** — `sensor.hbc_health` staat op *warning* of *error*; de melding toont de aantallen van de laatste 10 minuten, het laatste bericht en hoe lang geleden dat was, en bij bekende problemen een regel *Fix*. De aantallen gaan over 10 minuten: heb je de oorzaak opgelost, dan wordt de melding zo'n 90 s na het laatste bericht blauw (*No new HBC+ errors since …*) en verdwijnt ze 10 minuten erna, met het tijdstip waarop dat gebeurt.
 - **Phase fuse overloaded** en **Battery circuit overloaded** — dezelfde alarmen als op de view Phase guard.
 - **EV is charging** — de EV-stoptrigger is actief en gaat boven de strategie.

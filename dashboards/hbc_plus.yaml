@@ -34,7 +34,8 @@ views:
         type: markdown
         text_only: true
         content: >-
-          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.4" alt="HBC+ Home Battery Control Plus" height="72"><br>v1.4</center>
+          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.4"
+          alt="HBC+ Home Battery Control Plus" height="72"><br>v1.4</center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
@@ -45,6 +46,43 @@ views:
             heading: Status & control
             heading_style: title
             icon: mdi:gamepad-variant-outline
+          - type: markdown
+            content: >-
+              {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
+              t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
+              'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
+              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              plan yet') }}</b>.</br>
+
+              Batterijplan sets the Dynamic modes every quarter; your own modes
+              come back when Batterijplan Live goes off or you leave HBC+
+              Dynamic. {%- if state_attr('sensor.batterijplan_zon_voor_hbc',
+              'modus') == 'laaddoel' %} HBC+'s solar forecast is replaced by
+              Batterijplan's charge target. {%- endif %}</ha-alert>
+            text_only: true
+            tap_action:
+              action: navigate
+              navigation_path: /batterijplan
+            visibility:
+              - condition: state
+                entity: binary_sensor.hbc_managed_by_batterijplan
+                state: 'on'
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
+          - type: markdown
+            text_only: true
+            content: >-
+              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy <b>Helios</b> is selected.</br>
+
+              The HELIOS flow decides when the batteries charge, discharge or hold, not HBC+. If no HELIOS flow is installed, HBC+ runs Full stop instead. Choose another strategy to hand control back to HBC+.</ha-alert>
+            visibility:
+              - condition: state
+                entity: input_select.house_battery_strategy
+                state: Helios
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
           - type: markdown
             text_only: true
             content: >-
@@ -76,11 +114,23 @@ views:
                 state: Full control
             content: >-
               {%- set t = states('sensor.hbc_last_run') | as_datetime(None) -%}
+              {%- set p1 = states.sensor.p1_meter_power -%} {%- set p1_ok = p1
+              is not none and p1.state not in ['unknown', 'unavailable', ''] -%}
+              {%- set p1_at = (p1.last_reported if p1 is not none and
+              p1.last_reported is defined and p1.last_reported else (p1.last_updated
+              if p1 is not none else none)) -%} {%- set p1_stale = not p1_ok or
+              p1_at is none or (now() - p1_at).total_seconds() > 300 -%}
               <ha-alert alert-type="error" title="HBC+ is not steering the
-              batteries">No good control cycle {{ 'for ' ~ relative_time(t) if t
-              else 'since Home Assistant started' }}. Home Assistant has handed
-              the batteries back to their own firmware. Check that Node-RED
-              runs.</ha-alert>
+              batteries"><br>No good control cycle {{ 'for ' ~ relative_time(t)
+              if t else 'since Home Assistant started' }}. Home Assistant has
+              handed the batteries back to their own firmware. {% if p1_stale
+              -%} {%- if not p1_ok -%} The P1 meter (sensor.p1_meter_power) is
+              {{ p1.state if p1 is not none else 'missing' }}. {%- else -%} No
+              new P1 meter value since {{ as_local(p1_at).strftime('%H:%M') }}
+              (last {{ p1.state }} W). {%- endif %} HBC+ only runs on P1
+              updates: check the P1 meter and its integration in Home
+              Assistant. {%- else -%} Check that Node-RED runs. {%- endif
+              %}</ha-alert>
 
 
               [Open Logging](/home-battery-control-plus/problem-solver)
@@ -92,11 +142,40 @@ views:
                 state:
                   - warning
                   - error
-            content: |-
-              {%- set h = 'sensor.hbc_health' -%} {%- set e = state_attr(h, 'errors_10m') | int(0) -%} {%- set w = state_attr(h, 'warnings_10m') | int(0) -%} {%- set last = state_attr(h, 'last_error') if e > 0 else state_attr(h, 'last_warning') -%} {%- set ea = (state_attr(h, 'last_error_at') or '') | as_datetime(None) -%} {%- set wa = (state_attr(h, 'last_warning_at') or '') | as_datetime(None) -%} {%- set at = ea if e > 0 else wa -%} {%- set newest = ([ea, wa] | select | max) if (ea or wa) else None -%} {%- set quiet = newest is not none and (now() - newest).total_seconds() > 90 -%} {%- set hint = state_attr(h, 'hint') or '' -%} {%- set what = 'errors' if e > 0 else 'warnings' -%}
-              {%- if quiet -%} <ha-alert alert-type="info" title="No new HBC+ {{ what }} since {{ (newest | as_local).strftime('%H:%M') }}">This notice clears by itself around {{ ((newest + timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }}. Latest: <i>{{ last | e }}</i>{% if hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
-              {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h, 'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors' if is_state(h, 'error') else 'HBC+ logged a problem' }}">{{ e }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }} in the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ ' ago)' if at else '' }}: <i>{{ last | e }}</i>{% if hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed the cause? This notice clears by itself after 10 minutes without new errors or warnings.</small></ha-alert>
+            content: >-
+              {%- set h = 'sensor.hbc_health' -%} {%- set e = state_attr(h,
+              'errors_10m') | int(0) -%} {%- set w = state_attr(h,
+              'warnings_10m') | int(0) -%} {%- set last = state_attr(h,
+              'last_error') if e > 0 else state_attr(h, 'last_warning') -%} {%-
+              set ea = (state_attr(h, 'last_error_at') or '') |
+              as_datetime(None) -%} {%- set wa = (state_attr(h,
+              'last_warning_at') or '') | as_datetime(None) -%} {%- set at = ea
+              if e > 0 else wa -%} {%- set newest = ([ea, wa] | select | max) if
+              (ea or wa) else None -%} {%- set quiet = newest is not none and
+              (now() - newest).total_seconds() > 90 -%} {%- set hint =
+              state_attr(h, 'hint') or '' -%} {%- set what = 'errors' if e > 0
+              else 'warnings' -%}
+
+              {%- if quiet -%} <ha-alert alert-type="info" title="No new HBC+ {{
+              what }} since {{ (newest | as_local).strftime('%H:%M')
+              }}"><br>This notice clears by itself around {{ ((newest +
+              timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the
+              last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }}
+              warning{{ 's' if w != 1 }}. Latest: <i>{{ last | e }}</i>{% if
+              hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
+
+              {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h,
+              'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors'
+              if is_state(h, 'error') else 'HBC+ logged a problem' }}">{{ e }}
+              error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }} in
+              the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ ' ago)'
+              if at else '' }}: <i>{{ last | e }}</i>{% if hint
+              %}<br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed the
+              cause? This notice clears by itself after 10 minutes without new
+              errors or warnings.</small></ha-alert>
+
               {%- endif %}
+
 
               [Open Logging](/home-battery-control-plus/problem-solver)
           - type: markdown
@@ -108,7 +187,7 @@ views:
             content: >-
               {% set lim = states('input_number.house_battery_phase_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Phase fuse
-              overloaded">Grid power on {% for i in [1, 2, 3] if
+              overloaded"><br>Grid power on {% for i in [1, 2, 3] if
               states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
               %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
               load and the active batteries.</ha-alert>
@@ -125,7 +204,7 @@ views:
               {% set circ =
               states('input_number.house_battery_phase_circuit_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Battery circuit
-              overloaded">The batteries on {% for i in [1, 2, 3] if
+              overloaded"><br>The batteries on {% for i in [1, 2, 3] if
               states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
               abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
               W. Check that only one battery per phase runs
@@ -236,6 +315,20 @@ views:
               - condition: state
                 entity: input_select.marstek_master_battery_mode
                 state: Full control
+          - type: heading
+            icon: mdi:battery-sync
+            heading: Dynamic · managed by Batterijplan (Live)
+            heading_style: subtitle
+            tap_action:
+              action: navigate
+              navigation_path: /home-battery-control-plus/timed-dynamic
+            visibility:
+              - condition: state
+                entity: binary_sensor.hbc_managed_by_batterijplan
+                state: 'on'
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
           - type: markdown
             content: >-
               **✋ Held by:** {% for h in state_attr('sensor.hbc_strategy_holds',
@@ -371,7 +464,7 @@ views:
             heading_style: title
             icon: mdi:book-open-page-variant
           - type: heading
-            icon: mdi:information-slab-circle
+            icon: mdi:book-open-variant
             heading: User guide (English)
             heading_style: subtitle
             tap_action:
@@ -677,6 +770,43 @@ views:
             grid_options:
               rows: 1
             icon: mdi:cash-sync
+          - type: markdown
+            content: >-
+              {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
+              t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
+              'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
+              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              plan yet') }}</b>.</br>
+
+              Batterijplan sets the Dynamic modes every quarter; your own modes
+              come back when Batterijplan Live goes off or you leave HBC+
+              Dynamic. {%- if state_attr('sensor.batterijplan_zon_voor_hbc',
+              'modus') == 'laaddoel' %} HBC+'s solar forecast is replaced by
+              Batterijplan's charge target. {%- endif %}</ha-alert>
+            text_only: true
+            tap_action:
+              action: navigate
+              navigation_path: /batterijplan
+            visibility:
+              - condition: state
+                entity: binary_sensor.hbc_managed_by_batterijplan
+                state: 'on'
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
+          - type: markdown
+            text_only: true
+            content: >-
+              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy <b>Helios</b> is selected.</br>
+
+              The price intervals on this page are not used to steer the batteries while Helios is selected; the prices stay visible for information. If no HELIOS flow is installed, HBC+ runs Full stop instead. Choose another strategy to hand control back to HBC+.</ha-alert>
+            visibility:
+              - condition: state
+                entity: input_select.house_battery_strategy
+                state: Helios
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
           - type: heading
             icon: mdi:information
             heading: Using the dynamic strategy
@@ -724,6 +854,78 @@ views:
                 card_mod:
                   style: |
                     ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state_not: 'on'
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state_not: Helios
+              - type: heading
+                heading: 'Price intervals: HELIOS plan'
+                heading_style: title
+                icon: mdi:weather-sunny
+                card_mod:
+                  style: |
+                    ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state: Helios
+              - type: markdown
+                text_only: true
+                content: >-
+                  {%- set p = state_attr('input_number.helios_optimizer_energy_plan', 'plan') -%}
+                  {%- if p and p.timestamp is defined and p.timestamp | length > 0 -%}
+                  {%- set a = states('input_select.helios_optimizer_hbc_sub_strategy') -%}
+                  {%- set items = [('Charge', '#4caf50'), ('Charge PV', '#cddc39'),
+                  ('Self-consumption', '#00bcd4'), ('Zero import', '#3f51b5'),
+                  ('Sell', '#ff9800'), ('Standby / peak shave', '#9e9e9e'),
+                  ('Full stop', '#e53935')] -%}
+                  {% for t, c in items -%} <font color="{{ c }}">■</font> {% if
+                  t == a %}**{{ t }}** (now){% else %}{{ t }}{% endif %} · {%
+                  endfor -%} <font color="#616161">■</font> Past
+                  {%- else -%}
+                  No HELIOS plan found (input_number.helios_optimizer_energy_plan),
+                  so the bars show the normal price marks.
+                  {%- endif -%}
+                card_mod:
+                  style: >
+                    ha-card { padding: 4px 16px 0 16px !important; font-size:
+                    12px; }
+                visibility:
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state: Helios
+              - type: heading
+                heading: 'Price intervals: Batterijplan'
+                heading_style: title
+                icon: mdi:battery-sync
+                card_mod:
+                  style: |
+                    ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
+              - type: markdown
+                text_only: true
+                content: >-
+                  {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%-
+                  set items = [('L', '#3b82f6', 'Charge from grid'), ('O',
+                  '#22c55e', 'Discharge'), ('H', '#f59e0b', 'Hold'), ('V',
+                  '#ec4899', 'Feed in'), ('Z', '#94a3b8', 'Solar only')] -%} {%
+                  for k, c, t in items -%} <font color="{{ c }}">■</font> {% if
+                  k == a %}**{{ t }}** (now){% else %}{{ t }}{% endif %} · {%
+                  endfor -%} <font color="#616161">■</font> Past
+                card_mod:
+                  style: >
+                    ha-card { padding: 4px 16px 0 16px !important; font-size:
+                    12px; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
               - type: custom:apexcharts-card
                 card_mod:
                   style: >
@@ -753,6 +955,16 @@ views:
                   legend:
                     show: true
                     position: top
+                    markers:
+                      width: 0
+                      height: 0
+                      size: 0
+                      strokeWidth: 0
+                    formatter: |
+                      EVAL:function (name) {
+                        const i = String(name).indexOf(':');
+                        return i < 0 ? name : '<b>' + name.slice(0, i + 1) + '</b>' + name.slice(i + 1);
+                      }
                   xaxis:
                     type: datetime
                     labels:
@@ -769,40 +981,88 @@ views:
                     intersect: false
                     x:
                       format: ddd dd MMM HH:mm
+                    'y':
+                      formatter: |
+                        EVAL:function (val, opts) {
+                          if (val === null || val === undefined) return '';
+                          const t = Number(val).toFixed(1) + ' ct/kWh';
+                          if (!opts || opts.seriesIndex !== 0) return t;
+                          const x = opts.w.globals.seriesX[0][opts.dataPointIndex];
+                          const l = (window.hbcPlanLabel || {})[x];
+                          return l ? t + ' · ' + l : t;
+                        }
                 series:
                   - entity: sensor.hbc_energy_prices_data
-                    name: Buy
+                    name: 'Bars: buy price'
                     type: column
                     color: '#9e9e9e'
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: >
+                    data_generator: |
+                      // HBC+ v1.2: purple = feeding in costs money, dark purple = paid to import
+                      // HBC+ v1.4: while Batterijplan (Live) steers Dynamic (F3), or the strategy is Helios
+                      // with a HELIOS plan, past bars are plain grey and future bars show the planned action.
                       const marks = entity.attributes.marks || [];
-
-                      // HBC+ v1.2: purple = feeding in costs money, dark purple
-                      = paid to import
-
                       const colours = { high: '#ff9800', low: '#4caf50' };
-
-                      const negColours = { export: '#9c27b0', import: '#4a148c'
-                      };
-
+                      const negColours = { export: '#9c27b0', import: '#4a148c' };
                       const now = Date.now();
-
-                      return marks.map(iv => {
+                      const bp = hass.states['binary_sensor.hbc_managed_by_batterijplan']?.state === 'on';
+                      const helios = hass.states['input_select.house_battery_strategy']?.state === 'Helios';
+                      // planAt(start ms) -> [colour, tooltip label] of the planned action, or null
+                      let planAt = () => null;
+                      let managed = false;
+                      if (bp) {
+                        // Batterijplan: punten[0] = start in s, punten[5] = action
+                        const ACT = { L: ['#3b82f6', 'charge from grid'], O: ['#22c55e', 'discharge'],
+                                      H: ['#f59e0b', 'hold'], V: ['#ec4899', 'feed in'], Z: ['#94a3b8', 'solar only'] };
+                        const plan = {};
+                        (hass.states['sensor.batterijplan']?.attributes?.punten || [])
+                          .forEach(p => { plan[p[0] * 1000] = p[5]; });
+                        planAt = (s) => ACT[plan[s]] || null;
+                        managed = true;
+                      } else if (helios) {
+                        // HELIOS: plan.timestamp[i] (local time) + plan.hbc_sub_strat[i], step_size in minutes;
+                        // a quarter gets the sub-strategy of the HELIOS step it falls in
+                        const SUB = { 'Sell': ['#ff9800', 'Sell'], 'Charge': ['#4caf50', 'Charge'],
+                                      'Charge PV': ['#cddc39', 'Charge PV'], 'Self-consumption': ['#00bcd4', 'Self-consumption'],
+                                      'Zero import': ['#3f51b5', 'Zero import'], 'Standby / peak shave': ['#9e9e9e', 'Standby / peak shave'],
+                                      'Full stop': ['#e53935', 'Full stop'] };
+                        const hp = hass.states['input_number.helios_optimizer_energy_plan']?.attributes || {};
+                        const p = hp.plan || {};
+                        const ts = (p.timestamp || []).map(t => new Date(String(t).replace(' ', 'T')).getTime());
+                        const sub = p.hbc_sub_strat || [];
+                        const step = (Number(hp.step_size) || 15) * 60000;
+                        planAt = (s) => {
+                          for (let i = ts.length - 1; i >= 0; i--) {
+                            if (ts[i] <= s) return (s < ts[i] + step && SUB[sub[i]]) ? SUB[sub[i]] : null;
+                          }
+                          return null;
+                        };
+                        managed = ts.length > 0;
+                      }
+                      const labels = {};
+                      const out = marks.map(iv => {
                         const s = new Date(iv.start).getTime();
                         const e = new Date(iv.end).getTime();
+                        const a = managed ? planAt(s) : null;
+                        if (a) labels[s] = a[1];
                         return {
                           x: s,
                           y: iv.price,
                           fillColor: (now >= s && now < e)
                             ? '#009ac7'
-                            : (negColours[iv.neg] || colours[iv.mark] || '#9e9e9e')
+                            : (managed && e <= now)
+                              ? '#616161'
+                            : a
+                              ? a[0]
+                              : (negColours[iv.neg] || colours[iv.mark] || '#9e9e9e')
                         };
                       });
+                      window.hbcPlanLabel = labels;
+                      return out;
                   - entity: sensor.hbc_energy_prices_data
-                    name: Sell
+                    name: 'Line: sell price'
                     type: line
                     color: '#455a64'
                     stroke_width: 2
@@ -822,9 +1082,20 @@ views:
                       return marks.map(iv => ({ x: new Date(iv.start).getTime(),
                       y: iv.sell }));
           - type: entity
+            entity: input_text.house_battery_strategy_active_sub_strategy
+            icon: mdi:play-circle-outline
+            name: Executing now
+            grid_options:
+              columns: full
+              rows: auto
+            state_color: false
+            card_mod:
+              style: |
+                .value { font-size: 18px !important; }
+          - type: entity
             entity: sensor.hbc_energy_price_now
             icon: mdi:transmission-tower-export
-            name: Buy now
+            name: Buy price
             grid_options:
               rows: auto
             state_color: false
@@ -835,7 +1106,7 @@ views:
           - type: entity
             entity: sensor.hbc_energy_export_price_now
             icon: mdi:transmission-tower-import
-            name: Sell now
+            name: Sell price
             grid_options:
               rows: auto
             state_color: false
@@ -1264,17 +1535,6 @@ views:
                   name: Grid charge up to
             show_header_toggle: false
             state_color: false
-          - color: none
-            type: entities
-            entities:
-              - entity: sensor.hbc_energy_price_now
-                name: Buy price now
-            show_header_toggle: false
-            visibility:
-              - condition: state
-                entity: input_select.house_battery_strategy_dynamic_data_source
-                state:
-                  - Grid Clock
           - type: distribution
             entities:
               - entity: sensor.charge_available_energy
@@ -2037,17 +2297,6 @@ views:
                   entity: input_number.house_battery_strategy_sell_target_soc
             show_header_toggle: false
             state_color: false
-          - color: none
-            type: entities
-            entities:
-              - entity: sensor.hbc_energy_export_price_now
-                name: Sell price now
-            show_header_toggle: false
-            visibility:
-              - condition: state
-                entity: input_select.house_battery_strategy_dynamic_data_source
-                state:
-                  - Grid Clock
           - type: heading
             icon: mdi:information-slab-circle
             heading: When done, switch to strategy
@@ -2160,6 +2409,43 @@ views:
             grid_options:
               rows: 1
             icon: mdi:strategy
+          - type: markdown
+            content: >-
+              {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
+              t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
+              'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
+              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              plan yet') }}</b>.</br>
+
+              Batterijplan sets the Dynamic modes every quarter; your own modes
+              come back when Batterijplan Live goes off or you leave HBC+
+              Dynamic. {%- if state_attr('sensor.batterijplan_zon_voor_hbc',
+              'modus') == 'laaddoel' %} HBC+'s solar forecast is replaced by
+              Batterijplan's charge target. {%- endif %}</ha-alert>
+            text_only: true
+            tap_action:
+              action: navigate
+              navigation_path: /batterijplan
+            visibility:
+              - condition: state
+                entity: binary_sensor.hbc_managed_by_batterijplan
+                state: 'on'
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
+          - type: markdown
+            text_only: true
+            content: >-
+              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy <b>Helios</b> is selected.</br>
+
+              HELIOS replaces HBC+ Dynamic: your Dynamic modes, price intervals and solar forecast are not used while Helios is selected, and come back when you choose Dynamic again. If no HELIOS flow is installed, HBC+ runs Full stop instead. Choose another strategy to hand control back to HBC+.</ha-alert>
+            visibility:
+              - condition: state
+                entity: input_select.house_battery_strategy
+                state: Helios
+              - condition: state
+                entity: binary_sensor.hbc_heartbeat_stale
+                state_not: 'on'
           - type: heading
             icon: mdi:information
             heading: Using the dynamic strategy
@@ -2216,6 +2502,78 @@ views:
                 card_mod:
                   style: |
                     ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state_not: 'on'
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state_not: Helios
+              - type: heading
+                heading: 'Price intervals: HELIOS plan'
+                heading_style: title
+                icon: mdi:weather-sunny
+                card_mod:
+                  style: |
+                    ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state: Helios
+              - type: markdown
+                text_only: true
+                content: >-
+                  {%- set p = state_attr('input_number.helios_optimizer_energy_plan', 'plan') -%}
+                  {%- if p and p.timestamp is defined and p.timestamp | length > 0 -%}
+                  {%- set a = states('input_select.helios_optimizer_hbc_sub_strategy') -%}
+                  {%- set items = [('Charge', '#4caf50'), ('Charge PV', '#cddc39'),
+                  ('Self-consumption', '#00bcd4'), ('Zero import', '#3f51b5'),
+                  ('Sell', '#ff9800'), ('Standby / peak shave', '#9e9e9e'),
+                  ('Full stop', '#e53935')] -%}
+                  {% for t, c in items -%} <font color="{{ c }}">■</font> {% if
+                  t == a %}**{{ t }}** (now){% else %}{{ t }}{% endif %} · {%
+                  endfor -%} <font color="#616161">■</font> Past
+                  {%- else -%}
+                  No HELIOS plan found (input_number.helios_optimizer_energy_plan),
+                  so the bars show the normal price marks.
+                  {%- endif -%}
+                card_mod:
+                  style: >
+                    ha-card { padding: 4px 16px 0 16px !important; font-size:
+                    12px; }
+                visibility:
+                  - condition: state
+                    entity: input_select.house_battery_strategy
+                    state: Helios
+              - type: heading
+                heading: 'Price intervals: Batterijplan'
+                heading_style: title
+                icon: mdi:battery-sync
+                card_mod:
+                  style: |
+                    ha-card { padding: 12px 16px 0 16px !important; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
+              - type: markdown
+                text_only: true
+                content: >-
+                  {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%-
+                  set items = [('L', '#3b82f6', 'Charge from grid'), ('O',
+                  '#22c55e', 'Discharge'), ('H', '#f59e0b', 'Hold'), ('V',
+                  '#ec4899', 'Feed in'), ('Z', '#94a3b8', 'Solar only')] -%} {%
+                  for k, c, t in items -%} <font color="{{ c }}">■</font> {% if
+                  k == a %}**{{ t }}** (now){% else %}{{ t }}{% endif %} · {%
+                  endfor -%} <font color="#616161">■</font> Past
+                card_mod:
+                  style: >
+                    ha-card { padding: 4px 16px 0 16px !important; font-size:
+                    12px; }
+                visibility:
+                  - condition: state
+                    entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
               - type: custom:apexcharts-card
                 card_mod:
                   style: >
@@ -2245,6 +2603,16 @@ views:
                   legend:
                     show: true
                     position: top
+                    markers:
+                      width: 0
+                      height: 0
+                      size: 0
+                      strokeWidth: 0
+                    formatter: |
+                      EVAL:function (name) {
+                        const i = String(name).indexOf(':');
+                        return i < 0 ? name : '<b>' + name.slice(0, i + 1) + '</b>' + name.slice(i + 1);
+                      }
                   xaxis:
                     type: datetime
                     labels:
@@ -2261,40 +2629,88 @@ views:
                     intersect: false
                     x:
                       format: ddd dd MMM HH:mm
+                    'y':
+                      formatter: |
+                        EVAL:function (val, opts) {
+                          if (val === null || val === undefined) return '';
+                          const t = Number(val).toFixed(1) + ' ct/kWh';
+                          if (!opts || opts.seriesIndex !== 0) return t;
+                          const x = opts.w.globals.seriesX[0][opts.dataPointIndex];
+                          const l = (window.hbcPlanLabel || {})[x];
+                          return l ? t + ' · ' + l : t;
+                        }
                 series:
                   - entity: sensor.hbc_energy_prices_data
-                    name: Buy
+                    name: 'Bars: buy price'
                     type: column
                     color: '#9e9e9e'
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: >
+                    data_generator: |
+                      // HBC+ v1.2: purple = feeding in costs money, dark purple = paid to import
+                      // HBC+ v1.4: while Batterijplan (Live) steers Dynamic (F3), or the strategy is Helios
+                      // with a HELIOS plan, past bars are plain grey and future bars show the planned action.
                       const marks = entity.attributes.marks || [];
-
-                      // HBC+ v1.2: purple = feeding in costs money, dark purple
-                      = paid to import
-
                       const colours = { high: '#ff9800', low: '#4caf50' };
-
-                      const negColours = { export: '#9c27b0', import: '#4a148c'
-                      };
-
+                      const negColours = { export: '#9c27b0', import: '#4a148c' };
                       const now = Date.now();
-
-                      return marks.map(iv => {
+                      const bp = hass.states['binary_sensor.hbc_managed_by_batterijplan']?.state === 'on';
+                      const helios = hass.states['input_select.house_battery_strategy']?.state === 'Helios';
+                      // planAt(start ms) -> [colour, tooltip label] of the planned action, or null
+                      let planAt = () => null;
+                      let managed = false;
+                      if (bp) {
+                        // Batterijplan: punten[0] = start in s, punten[5] = action
+                        const ACT = { L: ['#3b82f6', 'charge from grid'], O: ['#22c55e', 'discharge'],
+                                      H: ['#f59e0b', 'hold'], V: ['#ec4899', 'feed in'], Z: ['#94a3b8', 'solar only'] };
+                        const plan = {};
+                        (hass.states['sensor.batterijplan']?.attributes?.punten || [])
+                          .forEach(p => { plan[p[0] * 1000] = p[5]; });
+                        planAt = (s) => ACT[plan[s]] || null;
+                        managed = true;
+                      } else if (helios) {
+                        // HELIOS: plan.timestamp[i] (local time) + plan.hbc_sub_strat[i], step_size in minutes;
+                        // a quarter gets the sub-strategy of the HELIOS step it falls in
+                        const SUB = { 'Sell': ['#ff9800', 'Sell'], 'Charge': ['#4caf50', 'Charge'],
+                                      'Charge PV': ['#cddc39', 'Charge PV'], 'Self-consumption': ['#00bcd4', 'Self-consumption'],
+                                      'Zero import': ['#3f51b5', 'Zero import'], 'Standby / peak shave': ['#9e9e9e', 'Standby / peak shave'],
+                                      'Full stop': ['#e53935', 'Full stop'] };
+                        const hp = hass.states['input_number.helios_optimizer_energy_plan']?.attributes || {};
+                        const p = hp.plan || {};
+                        const ts = (p.timestamp || []).map(t => new Date(String(t).replace(' ', 'T')).getTime());
+                        const sub = p.hbc_sub_strat || [];
+                        const step = (Number(hp.step_size) || 15) * 60000;
+                        planAt = (s) => {
+                          for (let i = ts.length - 1; i >= 0; i--) {
+                            if (ts[i] <= s) return (s < ts[i] + step && SUB[sub[i]]) ? SUB[sub[i]] : null;
+                          }
+                          return null;
+                        };
+                        managed = ts.length > 0;
+                      }
+                      const labels = {};
+                      const out = marks.map(iv => {
                         const s = new Date(iv.start).getTime();
                         const e = new Date(iv.end).getTime();
+                        const a = managed ? planAt(s) : null;
+                        if (a) labels[s] = a[1];
                         return {
                           x: s,
                           y: iv.price,
                           fillColor: (now >= s && now < e)
                             ? '#009ac7'
-                            : (negColours[iv.neg] || colours[iv.mark] || '#9e9e9e')
+                            : (managed && e <= now)
+                              ? '#616161'
+                            : a
+                              ? a[0]
+                              : (negColours[iv.neg] || colours[iv.mark] || '#9e9e9e')
                         };
                       });
+                      window.hbcPlanLabel = labels;
+                      return out;
                   - entity: sensor.hbc_energy_prices_data
-                    name: Sell
+                    name: 'Line: sell price'
                     type: line
                     color: '#455a64'
                     stroke_width: 2
@@ -2313,6 +2729,17 @@ views:
 
                       return marks.map(iv => ({ x: new Date(iv.start).getTime(),
                       y: iv.sell }));
+          - type: entity
+            entity: input_text.house_battery_strategy_active_sub_strategy
+            icon: mdi:play-circle-outline
+            name: Executing now
+            grid_options:
+              columns: full
+              rows: auto
+            state_color: false
+            card_mod:
+              style: |
+                .value { font-size: 18px !important; }
           - type: heading
             icon: mdi:information
             heading_style: subtitle
@@ -2330,16 +2757,44 @@ views:
             heading: Regular period
           - type: entities
             entities:
-              - entity: input_select.house_battery_strategy_dynamic_default
-                name: Default to
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state_not: 'on'
+                row:
+                  entity: input_select.house_battery_strategy_dynamic_default
+                  name: Default to
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
+                row:
+                  type: simple-entity
+                  entity: input_select.house_battery_strategy_dynamic_default
+                  name: Default to (set by Batterijplan)
+                  icon: mdi:battery-sync
           - type: heading
             icon: mdi:timeline-clock-outline
             heading: Cheap periods
             heading_style: subtitle
           - type: entities
             entities:
-              - entity: input_select.house_battery_strategy_dynamic_cheapest
-                name: I want to use
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state_not: 'on'
+                row:
+                  entity: input_select.house_battery_strategy_dynamic_cheapest
+                  name: I want to use
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
+                row:
+                  type: simple-entity
+                  entity: input_select.house_battery_strategy_dynamic_cheapest
+                  name: I want to use (set by Batterijplan)
+                  icon: mdi:battery-sync
               - entity: input_number.house_battery_strategy_dynamic_cheapest_hrs
                 name: 'Max # cheap hrs'
           - type: heading
@@ -2348,8 +2803,22 @@ views:
             heading_style: subtitle
           - type: entities
             entities:
-              - entity: input_select.house_battery_strategy_dynamic_expensive
-                name: I want to use
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state_not: 'on'
+                row:
+                  entity: input_select.house_battery_strategy_dynamic_expensive
+                  name: I want to use
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.hbc_managed_by_batterijplan
+                    state: 'on'
+                row:
+                  type: simple-entity
+                  entity: input_select.house_battery_strategy_dynamic_expensive
+                  name: I want to use (set by Batterijplan)
+                  icon: mdi:battery-sync
               - entity: input_number.house_battery_strategy_dynamic_expensive_hrs
                 name: 'Max # expensive hrs'
       - type: grid
@@ -2933,12 +3402,18 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Phase guard
 
-          **Phase guard** keeps each phase below its grid fuse and battery circuit, _e.g. one active battery per shared phase_.
-          **Peak shaving** keeps grid import and export below a limit, _e.g. for a capacity tariff_.
-          _Per phase: the active battery, grid and battery load, and charge and discharge room..._
+
+          **Phase guard** keeps each phase below its grid fuse and battery
+          circuit, _e.g. one active battery per shared phase_.
+
+          **Peak shaving** keeps grid import and export below a limit, _e.g. for
+          a capacity tariff_.
+
+          _Per phase: the active battery, grid and battery load, and charge and
+          discharge room..._
     cards: []
     sections:
       - type: grid
@@ -2966,7 +3441,7 @@ views:
             content: >-
               {% set lim = states('input_number.house_battery_phase_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Phase fuse
-              overloaded">Grid power on {% for i in [1, 2, 3] if
+              overloaded"><br>Grid power on {% for i in [1, 2, 3] if
               states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
               %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
               load and the active batteries below.</ha-alert>
@@ -2980,7 +3455,7 @@ views:
               {% set circ =
               states('input_number.house_battery_phase_circuit_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Battery circuit
-              overloaded">The batteries on {% for i in [1, 2, 3] if
+              overloaded"><br>The batteries on {% for i in [1, 2, 3] if
               states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
               abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
               W. Check that only one battery per phase runs
@@ -2993,7 +3468,7 @@ views:
                 state_not: Enforce
             content: >-
               <ha-alert alert-type="info" title="Phase guard is not
-              enforcing">Phase guard is <b>{{
+              enforcing"><br>Phase guard is <b>{{
               states('input_select.house_battery_phase_guard_mode') }}</b>: HBC+
               does not act on these settings yet. Active and standby stay empty
               until Node-RED publishes hbc/phase/L1-L3.</ha-alert>
@@ -3749,11 +4224,16 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Batteries
 
-          **Battery life**: calibration, which battery charges first, and when an idle battery stops.
-          The **self-test** checks the setup and measures which phase each battery is connected to.
+
+          **Battery life**: calibration, which battery charges first, and when
+          an idle battery stops.
+
+          The **self-test** checks the setup and measures which phase each
+          battery is connected to.
+
           _Per battery: phase, cutoffs and max power..._
     cards: []
     sections:
@@ -4569,14 +5049,16 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="Setup Grid Power Sensor">HBC+ needs sensor.p1_meter_power and
-              sensor.p1_meter_power_phase_1 … _3 (W, import positive).</ha-alert>
+              <ha-alert title="Setup Grid Power Sensor"><br>HBC+ needs
+              sensor.p1_meter_power and sensor.p1_meter_power_phase_1 … _3 (W,
+              import positive).</ha-alert>
 
               1. Edit the file `packages/hbc_config.yaml`
 
               1. Uncomment option A or B: every line between BEGIN and END
 
-              1. Replace each sensor marked `<< YOUR`, check the configuration and reload Template entities
+              1. Replace each sensor marked `<< YOUR`, check the configuration
+              and reload Template entities
             visibility:
               - condition: or
                 conditions:
@@ -4589,7 +5071,7 @@ views:
           - type: markdown
             content: >-
               <ha-alert title="Grid Power Sensor"
-              alert-type="success">Configured</ha-alert>
+              alert-type="success"><br>Configured</ha-alert>
             visibility:
               - condition: not
                 conditions:
@@ -4613,7 +5095,7 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="Setup Node-RED"> Import and deploy <font
+              <ha-alert title="Setup Node-RED"><br> Import and deploy <font
               color=red>Node-RED</font> scripts.</ha-alert>
             visibility:
               - condition: state
@@ -4621,7 +5103,7 @@ views:
                 state_not: 'on'
           - type: markdown
             content: >-
-              <ha-alert title="Node-RED" alert-type="success">Configured and
+              <ha-alert title="Node-RED" alert-type="success"><br>Configured and
               script deployed</ha-alert>
             visibility:
               - condition: state
@@ -4639,7 +5121,7 @@ views:
               title="Choose a tariff data source">Dynamic, Charge Deadline and
               the price guard need prices. Choose your source, and with Grid
               Clock your supplier.</ha-alert>{% else %}<ha-alert
-              alert-type="success" title="Tariff data source">{{ s
+              alert-type="success" title="Tariff data source"><br>{{ s
               }}</ha-alert>{% endif %}
           - type: heading
             heading: Open Prices
@@ -4653,8 +5135,8 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="(Optional) review power limits"> Use limits and
-              peak shaving to reduce <font color=darkblue>peaks and overload
+              <ha-alert title="(Optional) review power limits"><br> Use limits
+              and peak shaving to reduce <font color=darkblue>peaks and overload
               risk</font>.</ha-alert>
             visibility:
               - condition: and
@@ -4683,7 +5165,7 @@ views:
                     state_not: 'on'
           - type: markdown
             content: >-
-              <ha-alert title="Power limits" alert-type="success"> Batteries
+              <ha-alert title="Power limits" alert-type="success"><br> Batteries
               will help prevent peaks and overloads, when able.</ha-alert>
             visibility:
               - condition: or
@@ -4705,7 +5187,7 @@ views:
               title="(Optional) Notifications">Every notification now goes to
               <code>notify.notify</code>. Set your notify targets below and send
               a test.</ha-alert>{% else %}<ha-alert alert-type="success"
-              title="Notifications">Sent to {{ t }}</ha-alert>{% endif %}
+              title="Notifications"><br>Sent to {{ t }}</ha-alert>{% endif %}
           - type: markdown
             content: '### Step 7'
             text_only: true

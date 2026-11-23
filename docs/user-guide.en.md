@@ -234,7 +234,7 @@ Pick the strategy in `input_select.house_battery_strategy`. The *Strategy arbite
 | Timed | A different strategy per time period (A to E) |
 | Dynamic | A different strategy for cheap, expensive and normal price periods |
 | Full stop | Every battery on stop, 0 W; the relay opens, so no standby draw |
-| Helios | Reserved for a future HELIOS integration (not part of HBC+). Until that flow is installed, a placeholder tab runs *Full stop* and logs a warning |
+| Helios | Reserved for a future HELIOS integration (not part of HBC+). Until that flow is installed, a placeholder tab runs *Full stop* and logs a warning. While *Helios* is selected, the Overview, Prices and Timed & Dynamic views show a *Managed by HELIOS* banner, and the *Price intervals* chart shows the HELIOS plan (the HBC+ sub-strategy per quarter, from `input_number.helios_optimizer_energy_plan`) |
 
 **EV stop trigger.** Put the entity id of an "EV is charging" sensor or boolean in `input_text.house_battery_strategy_ev_sensor_entity_id`. While it is `on`, HBC+ runs the strategy in `input_select.house_battery_strategy_ev_stop_trigger_strategy` (*Full stop* or *Standby / peak shave*), so the batteries do not discharge into the car.
 
@@ -357,6 +357,17 @@ Prices are refreshed at midnight, at 13:15 and 15:00, after a change of source, 
 - the expensive strategy is not *Sell* (selling empties the batteries regardless of the house).
 
 Otherwise, and with the switch off, Dynamic works exactly as in v1.3. A big change in the house (heat pump, EV, someone moving in) makes the old profile wrong: press *Forget the learned profile* and switch off until it has learned again. With *Self-consumption* as the normal strategy the batteries also discharge outside the expensive quarters; a larger margin covers that.
+
+### Steered by Batterijplan
+
+*New in v1.4.* [Batterijplan](https://github.com/satscan1/hbc-batterijplan) is a Home Assistant integration that can steer HBC+. With HBC+ on **Dynamic** and Batterijplan's **Live** switch on, Batterijplan sets the Dynamic mode of the coming quarter's price class every quarter (*Default to*, the cheap and the expensive strategy), and may replace HBC+'s solar forecast with a charge target. Your own modes come back when Live goes off or you leave Dynamic. HBC+'s own marks then no longer decide what the batteries do, so the dashboard shows that Batterijplan is in charge (`packages/hbc_batterijplan.yaml`):
+
+- **Overview**: *Dynamic · managed by Batterijplan (Live)* under *Choose strategy*.
+- **Prices** and **Timed & Dynamic**: a banner with Batterijplan's action for this quarter (charge from the grid, discharge, hold, feed in, solar only), and a note when the solar forecast is replaced. Tap it to open Batterijplan.
+- **Price intervals** chart: titled *Price intervals: Batterijplan*; the coming quarters are coloured by Batterijplan's planned action (blue charge from grid, green discharge, amber hold, pink feed in, grey solar only), with a legend above the chart (the current action in bold); tap or hover a bar to see its action in the tooltip. Past quarters turn dark grey, so HBC+'s own cheap and expensive colours are not mistaken for the plan; the current quarter stays light blue.
+- **Timed & Dynamic**: the three Dynamic modes are read-only, marked *(set by Batterijplan)*. *Min. price difference* and the cheap and expensive hours stay editable: HBC+ still uses them to mark the quarters Batterijplan steers by.
+
+The indicator is `binary_sensor.hbc_managed_by_batterijplan`: on when the strategy is Dynamic, `switch.batterijplan_live` is on and `sensor.batterijplan` reports its plan as live. Without Batterijplan it stays off and the dashboard looks as before. The package only shows; it changes nothing in the control.
 
 ### Grid Clock feed
 
@@ -485,10 +496,11 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 
 - **F1 — Setup self-test.** One button on the *Batteries* view checks the setup (P1, battery entities, master mode, heartbeat, Node-RED, price sensor, notify targets) and measures per battery on which phase it is connected. A measured phase that differs from the phase map is shown, and applied only when you press *Apply phase map* (see [Setup self-test](#setup-self-test)).
 - **F2 — Load forecast.** HBC+ learns how much the house uses per quarter (working days and weekend days apart) and forecasts the next 24 hours. Optionally Dynamic charges only what the expensive quarters need, from the cheapest quarters before them (*Dynamic uses load forecast*, off by default; see [Load forecast](#load-forecast)).
+- **F3 — Steered by Batterijplan.** When Batterijplan (Live) steers Dynamic, the dashboard says so: a banner with Batterijplan's action, the price chart coloured by its plan, and the Dynamic modes read-only (see [Steered by Batterijplan](#steered-by-batterijplan)). New package `hbc_batterijplan.yaml`; without Batterijplan nothing changes.
 ### Updating from v1.3
 
 1. **Back up** as in [Step 1](#step-1--back-up).
-2. **Packages:** copy all files from `packages/` except `hbc_config.yaml` (that one is yours). `hbc_selftest.yaml` and `hbc_load_forecast.yaml` are new; `hbc_control.yaml` changed (strategy option *Self-test*, attribute `load_forecast`). *Check configuration* and restart HA.
+2. **Packages:** copy all files from `packages/` except `hbc_config.yaml` (that one is yours). `hbc_selftest.yaml`, `hbc_load_forecast.yaml` and `hbc_batterijplan.yaml` are new; `hbc_control.yaml` changed (strategy option *Self-test*, attribute `load_forecast`). *Check configuration* and restart HA.
 3. **Flows:** delete every tab whose name starts with *HBC+*, import `node-red/hbc-plus-all-flows.json` and deploy, as in *Updating HBC+* (`#updating-hbc`). New tab *HBC+ Self-test v1.4*; the Strategy arbiter knows the requester `selftest` (priority 90).
 4. **Dashboard:** paste `dashboards/hbc_plus.yaml` again in the raw configuration editor.
 5. **Run the self-test** once: *Batteries* → *Battery phase test* → *Run self-test*.
@@ -837,6 +849,7 @@ Download the latest release from the [Releases page](https://github.com/CodeRubb
 | `hbc_calibration.yaml` | Battery calibration (v1.3): settings, last full per battery, plan, start and finish automations |
 | `hbc_savings.yaml` | Savings and round-trip efficiency (v1.3): split power, energy counters, quarterly settlement, utility meters, efficiency and suggested spread |
 | `hbc_selftest.yaml` | Setup self-test (v1.4): `script.hbc_selftest_run`, `_abort`, `_apply_phase_map` and the result sensors |
+| `hbc_batterijplan.yaml` | Batterijplan indicator (v1.4): `binary_sensor.hbc_managed_by_batterijplan` for the dashboard; changes nothing in the control |
 | `hbc_load_forecast.yaml` | Load forecast (v1.4): learned profile per quarter, forecast sensors, switch and margin for Dynamic, reset script. Needs `hbc_savings.yaml` |
 
 **dashboards/**
@@ -1118,6 +1131,7 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 | `sensor.hbc_load_profile` | `hbc_load_forecast.yaml` | Learned days; attributes `wd` / `we` (96 quarter averages, W), `days_wd`, `days_we` |
 | `sensor.hbc_load_forecast` | `hbc_load_forecast.yaml` | Expected use, next 24 h (kWh); attribute `forecast` (96 × W from `start`), `learned` |
 | `sensor.hbc_load_forecast_expensive` | `hbc_load_forecast.yaml` | Expected use in the coming expensive quarters (kWh) |
+| `binary_sensor.hbc_managed_by_batterijplan` | `hbc_batterijplan.yaml` | On while Batterijplan (Live) steers Dynamic; attributes `action_now` (L, O, H, V, Z), `solar_override` |
 | `input_boolean.house_battery_dynamic_use_load_forecast`, `input_number.house_battery_load_forecast_margin`, `script.hbc_load_profile_reset` | `hbc_load_forecast.yaml` | Dynamic uses the forecast (off by default), margin (default 15 %), forget the profile |
 
 ### Grid Clock feed and price guard (v1.2)
@@ -1204,7 +1218,7 @@ The *Home Battery Control Plus* dashboard has ten views, in the order you use th
 On the Overview, alerts appear only when something needs attention:
 
 - **Setup: N of 6 steps done** — until you finish the *Setup* checklist; the link opens the Settings view.
-- **HBC+ is not steering the batteries** — no good control cycle while *Control Mode* is *Full control*: Home Assistant has handed the batteries back to their own firmware.
+- **HBC+ is not steering the batteries** — no good control cycle while *Control Mode* is *Full control*: Home Assistant has handed the batteries back to their own firmware. HBC+ runs a control cycle on every update of `sensor.p1_meter_power`, so when the P1 meter is unavailable or has sent no new value for more than 5 minutes, the message says so: check the P1 meter and its integration in Home Assistant (reload it). Otherwise, check that Node-RED runs. While this message shows, the Batterijplan and HELIOS banners are hidden.
 - **HBC+ logged a problem** or **HBC+ keeps logging errors** — `sensor.hbc_health` is on *warning* or *error*; the alert shows the counts of the last 10 minutes, the latest message and how long ago it was, and for known problems a *Fix* line. The counts cover 10 minutes, so after you fix the cause the alert turns blue (*No new HBC+ errors since …*) about 90 s after the last message and disappears 10 minutes after it, with the time when it will clear.
 - **Phase fuse overloaded** and **Battery circuit overloaded** — the same alarms as on the Phase guard view.
 - **EV is charging** — the EV stop trigger is active and overrules the strategy.
