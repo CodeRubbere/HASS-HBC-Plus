@@ -36,7 +36,7 @@ views:
         content: >-
           <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.2"
           alt="HBC+ Home Battery Control Plus"
-          height="72"><br><b>v1.2.1</b></center>
+          height="72"><br><b>v1.2.2</b></center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
@@ -2693,7 +2693,7 @@ views:
               <ha-alert alert-type="info" title="Phase guard is not
               enforcing">Phase guard is <b>{{
               states('input_select.house_battery_phase_guard_mode') }}</b>: HBC+
-              does not act on these settings yet. Active and standby stay empty
+              does not act on these settings yet{% if is_state('input_select.house_battery_phase_guard_mode', 'Monitor') %}; a phase overload only gives a notification, no Full stop{% else %}; a phase overload gives no Full stop and no notification{% endif %}. Active and standby stay empty
               until Node-RED publishes hbc/phase/L1-L3.</ha-alert>
           - type: tile
             entity: input_select.house_battery_phase_guard_mode

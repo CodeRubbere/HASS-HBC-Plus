@@ -3,6 +3,18 @@
 All notable changes to HBC+ (Home Battery Control Plus). The user guide has the details: *What's new* and
 *Updating from …* per version ([English](docs/user-guide.en.md), [Nederlands](docs/gebruikershandleiding.nl.md)).
 
+## [1.2.2] – 24 November 2026
+
+The phase guard on *Monitor* no longer stops the batteries; only *Enforce* does. The Node-RED flows are unchanged
+(still v1.2.1): no need to import them again.
+
+### Changed
+- Phase guard on *Monitor*: a phase that stayed overloaded with the batteries part of the cause no longer switches
+  to *Full stop*. On *Monitor* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* now only
+  writes to the logbook and notifies what it would have done (*HBC+: phase overload (Monitor)*); *Full stop* only
+  happens on *Enforce*. The note on the Phase guard view says so too.
+  Copy `packages/hbc_phase_guard.yaml` again and paste the dashboard again.
+
 ## [1.2.1] – 21 November 2026
 
 Fixes for a fresh install, a separate *Pricing List* switch on the Prices view, and clearer installation steps.

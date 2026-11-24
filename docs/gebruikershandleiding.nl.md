@@ -8,7 +8,7 @@ HBC+ (Home Battery Control Plus) v1.2 stuurt tot zes thuisbatterijen aan vanuit 
 
 Naast de fasebewaking brengt HBC+ verbeteringen op drie vlakken:
 
-- **Veiligheid** — bewaking van de hoofdzekering per fase, een strikte regel van één batterij per fase als de fasebewaking op *Enforce* faalt, een HA-automatisering die naar *Full stop* schakelt als de batterijen een fase overbelast houden, een HA-alarm dat ook zonder Node-RED werkt, en een heartbeat die de batterijen teruggeeft aan hun firmware als de regellus stopt of niet meer werkt, en waarschuwingen en fouten die altijd in het Node-RED-log en `sensor.hbc_health` terechtkomen.
+- **Veiligheid** — bewaking van de hoofdzekering per fase, een strikte regel van één batterij per fase als de fasebewaking op *Enforce* faalt, een HA-automatisering die naar *Full stop* schakelt als de batterijen een fase overbelast houden (op *Enforce*; op *Monitor* alleen een melding), een HA-alarm dat ook zonder Node-RED werkt, en een heartbeat die de batterijen teruggeeft aan hun firmware als de regellus stopt of niet meer werkt, en waarschuwingen en fouten die altijd in het Node-RED-log en `sensor.hbc_health` terechtkomen.
 - **Performance** — één snelle leesnode in plaats van ~43 losse reads, PID-stap en Timed-periodekeuze samengevoegd met instellingencaches, en minder Modbus-writes per tick.
 - **Stabiliteit** — bugfixes (o.a. totaal-helpers die na een herstart op 0 sprongen, een prijscache die na een bronwissel oude prijzen gebruikte, het debug board), batterijwaarden die nooit NaN worden (één onbeschikbare batterij legt de andere niet meer stil), en één consistente HA-servernode in alle flowbestanden.
 
@@ -88,9 +88,9 @@ Naast de lus publiceert *HBC+ health* de waarschuwingen en fouten van de laatste
 
 | Modus | Wat HBC+ doet | Gebruik het voor |
 | --- | --- | --- |
-| Off | Planner en guard laten elk bericht ongemoeid door: geen faseregels. | Eén batterij per fase, of om HBC+ uit te sluiten bij debuggen |
-| Monitor (standaard) | Berekent en publiceert wat het *zou* doen; de nodestatus toont `would: …`. Verandert niets. | In bedrijf nemen; de koppeling testen voordat batterijen een fase delen |
-| Enforce | Past de faseregels toe in de planner, de strategieën, de guard en de master switch. | Normaal gebruik met twee batterijen op een fase |
+| Off | Planner en guard laten elk bericht ongemoeid door: geen faseregels, en geen *Full stop* of melding bij een fase-overbelasting. | Eén batterij per fase, of om HBC+ uit te sluiten bij debuggen |
+| Monitor (standaard) | Berekent en publiceert wat het *zou* doen; de nodestatus toont `would: …`. Verandert niets: een fase-overbelasting geeft alleen een melding, geen *Full stop*. | In bedrijf nemen; de koppeling testen voordat batterijen een fase delen |
+| Enforce | Past de faseregels toe in de planner, de strategieën, de guard en de master switch. Een fase die de batterijen overbelast houden, schakelt naar *Full stop* (R10). | Normaal gebruik met twee batterijen op een fase |
 
 Elke gewijzigde node is getest tegen het origineel met dezelfde invoer: Off en Monitor geven identieke uitvoer.
 
@@ -394,7 +394,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 | Iemand wijzigt een batterij in de Marstek-app | De teruglezing wijkt af van het setpoint; *Set Batteries* schrijft opnieuw; het HA-alarm vangt een overbelasting binnen 10 s. |
 | Guard-modus *Off* | Geen faseregels; alleen veilig met één batterij per fase. |
 | Fout in planner of guard op *Enforce* | *Set Batteries* past de strikte regel toe: per gedeelde fase draait alleen het laagste M-nummer, hooguit batterijgroep − marge (R9). |
-| Een fase blijft 10 s overbelast met de batterijen als meeveroorzaker | HA zet de strategie op *Full stop* en stuurt een melding; draait HBC niet, dan zet HA de batterijen op die fase zelf stil (R10). |
+| Een fase blijft 10 s overbelast met de batterijen als meeveroorzaker | Op *Enforce* zet HA de strategie op *Full stop* en stuurt een melding; draait HBC niet, dan zet HA de batterijen op die fase zelf stil. Op *Monitor* stuurt hij alleen een melding (R10). |
 
 ### Ontwerpkeuzes
 
@@ -402,7 +402,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 - **Eén batterij per fase is de standaard.** *Shared headroom* (beide tegelijk binnen de zekeringruimte) is een optie in de instellingen.
 - **Uitbreiding met drie Marsteks (M4–M6).** Standaard fasekaart M1/M4 L1, M2/M5 L2, M3/M6 L3, per batterij aan te passen.
 - **Veiligheid boven snelheid.** De overdracht is break-before-make, en een batterij zonder verse teruglezing telt als bezig.
-- **Fail-safe op Enforce, elders fail-open.** Op *Off* en *Monitor* verandert een fout in een nieuwe stap niets; op *Enforce* valt hij terug op de strikte regel van één batterij per fase (R9). Het HA-alarm werkt los van Node-RED en schakelt naar *Full stop* als de batterijen een fase overbelast houden (R10).
+- **Fail-safe op Enforce, elders fail-open.** Op *Off* en *Monitor* verandert een fout in een nieuwe stap niets; op *Enforce* valt hij terug op de strikte regel van één batterij per fase (R9). Het HA-alarm werkt los van Node-RED; houden de batterijen een fase overbelast, dan schakelt het op *Enforce* naar *Full stop* en stuurt het op *Monitor* alleen een melding (R10).
 - **Tekens:** batterijvermogen is positief bij laden, P1-fasevermogen is positief bij import.
 - **Eerst Monitor.** De fasebewaking kan al draaien met één batterij per fase; dan verandert er niets en test je de koppeling gratis, voordat er een tweede batterij op een fase komt.
 
@@ -418,6 +418,7 @@ v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027
 - **F8 — Prijsbewaking.** Stopt met terugleveren en laadt juist bij negatieve prijzen, met signalen voor een PV-begrenzer (zie [Prijsbewaking (price guard)](#prijsbewaking-price-guard)).
 - **Nieuwe indeling van het dashboard.** Negen views in de volgorde waarin je ze gebruikt: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings en Logging (zie [Dashboard](#dashboard)). De adressen van de views blijven gelijk, dus links en bladwijzers blijven werken.
 - **Logo.** HBC+ heeft een logo, in de kop van het dashboard en bovenaan de README. Kopieer `www/hbc-plus/` naar de map `www/` van HA (zie [Stap 2](#stap-2--home-assistant-packages)); alle logobestanden staan in `assets/logo/`.
+- **v1.2.2 — Fasebewaking op Monitor zet de batterijen niet meer stil.** Een fase die overbelast bleef met de batterijen als meeveroorzaker, zette de strategie ook op *Monitor* op *Full stop*, terwijl Monitor belooft niets te veranderen. Op *Monitor* meldt HBC+ nu alleen wat hij gedaan zou hebben (*HBC+: phase overload (Monitor)*); *Full stop* volgt alleen op *Enforce*. Bijwerken vanaf v1.2.1: kopieer `packages/hbc_phase_guard.yaml` opnieuw, herstart HA en plak het dashboard opnieuw; de flows zijn niet veranderd.
 
 Met de standaardinstellingen werkt v1.2 precies als v1.1. Offline gecontroleerd: met terugleverprijs = inkoopprijs geeft Dynamic in 96 prijslijsten dezelfde markeringen, strategie en spreads, en met de prijsbewaking op Off is de strategiekeuze voor elke strategie gelijk.
 
@@ -604,7 +605,7 @@ Naast de fasebewaking bevat HBC+ de wijzigingen hieronder: B1–B8, R1–R4, P1�
 **R10 — De overbelastingsalarmen sloegen alleen alarm.**
 
 - *Probleem:* `binary_sensor.hbc_phase_limit_exceeded` en `binary_sensor.hbc_phase_circuit_limit_exceeded` gingen na 10 s overbelasting aan, maar niets deed er iets mee.
-- *Oplossing:* de automatisering *HBC+: Full stop when a phase stays overloaded by the batteries* in `hbc_phase_guard.yaml` zet de strategie op *Full stop* als een van beide aangaat en de batterijen op die fase meeveroorzaker zijn: boven de batterijgroep, of de fase boven de netzekering terwijl de batterijen dezelfde kant op duwen (laden bij afname, ontladen bij teruglevering). Een huisbelasting alleen, terwijl de batterijen ontladen, wordt niet gestopt: dan helpen de batterijen juist. De Strategy arbiter ziet de wijziging als een handmatige keuze, dus HBC zet de batterijen zelf stil. Draait HBC niet (heartbeat verouderd), dan zet HA de batterijen op die fase ook zelf op RS485 *enable* + forcible *stop*. Hij schrijft naar het logboek, maakt een persistente melding en roept `notify.notify` aan. Hij grijpt alleen in bij *Full control* en met de guard op *Monitor* of *Enforce* (de limieten zijn ingesteld). Kies je strategie opnieuw zodra de oorzaak duidelijk is.
+- *Oplossing:* de automatisering *HBC+: Full stop when a phase stays overloaded by the batteries* in `hbc_phase_guard.yaml` zet de strategie op *Full stop* als een van beide aangaat en de batterijen op die fase meeveroorzaker zijn: boven de batterijgroep, of de fase boven de netzekering terwijl de batterijen dezelfde kant op duwen (laden bij afname, ontladen bij teruglevering). Een huisbelasting alleen, terwijl de batterijen ontladen, wordt niet gestopt: dan helpen de batterijen juist. De Strategy arbiter ziet de wijziging als een handmatige keuze, dus HBC zet de batterijen zelf stil. Draait HBC niet (heartbeat verouderd), dan zet HA de batterijen op die fase ook zelf op RS485 *enable* + forcible *stop*. Hij schrijft naar het logboek, maakt een persistente melding en roept `notify.notify` aan. Hij grijpt alleen in bij *Full control* en met de guard op *Enforce*. Op *Monitor* verandert hij niets: hij schrijft naar het logboek en meldt wat hij gedaan zou hebben (titel *HBC+: phase overload (Monitor)*), zodat een te lage limiet tijdens het in bedrijf nemen de batterijen niet stilzet. Op *Off* doet hij niets. Kies je strategie opnieuw zodra de oorzaak duidelijk is.
 
 **R11 — Een batterij die opdrachten negeerde, viel niet op.**
 
@@ -829,7 +830,7 @@ Zet op de view **Batteries**, onder elke *Marstek M1…M6*, *Connected to phase*
 | `packages/hbc_heartbeat.yaml`, automatisering *alert when the control loop keeps logging errors* | HBC+ 5 minuten lang 3 of meer fouten in 10 minuten logde |
 | `packages/hbc_control.yaml`, automatisering *alert when the tariff source delivers no prices* | De tariefbron 30 minuten geen geldige prijzen leverde |
 | `packages/hbc_phase_guard.yaml`, automatisering *notify when a phase guard safety setting changes* | Iemand of iets de guard-modus, sharing, een zekeringlimiet, de marge of de fasekaart wijzigde |
-| `packages/hbc_phase_guard.yaml`, automatisering *Full stop when a phase stays overloaded by the batteries* | Een fase 10 s overbelast bleef met de batterijen als meeveroorzaker, en HBC+ naar *Full stop* schakelde |
+| `packages/hbc_phase_guard.yaml`, automatisering *Full stop when a phase stays overloaded by the batteries* | Een fase 10 s overbelast bleef met de batterijen als meeveroorzaker, en HBC+ naar *Full stop* schakelde (op *Monitor*: wat hij gedaan zou hebben, zonder iets te veranderen) |
 
 ### Je installatie beveiligen
 
@@ -1006,7 +1007,7 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 Laat HBC+ een paar dagen op *Monitor* draaien voordat twee batterijen een fase delen. Met één batterij per fase verandert ook Enforce niets, dus je kunt de koppeling kosteloos testen.
 
 1. **Controleer de metingen.** Op de view Phase guard moet *Batteries* per fase overeenkomen met de eigen vermogenssensor van elke batterij, en *Grid vs fuse* × de zekering moet kloppen met je meter (bijvoorbeeld 10 % van 7360 W = 736 W). Controleer de tekens: laden geeft positief batterijvermogen, import geeft positief netvermogen.
-2. **Kijk een paar dagen naar Monitor.** In Node-RED toont de status van *HBC+ phase planner* en *HBC+ phase guard* `would: …`. Met één batterij per fase moet de actieve batterij altijd die batterij zijn en hoort `sensor.hbc_phase_findings` op 0 te blijven, behalve als de zekeringruimte begrenst.
+2. **Kijk een paar dagen naar Monitor.** In Node-RED toont de status van *HBC+ phase planner* en *HBC+ phase guard* `would: …`. Met één batterij per fase moet de actieve batterij altijd die batterij zijn en hoort `sensor.hbc_phase_findings` op 0 te blijven, behalve als de zekeringruimte begrenst. Een melding *HBC+: phase overload (Monitor)* betekent dat een fase boven zijn limiet bleef met de batterijen als meeveroorzaker: controleer eerst de netzekering en de batterijgroep, want op *Enforce* schakelt dat naar *Full stop*.
 3. **Zet op Enforce** onder *Phase guard settings* op de view Settings. Zolang elke fase één batterij heeft, hoort er niets te veranderen.
 4. **Voeg de tweede batterij op een fase toe** (bijvoorbeeld Marstek M4 op L1): maak zijn entiteiten `marstek_m4_*` aan, verhoog `input_number.house_battery_count` en zet `input_select.marstek_m4_phase` = L1.
 5. **Test in deze volgorde**, terwijl je de view Phase guard bekijkt:
@@ -1084,6 +1085,7 @@ Twee meters per fase volgen vanzelf de instellingen van de fasebewaking, in % va
 | De checklist *Setup* toont *Setup Node-RED* | De Start-flow heeft nog niet gedraaid | Importeer en deploy de flows (stap 3); controleer de servernode *HA System* |
 | De gekozen strategie blijft niet staan, of verandert vanzelf | Een hold in de Strategy arbiter (Oscillation Guard of een eigen flow) | Bekijk `input_text.hbc_strategy_arbiter` en het HA-logboek; een handmatige keuze wordt de nieuwe basis, de hold eindigt als de aanvrager hem loslaat |
 | Strategie ineens *Full stop*; melding *HBC+: phase overload - Full stop* | Een fase bleef 10 s overbelast met de batterijen als meeveroorzaker (R10) | Controleer de view Phase guard en de limieten; kies daarna je strategie opnieuw |
+| Melding *HBC+: phase overload (Monitor)* | Een fase bleef 10 s overbelast met de batterijen als meeveroorzaker terwijl de fasebewaking op *Monitor* staat; er is niets veranderd | Controleer de netzekering en de batterijgroep onder *Phase guard settings*: een te lage limiet geeft dit, bijvoorbeeld als de auto en de batterijen tegelijk laden. Op *Enforce* zou dit naar *Full stop* schakelen |
 | Waarschuwing *… keeps ignoring commands* | De batterij volgt HBC+ niet (RS485 uitgezet in de Marstek-app, firmwaremodus, Modbus-probleem) | Controleer RS485-besturing en de werkmodus van die batterij |
 | *Grid Clock feed* toont `error`, reden `HTTP 404` | Geen feedbestand voor deze zone of leverancier (nog niet), of de leverancier is verwijderd | Kies een andere leverancier; de lijst ververst bij de start en dagelijks om 00:10 |
 | De leverancierslijst toont alleen *Market price (no supplier)* | De leveranciersindex kon niet geladen worden (geen internet, of het Dynamic-tabblad is niet gedeployd) | Bekijk de status van de groep *Grid Clock suppliers* in het Dynamic-tabblad; hij probeert het bij de start en dagelijks opnieuw |
