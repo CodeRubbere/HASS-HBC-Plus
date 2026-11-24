@@ -58,6 +58,14 @@ input_text:
     max: 255
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_calibration"
+        unique_id: hbc_version_hbc_calibration
+        icon: mdi:tag-outline
+        state: "1.3.0"
+
   # When each battery last reached its charge cutoff (cutoff - 1 %). Starts counting on a new installation,
   # so there is no calibration straight away. Kept across restarts (trigger-based).
 

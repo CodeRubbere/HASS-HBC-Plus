@@ -43,6 +43,14 @@ input_number:
     mode: box
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_price_guard"
+        unique_id: hbc_version_hbc_price_guard
+        icon: mdi:tag-outline
+        state: "1.3.0"
+
   - sensor:
       # normal / export_negative / import_negative for the current quarter, from Dynamic's marks.
       - name: "HBC price state"

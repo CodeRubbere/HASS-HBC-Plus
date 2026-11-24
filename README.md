@@ -60,6 +60,8 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | `node-red/*.json` | The same tabs as separate files |
 | `node-red/README.md` | Per-tab overview of what HBC+ changes |
 | `node-red/examples/` | Example tab for the shared price fetch |
+| `tools/` | For maintainers: `set-version.py` sets the version of a release and writes `versions.json`; `check-versions.py` (versions, identical flow files, `versions.json`), `check-docs.py` (English and Dutch guide in step, CHANGELOG entry) and `release-files.py` (what changed since the last tag, and that every changed part has a new version). `hooks/pre-commit` runs the first two before each commit (`git config core.hooksPath tools/hooks`). The GitHub Action in `.github/workflows/` runs them on every push and makes a draft release with the zip on a tag |
+| `versions.json` | The release manifest: every part and its version. Home Assistant reads it at the release tag to say which parts are older than the release |
 | `docs/` | User guide in English and Dutch |
 
 ## Requirements
@@ -78,7 +80,7 @@ Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#
 
 ## Quick start
 
-1. Download the [latest release](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) (*Assets* → *Source code (zip)*) and unzip it.
+1. Download the [latest release](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) (*Assets* → **hbc-plus-vX.Y.Z.zip**; before v1.3: *Source code (zip)*) and unzip it.
 2. Make sure Home Assistant (with packages and MQTT) and Node-RED (see *Requirements*) are running.
    From Marketplace, install **Cheapest Energy Hours**, **card-mod** and **apexcharts-card**, then restart HA and reload the browser.
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.

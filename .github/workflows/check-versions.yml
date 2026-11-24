@@ -1,0 +1,82 @@
+# HBC+ release integrity (v1.3). On every push and pull request: versions, flow files, versions.json and the
+# EN/NL guides (tools/check-*.py). On a tag vX.Y.Z, after those checks: a DRAFT release with
+#   hbc-plus-vX.Y.Z.zip   only what users copy (packages, flows, dashboard, logo) plus README, LICENSE, CHANGELOG
+#   versions.json         the release manifest (Home Assistant reads it from the tag, not from this asset)
+#   release notes         the CHANGELOG entry and the files to copy since the previous tag
+# Review the draft on GitHub and publish it: the update check in Home Assistant only sees published releases.
+name: Check versions and release
+
+on:
+  push:
+    branches: [main, 'feature/**']
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Versions, flow files and versions.json
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            python3 tools/check-versions.py --tag "${GITHUB_REF_NAME}"
+          else
+            python3 tools/check-versions.py
+          fi
+      - name: English and Dutch guides, CHANGELOG
+        run: python3 tools/check-docs.py
+      - name: Every changed part has a new version
+        if: github.ref_type == 'tag'
+        run: python3 tools/release-files.py --to "${GITHUB_REF_NAME}"
+
+  release:
+    needs: check
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the release zip and the notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NAME="hbc-plus-${TAG}"
+          mkdir -p "dist/${NAME}/node-red"
+          cp -r packages www dashboards "dist/${NAME}/"
+          cp node-red/hbc-plus-all-flows.json "dist/${NAME}/node-red/"
+          cp README.md LICENSE CHANGELOG.md versions.json "dist/${NAME}/"
+          (cd dist && zip -qr "${NAME}.zip" "${NAME}")
+          python3 - "${TAG#v}" > dist/notes.md <<'PY'
+          import re, sys
+          v = sys.argv[1]
+          text = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(r'^## \[' + re.escape(v) + r'\].*?(?=^## \[|\Z)', text, re.M | re.S)
+          print(m.group(0).strip() if m else f'HBC+ v{v}')
+          print()
+          print('Download **hbc-plus-v' + v + '.zip** below (not *Source code*): it holds only what you copy.')
+          print()
+          PY
+          python3 tools/release-files.py --to "${TAG}" --markdown >> dist/notes.md
+      - name: Draft release with the zip and versions.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "dist/hbc-plus-${TAG}.zip" versions.json --clobber
+          else
+            gh release create "${TAG}" --draft --title "HBC+ ${TAG}" --notes-file dist/notes.md \
+              "dist/hbc-plus-${TAG}.zip" versions.json
+          fi
