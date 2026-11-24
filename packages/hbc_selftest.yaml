@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=http://schemas.home-assistant.io/configuration
 ###########################################################################################################
-# HBC+ v1.4 - setup self-test (F1)
+# HBC+ v1.3 - setup self-test (F1)
 #
 # One button (Batteries view, Battery phase test) checks that everything HBC+ needs is there and working,
 # and measures per battery which phase it is connected to.
@@ -14,7 +14,7 @@
 #   sensor.hbc_self_test_phase_changes  number of batteries whose measured phase differs from the phase map now
 #
 # Part 1, the checks, runs in HA and does not move the batteries. Part 2, phase detection, needs Node-RED:
-# the tab 'HBC+ Self-test v1.4' (node-red/03 self-test (HBC+).json). The script holds the strategy
+# the tab 'HBC+ Self-test v1.3' (node-red/03 self-test (HBC+).json). The script holds the strategy
 # 'Self-test' through the Strategy arbiter (requester selftest, priority 90); Node-RED then lets one battery
 # at a time charge at 800 W for about 35 s and looks on which P1 phase the import rises. About 1 minute per
 # battery, up to 3 minutes when the house load changes during a measurement. Each battery takes about 9 Wh.
@@ -23,7 +23,7 @@
 # The test NEVER changes the phase map itself: apply a measured phase with the button on the dashboard.
 # Signs as everywhere in HBC+: sensor.p1_meter_power_phase_N > 0 = import, battery power > 0 = charging.
 # Requires: hbc_strategy_arbiter.yaml, hbc_notify.yaml, hbc_heartbeat.yaml, hbc_phase_guard.yaml and the
-# strategy option 'Self-test' in input_select.house_battery_strategy (hbc_control.yaml, v1.4).
+# strategy option 'Self-test' in input_select.house_battery_strategy (hbc_control.yaml, v1.3).
 ###########################################################################################################
 
 script:
@@ -49,7 +49,7 @@ script:
         event_data:
           run_id: "{{ run_id }}"
           step: checks
-      # --- what only Node-RED can see (tab 'HBC+ Self-test v1.4', group Flow check)
+      # --- what only Node-RED can see (tab 'HBC+ Self-test v1.3', group Flow check)
       - event: hbc_selftest_flow_check
         event_data:
           run_id: "{{ run_id }}"
@@ -115,9 +115,9 @@ script:
             {#- Node-RED flow check -#}
             {%- if not flow -%}
               {%- set ns.c = ns.c + [{'id': 'flow', 'label': 'Node-RED self-test flow', 'result': 'error',
-                   'info': ("Node-RED runs, but the tab 'HBC+ Self-test v1.4' did not answer within 10 s: import the v1.4 flows (node-red/hbc-plus-all-flows.json) and deploy"
+                   'info': ("Node-RED runs, but the tab 'HBC+ Self-test v1.3' did not answer within 10 s: import the v1.3 flows (node-red/hbc-plus-all-flows.json) and deploy"
                             if is_state('binary_sensor.hbc_heartbeat_stale', 'off')
-                            else "no answer within 10 s: is Node-RED running, with the tab 'HBC+ Self-test v1.4' imported?")}] -%}
+                            else "no answer within 10 s: is Node-RED running, with the tab 'HBC+ Self-test v1.3' imported?")}] -%}
             {%- elif not flow.global_states -%}
               {%- set ns.c = ns.c + [{'id': 'flow', 'label': 'Node-RED self-test flow', 'result': 'error',
                    'info': "no HA states in global context: turn on 'Expose to global context' on the HA server node"}] -%}
@@ -151,10 +151,10 @@ script:
             {%- set ns.c = ns.c + [{'id': 'arbiter', 'label': 'Strategy arbiter', 'result': 'ok' if not arb_miss else 'error',
                  'info': 'hold and release scripts available' if not arb_miss
                          else 'missing ' ~ arb_miss | join(', ') ~ ': copy packages/hbc_strategy_arbiter.yaml (v1.3 or newer) and restart HA'}] -%}
-            {#- strategy option Self-test (hbc_control.yaml v1.4) -#}
+            {#- strategy option Self-test (hbc_control.yaml v1.3) -#}
             {%- set opts = state_attr('input_select.house_battery_strategy', 'options') or [] -%}
             {%- set ns.c = ns.c + [{'id': 'option', 'label': 'Strategy option Self-test', 'result': 'ok' if 'Self-test' in opts else 'error',
-                 'info': 'present' if 'Self-test' in opts else 'missing in input_select.house_battery_strategy: copy hbc_control.yaml v1.4 and restart HA'}] -%}
+                 'info': 'present' if 'Self-test' in opts else 'missing in input_select.house_battery_strategy: copy hbc_control.yaml v1.3 and restart HA'}] -%}
             {#- EV stop trigger -#}
             {%- set ev = states('input_text.house_battery_strategy_ev_sensor_entity_id') | trim -%}
             {%- set ev_on = ev not in bad and ev != '' and states(ev) in ['on', 'true', 'True', '1'] -%}
@@ -342,7 +342,7 @@ template:
       - name: "HBC version hbc_selftest"
         unique_id: hbc_version_hbc_selftest
         icon: mdi:tag-outline
-        state: "1.4.0"
+        state: "1.3.0"
 
   - trigger:
       - trigger: event

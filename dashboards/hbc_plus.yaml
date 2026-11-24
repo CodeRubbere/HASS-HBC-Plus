@@ -34,7 +34,7 @@ views:
         type: markdown
         text_only: true
         content: >-
-          {%- set dash = '1.4.0' -%}
+          {%- set dash = '1.3.0' -%}
           <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v{{ dash }}"
           alt="HBC+ Home Battery Control Plus" height="72"></center>
       layout: center
@@ -44,7 +44,7 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Status & control (v1.4.0)
+            heading: Status & control (v1.3.0)
             heading_style: title
             icon: mdi:gamepad-variant-outline
           - type: markdown
@@ -57,9 +57,9 @@ views:
                     state: 'on'
                   - condition: numeric_state
                     entity: sensor.hbc_release_dashboard_number
-                    above: 10400
+                    above: 10300
             content: |-
-              {%- set dash = '1.4.0' -%}
+              {%- set dash = '1.3.0' -%}
               {%- set u = 'binary_sensor.hbc_update_available' -%}
               {%- set latest = state_attr(u, 'latest') -%}
               {%- set out = state_attr(u, 'outdated') or [] -%}
@@ -83,12 +83,12 @@ views:
                 conditions:
                   - condition: numeric_state
                     entity: sensor.hbc_release_number
-                    below: 104
+                    below: 103
                   - condition: numeric_state
                     entity: sensor.hbc_release_number
-                    above: 104
+                    above: 103
             content: >-
-              {%- set dash = '1.4.0' -%} {%- set inst =
+              {%- set dash = '1.3.0' -%} {%- set inst =
               states('sensor.hbc_package_version') -%} {%- set dn = (dash.split('.')[0]
               | int) * 100 + (dash.split('.')[1] | int) -%} {%- set newer =
               states('sensor.hbc_release_number') | int(0) > dn -%}
@@ -1123,7 +1123,7 @@ views:
                       // HBC+ v1.2: purple = feeding in costs money, dark purple
                       = paid to import
 
-                      // HBC+ v1.4: while Batterijplan (Live) steers Dynamic
+                      // HBC+ v1.3: while Batterijplan (Live) steers Dynamic
                       (F3), or the strategy is Helios
 
                       // with a HELIOS plan, past bars are plain grey and future
@@ -2863,7 +2863,7 @@ views:
                       // HBC+ v1.2: purple = feeding in costs money, dark purple
                       = paid to import
 
-                      // HBC+ v1.4: while Batterijplan (Live) steers Dynamic
+                      // HBC+ v1.3: while Batterijplan (Live) steers Dynamic
                       (F3), or the strategy is Helios
 
                       // with a HELIOS plan, past bars are plain grey and future
@@ -5685,7 +5685,7 @@ views:
           - type: markdown
             text_only: true
             content: |-
-              {%- set dash = '1.4.0' -%}
+              {%- set dash = '1.3.0' -%}
               {%- set rel = states('sensor.hbc_package_version') -%}
               {%- set mm = rel.split('.')[:2] | join('.') -%}
               {%- set fl = state_attr('sensor.hbc_health', 'flows_version') or '—' -%}

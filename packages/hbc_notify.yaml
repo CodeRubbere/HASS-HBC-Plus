@@ -73,4 +73,4 @@ template:
       - name: "HBC version hbc_notify"
         unique_id: hbc_version_hbc_notify
         icon: mdi:tag-outline
-        state: "1.4.0"
+        state: "1.3.0"

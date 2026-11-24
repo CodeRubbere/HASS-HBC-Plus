@@ -1,5 +1,5 @@
 ###########################################################################################################
-# HBC+ - your installation-specific config                                                      (HBC+ v1.4)
+# HBC+ - your installation-specific config                                                      (HBC+ v1.3)
 #
 # This is the one package that belongs to YOUR installation. Updates never replace it: when you copy the
 # new packages, keep your own hbc_config.yaml (the update steps in the user guide say so).

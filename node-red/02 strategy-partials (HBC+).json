@@ -2,7 +2,7 @@
     {
         "id": "1ae53b821b8673a2",
         "type": "tab",
-        "label": "HBC+ Strategy Partials v1.4",
+        "label": "HBC+ Strategy Partials v1.3",
         "disabled": false,
         "info": "",
         "env": []
@@ -16,7 +16,7 @@
         "outputs": 0,
         "timeout": 0,
         "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.4.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
         "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
         "libs": [],
         "x": 160,
@@ -684,8 +684,8 @@
         "id": "hbcpdocd4b9c1638",
         "type": "comment",
         "z": "1ae53b821b8673a2",
-        "name": "📖 How this flow works - HBC+ v1.4 (open the Info sidebar)",
-        "info": "# HBC+ Strategy Partials v1.4 - how this flow works\n\nPart of **HBC+ v1.4** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nThree small strategies that all run **Self-consumption** with one direction switched off:\n\n| Strategy (link-in) | Self-consumption with | Effect |\n|---|---|---|\n| Charge PV | discharging disabled | charges only from PV surplus, never discharges |\n| Zero import | charging disabled | discharges to keep grid import at 0 W, never charges |\n| Standby / peak shave | charging and discharging disabled | batteries idle (soft stop, no relay clicks) |\n\n**Peak shaving**: when grid power exceeds the import or export limit set in HBC+, *Mode selection* switches to peak shaving and the batteries are used to stay below the limit. It persists while the batteries are still needed (*Peak check*) and ends by a time-out once they are not.\n\n## HBC+ v1.0\n\nNo change in this tab. Everything runs through Self-consumption, which applies the phase rules on Enforce.\n",
+        "name": "📖 How this flow works - HBC+ v1.3 (open the Info sidebar)",
+        "info": "# HBC+ Strategy Partials v1.3 - how this flow works\n\nPart of **HBC+ v1.3** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nThree small strategies that all run **Self-consumption** with one direction switched off:\n\n| Strategy (link-in) | Self-consumption with | Effect |\n|---|---|---|\n| Charge PV | discharging disabled | charges only from PV surplus, never discharges |\n| Zero import | charging disabled | discharges to keep grid import at 0 W, never charges |\n| Standby / peak shave | charging and discharging disabled | batteries idle (soft stop, no relay clicks) |\n\n**Peak shaving**: when grid power exceeds the import or export limit set in HBC+, *Mode selection* switches to peak shaving and the batteries are used to stay below the limit. It persists while the batteries are still needed (*Peak check*) and ends by a time-out once they are not.\n\n## HBC+ v1.0\n\nNo change in this tab. Everything runs through Self-consumption, which applies the phase rules on Enforce.\n",
         "x": 230,
         "y": 40,
         "wires": []

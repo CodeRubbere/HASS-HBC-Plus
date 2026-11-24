@@ -1,20 +1,20 @@
 {
-  "release": "1.4.0",
+  "release": "1.3.0",
   "parts": {
-    "dashboard": "1.4.0",
-    "flows": "1.4.0",
-    "hbc_batterijplan": "1.4.0",
-    "hbc_calibration": "1.4.0",
-    "hbc_control": "1.4.0",
-    "hbc_deadline_charge": "1.4.0",
-    "hbc_gridclock": "1.4.0",
-    "hbc_heartbeat": "1.4.0",
-    "hbc_load_forecast": "1.4.0",
-    "hbc_notify": "1.4.0",
-    "hbc_phase_guard": "1.4.0",
-    "hbc_price_guard": "1.4.0",
-    "hbc_savings": "1.4.0",
-    "hbc_selftest": "1.4.0",
-    "hbc_strategy_arbiter": "1.4.0"
+    "dashboard": "1.3.0",
+    "flows": "1.3.0",
+    "hbc_batterijplan": "1.3.0",
+    "hbc_calibration": "1.3.0",
+    "hbc_control": "1.3.0",
+    "hbc_deadline_charge": "1.3.0",
+    "hbc_gridclock": "1.3.0",
+    "hbc_heartbeat": "1.3.0",
+    "hbc_load_forecast": "1.3.0",
+    "hbc_notify": "1.3.0",
+    "hbc_phase_guard": "1.3.0",
+    "hbc_price_guard": "1.3.0",
+    "hbc_savings": "1.3.0",
+    "hbc_selftest": "1.3.0",
+    "hbc_strategy_arbiter": "1.3.0"
   }
 }

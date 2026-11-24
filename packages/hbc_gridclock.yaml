@@ -58,7 +58,7 @@ template:
       - name: "HBC version hbc_gridclock"
         unique_id: hbc_version_hbc_gridclock
         icon: mdi:tag-outline
-        state: "1.4.0"
+        state: "1.3.0"
 
   # Status of the last feed fetch, from the event Node-RED fires after every fetch.
   # Entity id: sensor.hbc_grid_clock_feed (HA derives it from the name below; keep the name).
