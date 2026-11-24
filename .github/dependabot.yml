@@ -1,0 +1,10 @@
+# Keeps the GitHub Actions in .github/workflows/ current: a pull request when actions/checkout or
+# actions/setup-python gets a new version (for example when GitHub deprecates the Node.js they run on).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"

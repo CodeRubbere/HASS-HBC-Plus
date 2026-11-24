@@ -117,6 +117,32 @@ The switch takes about 45 minutes and the batteries stay on their own firmware u
 - A Marstek over Modbus TCP works as well, as long as its entities follow the `marstek_mN_*` pattern.
 - Always consult a qualified electrician about your installation and fuse ratings.
 
+## Releasing (maintainers)
+
+Every part of HBC+ carries its own version; `tools/` keeps them right. Once per clone or worktree:
+`git config core.hooksPath tools/hooks` (checks versions and both guides before each commit).
+
+1. **Set the version.** Minor release: `python3 tools/set-version.py X.Y.0` (every part). Patch release:
+   `python3 tools/set-version.py X.Y.Z <part> …` with only the parts that changed (`flows`, `dashboard`, or a
+   package file such as `hbc_phase_guard`). It also writes `versions.json`.
+2. **Write the docs.** A `## [X.Y.Z]` entry in `CHANGELOG.md`, and the same change in both guides
+   (English and Dutch); `python3 tools/check-docs.py` checks that they are in step.
+3. **Check before you tag.** `python3 tools/check-versions.py` and `python3 tools/release-files.py`: the
+   second lists what changed since the last tag and fails when a changed part kept its version.
+4. **Merge through a pull request** into `main`; the *check* job must pass (ruleset on `main`).
+5. **Tag** `vX.Y.Z` on `main` and push the tag. The Action checks again and makes a **draft** release with
+   `hbc-plus-vX.Y.Z.zip`, `versions.json` and notes (the CHANGELOG entry plus the files to copy).
+6. **Publish the draft** after reading it. A patch for an *older* line (a 1.2.x after 1.3.0): untick
+   *Set as the latest release*, or Home Assistant's update check compares with that one.
+7. **After a merge between feature branches** (for example `main` into `feature/v1.4`): resolve version
+   conflicts in favour of the branch's own version, then `python3 tools/set-version.py <branch version>` and
+   `python3 tools/check-versions.py`.
+
+**Testing the update check before a release:** push the branch with its `versions.json`, then in Home Assistant
+set `sensor.hbc_latest_version` to the branch name (*Developer tools* → *States*, for example `feature/v1.3`).
+HBC+ fetches the manifest from that branch, and the Overview and the *Versions* table on the Settings view show
+what differs. The next release check (at most 6 hours, or a restart) puts the sensor back.
+
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE). HBC+ is derived from HBC v4.15.1 by CodeBob (GPL-3.0); all changes are described in [docs/user-guide.en.md](docs/user-guide.en.md).
