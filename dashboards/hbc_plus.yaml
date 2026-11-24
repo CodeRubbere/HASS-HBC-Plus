@@ -55,7 +55,7 @@ views:
             content: >-
               {%- set u = 'binary_sensor.hbc_update_available' -%}
               <ha-alert alert-type="info" title="HBC+ v{{ state_attr(u,
-              'latest') }} is available">You run v{{ state_attr(u, 'installed')
+              'latest') }} is available"><br>You run v{{ state_attr(u, 'installed')
               }}. The release notes say what is new and how to update.</ha-alert>
 
 
@@ -71,7 +71,7 @@ views:
                 is_state('input_select.marstek_master_battery_mode', 'Full control'),
                 states('sensor.hbc_self_test_status') in ['ok', 'warning'] ] -%}
               <ha-alert alert-type="info" title="Setup: {{ checks | select |
-              list | count }} of {{ checks | count }} steps done">Finish the
+              list | count }} of {{ checks | count }} steps done"><br>Finish the
               setup on the Settings view.</ha-alert>
 
 
@@ -143,7 +143,7 @@ views:
 
               {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h,
               'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors'
-              if is_state(h, 'error') else 'HBC+ logged a problem' }}">{{ e }}
+              if is_state(h, 'error') else 'HBC+ logged a problem' }}"><br>{{ e }}
               error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }} in
               the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ ' ago)'
               if at else '' }}: <i>{{ last | e }}</i>{% if hint
@@ -295,7 +295,7 @@ views:
           - type: markdown
             text_only: true
             content: >-
-              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy
+              <ha-alert alert-type="info" title="Managed by HELIOS"><br> Strategy
               <b>Helios</b> is selected.</br>
 
               The HELIOS flow decides when the batteries charge, discharge or
@@ -328,7 +328,7 @@ views:
               {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
               t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
               'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
-              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              title="Managed by Batterijplan (Live)"><br> Now: <b>{{ t.get(a, 'no
               plan yet') }}</b>.</br>
 
               Batterijplan sets the Dynamic modes every quarter; your own modes
@@ -804,7 +804,7 @@ views:
               {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
               t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
               'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
-              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              title="Managed by Batterijplan (Live)"><br> Now: <b>{{ t.get(a, 'no
               plan yet') }}</b>.</br>
 
               Batterijplan sets the Dynamic modes every quarter; your own modes
@@ -837,7 +837,7 @@ views:
           - type: markdown
             text_only: true
             content: >-
-              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy
+              <ha-alert alert-type="info" title="Managed by HELIOS"><br> Strategy
               <b>Helios</b> is selected.</br>
 
               The price intervals on this page are not used to steer the
@@ -2535,7 +2535,7 @@ views:
               {%- set a = state_attr('sensor.batterijplan', 'actie') -%} {%- set
               t = {'L': 'charge from the grid', 'O': 'discharge', 'H': 'hold',
               'V': 'feed in', 'Z': 'solar only'} -%} <ha-alert alert-type="info"
-              title="Managed by Batterijplan (Live)"> Now: <b>{{ t.get(a, 'no
+              title="Managed by Batterijplan (Live)"><br> Now: <b>{{ t.get(a, 'no
               plan yet') }}</b>.</br>
 
               Batterijplan sets the Dynamic modes every quarter; your own modes
@@ -2568,7 +2568,7 @@ views:
           - type: markdown
             text_only: true
             content: >-
-              <ha-alert alert-type="info" title="Managed by HELIOS"> Strategy
+              <ha-alert alert-type="info" title="Managed by HELIOS"><br> Strategy
               <b>Helios</b> is selected.</br>
 
               HELIOS replaces HBC+ Dynamic: your Dynamic modes, price intervals
@@ -5310,7 +5310,7 @@ views:
               {% set s =
               states('input_select.house_battery_strategy_dynamic_data_source')
               %}{% if s in ['None', 'unknown', 'unavailable'] %}<ha-alert
-              title="Choose a tariff data source">Dynamic, Charge Deadline and
+              title="Choose a tariff data source"><br>Dynamic, Charge Deadline and
               the price guard need prices. Choose your source, and with Grid
               Clock your supplier.</ha-alert>{% else %}<ha-alert
               alert-type="success" title="Tariff data source"><br>{{ s
@@ -5376,7 +5376,7 @@ views:
             content: >-
               {% set t = states('input_text.house_battery_notify_targets') %}{%
               if t in ['', 'unknown', 'unavailable'] %}<ha-alert
-              title="(Optional) Notifications">Every notification now goes to
+              title="(Optional) Notifications"><br>Every notification now goes to
               <code>notify.notify</code>. Set your notify targets below and send
               a test.</ha-alert>{% else %}<ha-alert alert-type="success"
               title="Notifications"><br>Sent to {{ t }}</ha-alert>{% endif %}
@@ -5399,9 +5399,9 @@ views:
             content: >-
               {% set s = states('sensor.hbc_self_test_status') %}{% if s in
               ['ok', 'warning'] %}<ha-alert alert-type="success"
-              title="Self-test">Last result: {{ s }}</ha-alert>{% elif s ==
-              'running' %}<ha-alert title="Self-test">Running…</ha-alert>{% else
-              %}<ha-alert title="Run the self-test">With Full control on, run
+              title="Self-test"><br>Last result: {{ s }}</ha-alert>{% elif s ==
+              'running' %}<ha-alert title="Self-test"><br>Running…</ha-alert>{% else
+              %}<ha-alert title="Run the self-test"><br>With Full control on, run
               the self-test on the Batteries view (Battery phase test): it
               checks the setup and measures the phase of every
               battery.</ha-alert>{% endif %}
