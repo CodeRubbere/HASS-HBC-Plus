@@ -1,0 +1,96 @@
+name: Feature request
+description: Suggest a new feature or an improvement for HBC+
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest an improvement to HBC+!
+        Before you start, please check the [existing issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues?q=is%3Aissue) to see if someone already asked for the same thing.
+
+        You may write in English or Dutch (Nederlands mag ook).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation or limitation you run into. What are you trying to achieve?
+      placeholder: "Example: When prices are negative for several hours, I want my battery to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like HBC+ to handle this? Mention settings, dashboard fields or behaviour you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Workarounds you use today, or other ways this could be solved.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of HBC+ does this concern?
+      multiple: true
+      options:
+        - Overview / Status & control
+        - Prices / Grid Clock tariff data
+        - Charge & Sell
+        - Timed & Dynamic
+        - Phase guard
+        - PID Control
+        - Batteries
+        - Settings
+        - Logging
+        - Node-RED flows
+        - Documentation / user guide
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: HBC+ version
+      description: Shown on the Overview tab under "Status & control (vX.Y.Z)".
+      placeholder: "v1.2.2"
+    validations:
+      required: false
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup (optional)
+      description: Battery brand/model, number of batteries, phases, country, tariff type. Helps judge whether the feature fits your situation.
+      placeholder: |
+        - Batteries: 2x Marstek Venus E V2 on L1 and L2
+        - Country / tariff: NL, dynamic contract
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, graphs, links or anything else that helps explain the request.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues and this has not been requested yet.
+          required: true
+        - label: I am willing to help test this feature.
+          required: false
