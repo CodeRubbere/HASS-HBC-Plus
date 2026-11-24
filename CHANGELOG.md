@@ -29,6 +29,10 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   tabs, or flows and packages, are of different HBC+ versions, or a tab is missing.
 
 ### Changed
+- Phase guard on *Monitor*: a phase that stayed overloaded with the batteries part of the cause no longer switches
+  to *Full stop*. On *Monitor* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* now only
+  writes to the logbook and notifies what it would have done (*HBC+: phase overload (Monitor)*); *Full stop* only
+  happens on *Enforce*. The note on the Phase guard view says so too.
 - **Problem alert** — the Overview alert *HBC+ keeps logging errors* shows how long ago the latest message
   was and a *Fix* line for known problems (new attribute `hint` on `sensor.hbc_health`, also in the
   notification). About 90 s after the last message it turns blue with the time it clears, instead of staying
@@ -48,6 +52,16 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
   on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
   Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+- Lost connection to Home Assistant: every node that calls HA failed with `NoConnectionError` and was logged as an
+  *Unhandled exception* error, usually first from *HBC+ Strategy Timed >> Render settings* (its 30-s settings refresh),
+  so the alert pointed at Timed. It is now ONE warning per outage, *No connection to Home Assistant since HH:MM*,
+  repeated every 5 minutes while it lasts, with a *Fix* hint; *Once per (re)connect* (Start tab) clears it when HA
+  runs again. Timed skips its settings refresh while there is no connection (new node *HA connected?*) and keeps
+  using the last settings.
+- Dashboard, PID Control: the *PID analysis* graph could show *Unable to load history: Invalid start_time*. It asked
+  for only 90 s of history (`hours_to_show: 0.025`), and Home Assistant refuses a start time later than its own clock,
+  so a browser clock more than 90 s ahead of the HA server broke the graph. It now shows 6 minutes
+  (`hours_to_show: 0.1`).
 
 ### Updating from 1.2
 Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml` and `hbc_savings.yaml`), delete the old

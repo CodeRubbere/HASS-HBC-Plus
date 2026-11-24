@@ -53,6 +53,7 @@
         },
         "nodes": [
             "tmd_cfg_tick",
+            "tmd_cfg_gate",
             "tmd_cfg_sub",
             "tmd_cfg_tpl",
             "tmd_cfg_json",
@@ -60,7 +61,7 @@
         ],
         "x": 514,
         "y": 1419,
-        "w": 772,
+        "w": 922,
         "h": 122
     },
     {
@@ -428,7 +429,7 @@
         "y": 1460,
         "wires": [
             [
-                "tmd_cfg_tpl"
+                "tmd_cfg_gate"
             ]
         ]
     },
@@ -499,6 +500,27 @@
         ]
     },
     {
+        "id": "tmd_cfg_gate",
+        "type": "function",
+        "z": "08784a7d4ebd8fe8",
+        "g": "tmd_g_read",
+        "name": "HA connected?",
+        "func": "// HBC+ (v1.3): skip the 30-s settings refresh while Node-RED has no connection to Home Assistant.\n// 'Render settings' would fail with NoConnectionError every 30 s; the last cached settings stay in use\n// and the refresh runs again on the next tick once the connection is back.\nconst ha = global.get('homeassistant');\nconst servers = (ha && typeof ha === 'object') ? Object.values(ha).filter(s => s && typeof s === 'object' && 'isConnected' in s) : [];\nif (servers.length && !servers.some(s => s.isConnected)) {\n    node.status({ fill: 'yellow', shape: 'ring', text: `no HA connection, skipped ${new Date().toLocaleTimeString()}` });\n    return null;\n}\nnode.status({});\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 1460,
+        "wires": [
+            [
+                "tmd_cfg_tpl"
+            ]
+        ]
+    },
+    {
         "id": "tmd_cfg_tpl",
         "type": "api-render-template",
         "z": "08784a7d4ebd8fe8",
@@ -511,7 +533,7 @@
         "resultsLocationType": "msg",
         "templateLocation": "",
         "templateLocationType": "none",
-        "x": 880,
+        "x": 1030,
         "y": 1480,
         "wires": [
             [
@@ -528,7 +550,7 @@
         "property": "timed_cfg",
         "action": "obj",
         "pretty": false,
-        "x": 1030,
+        "x": 1180,
         "y": 1480,
         "wires": [
             [
@@ -549,7 +571,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1180,
+        "x": 1330,
         "y": 1480,
         "wires": [
             []

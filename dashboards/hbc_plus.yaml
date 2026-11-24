@@ -34,7 +34,8 @@ views:
         type: markdown
         text_only: true
         content: >-
-          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.3" alt="HBC+ Home Battery Control Plus" height="72"><br>v1.3</center>
+          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.3"
+          alt="HBC+ Home Battery Control Plus" height="72"><br>v1.3</center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
@@ -47,14 +48,17 @@ views:
             icon: mdi:gamepad-variant-outline
           - type: markdown
             text_only: true
-            content: |-
+            content: >-
               {%- set checks = [
                 states('input_number.house_battery_count') | int(0) > 0,
                 states('sensor.p1_meter_power') not in ['unknown', 'unavailable'],
                 is_state('input_boolean.house_battery_control_has_node_red', 'on'),
                 states('input_select.house_battery_strategy_dynamic_data_source') not in ['None', 'unknown', 'unavailable'],
                 is_state('input_select.marstek_master_battery_mode', 'Full control') ] -%}
-              <ha-alert alert-type="info" title="Setup: {{ checks | select | list | count }} of {{ checks | count }} steps done">Finish the setup on the Settings view.</ha-alert>
+              <ha-alert alert-type="info" title="Setup: {{ checks | select |
+              list | count }} of {{ checks | count }} steps done">Finish the
+              setup on the Settings view.</ha-alert>
+
 
               [Open Settings](/home-battery-control-plus/advanced-settings)
             visibility:
@@ -70,8 +74,14 @@ views:
               - condition: state
                 entity: input_select.marstek_master_battery_mode
                 state: Full control
-            content: |-
-              {%- set t = states('sensor.hbc_last_run') | as_datetime(None) -%} <ha-alert alert-type="error" title="HBC+ is not steering the batteries">No good control cycle {{ 'for ' ~ relative_time(t) if t else 'since Home Assistant started' }}. Home Assistant has handed the batteries back to their own firmware. Check that Node-RED runs.</ha-alert>
+            content: >-
+              {%- set t = states('sensor.hbc_last_run') | as_datetime(None) -%}
+              <ha-alert alert-type="error" title="HBC+ is not steering the
+              batteries">No good control cycle {{ 'for ' ~ relative_time(t) if t
+              else 'since Home Assistant started' }}. Home Assistant has handed
+              the batteries back to their own firmware. Check that Node-RED
+              runs.</ha-alert>
+
 
               [Open Logging](/home-battery-control-plus/problem-solver)
           - type: markdown
@@ -82,11 +92,40 @@ views:
                 state:
                   - warning
                   - error
-            content: |-
-              {%- set h = 'sensor.hbc_health' -%} {%- set e = state_attr(h, 'errors_10m') | int(0) -%} {%- set w = state_attr(h, 'warnings_10m') | int(0) -%} {%- set last = state_attr(h, 'last_error') if e > 0 else state_attr(h, 'last_warning') -%} {%- set ea = (state_attr(h, 'last_error_at') or '') | as_datetime(None) -%} {%- set wa = (state_attr(h, 'last_warning_at') or '') | as_datetime(None) -%} {%- set at = ea if e > 0 else wa -%} {%- set newest = ([ea, wa] | select | max) if (ea or wa) else None -%} {%- set quiet = newest is not none and (now() - newest).total_seconds() > 90 -%} {%- set hint = state_attr(h, 'hint') or '' -%} {%- set what = 'errors' if e > 0 else 'warnings' -%}
-              {%- if quiet -%} <ha-alert alert-type="info" title="No new HBC+ {{ what }} since {{ (newest | as_local).strftime('%H:%M') }}">This notice clears by itself around {{ ((newest + timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }}. Latest: <i>{{ last | e }}</i>{% if hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
-              {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h, 'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors' if is_state(h, 'error') else 'HBC+ logged a problem' }}">{{ e }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }} in the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ ' ago)' if at else '' }}: <i>{{ last | e }}</i>{% if hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed the cause? This notice clears by itself after 10 minutes without new errors or warnings.</small></ha-alert>
+            content: >-
+              {%- set h = 'sensor.hbc_health' -%} {%- set e = state_attr(h,
+              'errors_10m') | int(0) -%} {%- set w = state_attr(h,
+              'warnings_10m') | int(0) -%} {%- set last = state_attr(h,
+              'last_error') if e > 0 else state_attr(h, 'last_warning') -%} {%-
+              set ea = (state_attr(h, 'last_error_at') or '') |
+              as_datetime(None) -%} {%- set wa = (state_attr(h,
+              'last_warning_at') or '') | as_datetime(None) -%} {%- set at = ea
+              if e > 0 else wa -%} {%- set newest = ([ea, wa] | select | max) if
+              (ea or wa) else None -%} {%- set quiet = newest is not none and
+              (now() - newest).total_seconds() > 90 -%} {%- set hint =
+              state_attr(h, 'hint') or '' -%} {%- set what = 'errors' if e > 0
+              else 'warnings' -%}
+
+              {%- if quiet -%} <ha-alert alert-type="info" title="No new HBC+ {{
+              what }} since {{ (newest | as_local).strftime('%H:%M')
+              }}"><br>This notice clears by itself around {{ ((newest +
+              timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the
+              last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }}
+              warning{{ 's' if w != 1 }}. Latest: <i>{{ last | e }}</i>{% if
+              hint %}<br><br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
+
+              {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h,
+              'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors'
+              if is_state(h, 'error') else 'HBC+ logged a problem' }}"><br>{{ e
+              }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }}
+              in the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ '
+              ago)' if at else '' }}: <i>{{ last | e }}</i>{% if hint
+              %}<br><br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed
+              the cause? This notice clears by itself after 10 minutes without
+              new errors or warnings.</small></ha-alert>
+
               {%- endif %}
+
 
               [Open Logging](/home-battery-control-plus/problem-solver)
           - type: markdown
@@ -95,8 +134,14 @@ views:
               - condition: state
                 entity: binary_sensor.hbc_phase_limit_exceeded
                 state: 'on'
-            content: |-
-              {% set lim = states('input_number.house_battery_phase_limit_w') | float(3680) %} <ha-alert alert-type="error" title="Phase fuse overloaded">Grid power on {% for i in [1, 2, 3] if states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house load and the active batteries.</ha-alert>
+            content: >-
+              {% set lim = states('input_number.house_battery_phase_limit_w') |
+              float(3680) %} <ha-alert alert-type="error" title="Phase fuse
+              overloaded">Grid power on {% for i in [1, 2, 3] if
+              states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
+              %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
+              load and the active batteries.</ha-alert>
+
 
               [Open Phase guard](/home-battery-control-plus/phases)
           - type: markdown
@@ -105,8 +150,16 @@ views:
               - condition: state
                 entity: binary_sensor.hbc_phase_circuit_limit_exceeded
                 state: 'on'
-            content: |-
-              {% set circ = states('input_number.house_battery_phase_circuit_limit_w') | float(3680) %} <ha-alert alert-type="error" title="Battery circuit overloaded">The batteries on {% for i in [1, 2, 3] if states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) | abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }} W. Check that only one battery per phase runs (Enforce).</ha-alert>
+            content: >-
+              {% set circ =
+              states('input_number.house_battery_phase_circuit_limit_w') |
+              float(3680) %} <ha-alert alert-type="error" title="Battery circuit
+              overloaded">The batteries on {% for i in [1, 2, 3] if
+              states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
+              abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
+              W. Check that only one battery per phase runs
+              (Enforce).</ha-alert>
+
 
               [Open Phase guard](/home-battery-control-plus/phases)
           - type: tile
@@ -149,7 +202,9 @@ views:
             features_position: bottom
           - type: heading
             icon: mdi:cash-remove
-            heading: 'No energy prices: Dynamic runs its baseline strategy. Check the tariff source'
+            heading: >-
+              No energy prices: Dynamic runs its baseline strategy. Check the
+              tariff source
             heading_style: subtitle
             tap_action:
               action: navigate
@@ -211,14 +266,23 @@ views:
                 entity: input_select.marstek_master_battery_mode
                 state: Full control
           - type: markdown
-            content: '**✋ Held by:** {% for h in state_attr(''sensor.hbc_strategy_holds'', ''holds'') or [] if h.active %}{{ h.requester }} ({{ h.strategy }}{{ '', until '' ~ h.expires if h.expires }}){{ '', '' if not loop.last }}{% endfor %}. Your choice: {{ state_attr(''sensor.hbc_strategy_holds'', ''base'') }}.'
+            content: >-
+              **✋ Held by:** {% for h in state_attr('sensor.hbc_strategy_holds',
+              'holds') or [] if h.active %}{{ h.requester }} ({{ h.strategy }}{{
+              ', until ' ~ h.expires if h.expires }}){{ ', ' if not loop.last
+              }}{% endfor %}. Your choice: {{
+              state_attr('sensor.hbc_strategy_holds', 'base') }}.
             visibility:
               - condition: numeric_state
                 entity: sensor.hbc_strategy_holds
                 above: 0
           - type: markdown
-            content: |-
-              **⚡ Price guard:** {{ state_attr('sensor.hbc_price_guard', 'action') }} {%- set u = state_attr('sensor.hbc_price_state', 'until') -%} {%- if u %} until {{ as_timestamp(u) | timestamp_custom('%H:%M') }}{% endif %} ({{ {'export_negative': 'feeding in costs money',
+            content: >-
+              **⚡ Price guard:** {{ state_attr('sensor.hbc_price_guard',
+              'action') }} {%- set u = state_attr('sensor.hbc_price_state',
+              'until') -%} {%- if u %} until {{ as_timestamp(u) |
+              timestamp_custom('%H:%M') }}{% endif %} ({{ {'export_negative':
+              'feeding in costs money',
                   'import_negative': 'you are paid to import'}.get(states('sensor.hbc_price_state'), 'low prices') }})
             tap_action:
               action: navigate
@@ -336,7 +400,7 @@ views:
             heading_style: title
             icon: mdi:book-open-page-variant
           - type: heading
-            icon: mdi:information-slab-circle
+            icon: mdi:book-open-variant
             heading: User guide (English)
             heading_style: subtitle
             tap_action:
@@ -357,7 +421,7 @@ views:
               navigation_path: /home-battery-control-plus/problem-solver
             heading: Logging
           - type: markdown
-            content: '-----'
+            content: -----
             text_only: true
           - type: heading
             icon: mdi:star-check-outline
@@ -367,7 +431,9 @@ views:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus
           - type: markdown
-            content: '[![GitHub stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=social)](https://github.com/CodeRubbere/HASS-HBC-Plus)'
+            content: >-
+              [![GitHub
+              stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=social)](https://github.com/CodeRubbere/HASS-HBC-Plus)
             text_only: true
       - type: grid
         cards:
@@ -623,10 +689,13 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Prices
 
-          The **tariff data source** gives the buy and sell price of every quarter.
+
+          The **tariff data source** gives the buy and sell price of every
+          quarter.
+
           _Used by Dynamic, Charge Deadline, the price guard and Savings..._
     sections:
       - type: grid
@@ -645,10 +714,14 @@ views:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#dynamic
           - type: markdown
-            content: |-
-              <ha-alert alert-type="info">Cheapest Hours integration not installed.</ha-alert>
+            content: >-
+              <ha-alert alert-type="info">Cheapest Hours integration not
+              installed.</ha-alert>
 
-              This strategy uses [the Cheapest Hours integration from TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
+
+              This strategy uses [the Cheapest Hours integration from
+              TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
+
               Please install via Marketplace or follow his instructions.
             text_only: true
             visibility:
@@ -682,8 +755,9 @@ views:
                     ha-card { padding: 12px 16px 0 16px !important; }
               - type: custom:apexcharts-card
                 card_mod:
-                  style: |
-                    ha-card { background: none !important; border: none !important; box-shadow: none !important; }
+                  style: >
+                    ha-card { background: none !important; border: none
+                    !important; box-shadow: none !important; }
                 header:
                   show: false
                 graph_span: 48h
@@ -732,12 +806,19 @@ views:
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: |
+                    data_generator: >
                       const marks = entity.attributes.marks || [];
-                      // HBC+ v1.2: purple = feeding in costs money, dark purple = paid to import
+
+                      // HBC+ v1.2: purple = feeding in costs money, dark purple
+                      = paid to import
+
                       const colours = { high: '#ff9800', low: '#4caf50' };
-                      const negColours = { export: '#9c27b0', import: '#4a148c' };
+
+                      const negColours = { export: '#9c27b0', import: '#4a148c'
+                      };
+
                       const now = Date.now();
+
                       return marks.map(iv => {
                         const s = new Date(iv.start).getTime();
                         const e = new Date(iv.end).getTime();
@@ -758,11 +839,17 @@ views:
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: |
-                      // HBC+ v1.2: only when there are separate sell prices (Grid Clock feed)
+                    data_generator: >
+                      // HBC+ v1.2: only when there are separate sell prices
+                      (Grid Clock feed)
+
                       const marks = entity.attributes.marks || [];
-                      if (!marks.some(iv => iv.sell !== undefined && iv.sell !== null && iv.sell !== iv.price)) return [];
-                      return marks.map(iv => ({ x: new Date(iv.start).getTime(), y: iv.sell }));
+
+                      if (!marks.some(iv => iv.sell !== undefined && iv.sell !==
+                      null && iv.sell !== iv.price)) return [];
+
+                      return marks.map(iv => ({ x: new Date(iv.start).getTime(),
+                      y: iv.sell }));
           - type: entity
             entity: sensor.hbc_energy_price_now
             icon: mdi:transmission-tower-export
@@ -827,22 +914,38 @@ views:
             heading: Today and tomorrow per interval
             heading_style: subtitle
           - type: markdown
-            content: |-
+            content: >-
               <small><small>
 
+
               | Time | Today ¢ | Mark | Trend | Tomorrow ¢ | Mark | Trend |
+
               |:---:|---:|:---:|:---:|---:|:---:|:---:|
+
               {% set s = 'sensor.hbc_energy_prices_data' %}
+
               {%- set prices = state_attr(s, 'prices') or [] -%}
+
               {%- set marks  = state_attr(s, 'marks') or [] -%}
-              {%- set pph    = state_attr(s, 'datapoints_per_hour') | default(1, true) | int -%}
+
+              {%- set pph    = state_attr(s, 'datapoints_per_hour') | default(1,
+              true) | int -%}
+
               {%- set ppd    = 24 * pph -%}
+
               {%- set step   = (60 / pph) | int -%}
+
               {%- set bars   = ['▁','▂','▃','▄','▅','▆','▇','█'] -%}
+
               {%- set pmin   = (prices | min) if prices else 0 -%}
+
               {%- set pmax   = (prices | max) if prices else 0 -%}
+
               {%- set rng    = pmax - pmin -%}
-              {%- set current_idx = now().hour * pph + (now().minute // step) -%}
+
+              {%- set current_idx = now().hour * pph + (now().minute // step)
+              -%}
+
               {%- if prices and (prices | length) >= ppd -%}
                 {%- for i in range(ppd) -%}
                   {%- set t_price   = prices[i] -%}
@@ -862,7 +965,10 @@ views:
                 | - | *Insufficient data available...* | - | - | - | - | - |
               {% endif %}
 
-              **Range:** {{ "%0.1f"|format(pmin) }} – {{ "%0.1f"|format(pmax) }} ¢  •  **Spread:** {{ "%0.1f"|format(rng) }} ¢
+
+              **Range:** {{ "%0.1f"|format(pmin) }} – {{ "%0.1f"|format(pmax) }}
+              ¢  •  **Spread:** {{ "%0.1f"|format(rng) }} ¢
+
 
               </small></small>
         visibility:
@@ -1018,7 +1124,10 @@ views:
             show_header_toggle: false
             state_color: true
           - type: markdown
-            content: '**On needs the tariff source Grid Clock.** With another tariff source the price guard only shows what it would do (Monitor): only the feed has the real all-in buy and sell prices.'
+            content: >-
+              **On needs the tariff source Grid Clock.** With another tariff
+              source the price guard only shows what it would do (Monitor): only
+              the feed has the real all-in buy and sell prices.
             visibility:
               - condition: state
                 entity: input_select.house_battery_price_guard_mode
@@ -1027,7 +1136,10 @@ views:
                 entity: input_select.house_battery_strategy_dynamic_data_source
                 state_not: Grid Clock
           - type: markdown
-            content: '**Import override stays in Monitor:** a phase carries two batteries and the phase guard is not on *Enforce*. Charging at full power from the grid could overload that phase''s group.'
+            content: >-
+              **Import override stays in Monitor:** a phase carries two
+              batteries and the phase guard is not on *Enforce*. Charging at
+              full power from the grid could overload that phase's group.
             visibility:
               - condition: state
                 entity: binary_sensor.hbc_phase_shared
@@ -1039,7 +1151,14 @@ views:
                 entity: input_select.house_battery_price_guard_mode
                 state_not: 'Off'
           - type: markdown
-            content: '**Selling rarely pays without net metering.** Right now an exported kWh earns {{ states(''sensor.hbc_energy_export_price_now'') }} ct, a kWh you keep saves {{ states(''sensor.hbc_energy_price_now'') }} ct. Dynamic only marks a Sell period when the sell price beats the buy price by more than the minimum spread; consider *Self-consumption* for expensive periods.'
+            content: >-
+              **Selling rarely pays without net metering.** Right now an
+              exported kWh earns {{ states('sensor.hbc_energy_export_price_now')
+              }} ct, a kWh you keep saves {{
+              states('sensor.hbc_energy_price_now') }} ct. Dynamic only marks a
+              Sell period when the sell price beats the buy price by more than
+              the minimum spread; consider *Self-consumption* for expensive
+              periods.
             visibility:
               - condition: state
                 entity: input_select.house_battery_strategy_dynamic_expensive
@@ -1102,11 +1221,15 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |
+        content: >
           ### Charge & Sell
 
-          **Charge** and **Sell** run your batteries until a goal is reached, then switch to the strategy you choose.
+
+          **Charge** and **Sell** run your batteries until a goal is reached,
+          then switch to the strategy you choose.
+
           **Charge Deadline** reaches its goal before a set time.
+
           _Choose them yourself, or let Timed and Dynamic switch to them..._
     sections:
       - type: grid
@@ -1218,7 +1341,9 @@ views:
                 entity: input_select.house_battery_strategy_charge_goal
                 state: solar forecast
           - type: markdown
-            content: <i>Batteries can be charged using 100% <ha-icon icon="mdi:weather-sunny"></ha-icon> PV today</i>
+            content: >-
+              <i>Batteries can be charged using 100% <ha-icon
+              icon="mdi:weather-sunny"></ha-icon> PV today</i>
             visibility:
               - condition: and
                 conditions:
@@ -1247,7 +1372,9 @@ views:
                 entity: input_select.house_battery_strategy_charge_goal
                 state: solar forecast
           - type: markdown
-            content: <i>Batteries can be charged using 100% <ha-icon icon="mdi:weather-sunny"></ha-icon> PV tomorrow</i>
+            content: >-
+              <i>Batteries can be charged using 100% <ha-icon
+              icon="mdi:weather-sunny"></ha-icon> PV tomorrow</i>
             visibility:
               - condition: and
                 conditions:
@@ -1289,8 +1416,10 @@ views:
             entities:
               - entity: input_select.house_battery_strategy_charge_goal_reached
           - type: markdown
-            content: |-
-              <font color=grey>_'Reserve' is usable energy in your batteries (e.g. above 11% SoC)_
+            content: >-
+              <font color=grey>_'Reserve' is usable energy in your batteries
+              (e.g. above 11% SoC)_
+
               </font>
             text_only: true
             visibility:
@@ -1303,8 +1432,11 @@ views:
                     entity: input_select.house_battery_strategy_charge_goal
                     state: solar forecast
           - type: markdown
-            content: |-
-              <font color=grey><i>Visit the '<ha-icon icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for fine-grained control **per battery**
+            content: >-
+              <font color=grey><i>Visit the '<ha-icon
+              icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for
+              fine-grained control **per battery**
+
               </i></font>
             text_only: true
           - type: entities
@@ -1861,8 +1993,10 @@ views:
                             entity: sensor.deadline_planned_timed_window
                             state_not: Not defined
           - type: markdown
-            content: |-
-              <font color=grey>_'Reserve' is usable energy in your batteries (e.g. above 11% SoC)_
+            content: >-
+              <font color=grey>_'Reserve' is usable energy in your batteries
+              (e.g. above 11% SoC)_
+
               </font>
             text_only: true
             visibility:
@@ -1870,13 +2004,22 @@ views:
                 entity: input_select.house_battery_deadline_goal
                 state: energy reserve
           - type: markdown
-            content: |-
-              <font color=grey>_'Leave room for forecast PV' subtracts the solar surplus still forecast for today from the energy bought from the grid, so an expected sunny afternoon is not paid for in advance. It steps aside once the target only just fits before the deadline, and the grid charge is recalculated continuously as real sun arrives._
+            content: >-
+              <font color=grey>_'Leave room for forecast PV' subtracts the solar
+              surplus still forecast for today from the energy bought from the
+              grid, so an expected sunny afternoon is not paid for in advance.
+              It steps aside once the target only just fits before the deadline,
+              and the grid charge is recalculated continuously as real sun
+              arrives._
+
               </font>
             text_only: true
           - type: markdown
-            content: |-
-              <font color=grey><i>Visit the '<ha-icon icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for fine-grained control **per battery**
+            content: >-
+              <font color=grey><i>Visit the '<ha-icon
+              icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for
+              fine-grained control **per battery**
+
               </i></font>
             text_only: true
         type: grid
@@ -1945,8 +2088,10 @@ views:
             entities:
               - entity: input_select.house_battery_strategy_sell_goal_reached
           - type: markdown
-            content: |-
-              <font color=grey>_'Reserve' is usable energy in your batteries (e.g. above 11% SoC)_
+            content: >-
+              <font color=grey>_'Reserve' is usable energy in your batteries
+              (e.g. above 11% SoC)_
+
               </font>
             text_only: true
             visibility:
@@ -1954,8 +2099,11 @@ views:
                 entity: input_select.house_battery_strategy_sell_goal
                 state: energy reserve
           - type: markdown
-            content: |-
-              <font color=grey><i>Visit the '<ha-icon icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for fine-grained control **per battery**
+            content: >-
+              <font color=grey><i>Visit the '<ha-icon
+              icon="mdi:home-battery-outline"></ha-icon>Batteries tab' for
+              fine-grained control **per battery**
+
               </i></font>
             text_only: true
   - type: sections
@@ -2009,11 +2157,15 @@ views:
       badges_wrap: scroll
       card:
         type: markdown
-        content: |-
+        content: >-
           ### Timed & Dynamic
 
+
           **Timed** runs the strategy you set for each period of the day.
-          **Dynamic** picks a strategy from the energy prices, _e.g. Charge in the cheapest hours_.
+
+          **Dynamic** picks a strategy from the energy prices, _e.g. Charge in
+          the cheapest hours_.
+
           _Prices come from your tariff data source, by default Grid Clock..._
         text_only: true
     max_columns: 3
@@ -2054,10 +2206,14 @@ views:
                     entity: update.cheapest_energy_hours_update
                     state: unknown
           - type: markdown
-            content: |-
-              <ha-alert alert-type="info">Cheapest Hours integration not installed.</ha-alert>
+            content: >-
+              <ha-alert alert-type="info">Cheapest Hours integration not
+              installed.</ha-alert>
 
-              This strategy uses [the Cheapest Hours integration from TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
+
+              This strategy uses [the Cheapest Hours integration from
+              TheFes](https://github.com/TheFes/cheapest-energy-hours/tree/main?tab=readme-ov-file#how-to-install).
+
               Please install via Marketplace or follow his instructions.
             text_only: true
             visibility:
@@ -2091,8 +2247,9 @@ views:
                     ha-card { padding: 12px 16px 0 16px !important; }
               - type: custom:apexcharts-card
                 card_mod:
-                  style: |
-                    ha-card { background: none !important; border: none !important; box-shadow: none !important; }
+                  style: >
+                    ha-card { background: none !important; border: none
+                    !important; box-shadow: none !important; }
                 header:
                   show: false
                 graph_span: 48h
@@ -2141,12 +2298,19 @@ views:
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: |
+                    data_generator: >
                       const marks = entity.attributes.marks || [];
-                      // HBC+ v1.2: purple = feeding in costs money, dark purple = paid to import
+
+                      // HBC+ v1.2: purple = feeding in costs money, dark purple
+                      = paid to import
+
                       const colours = { high: '#ff9800', low: '#4caf50' };
-                      const negColours = { export: '#9c27b0', import: '#4a148c' };
+
+                      const negColours = { export: '#9c27b0', import: '#4a148c'
+                      };
+
                       const now = Date.now();
+
                       return marks.map(iv => {
                         const s = new Date(iv.start).getTime();
                         const e = new Date(iv.end).getTime();
@@ -2167,11 +2331,17 @@ views:
                     float_precision: 1
                     show:
                       legend_value: false
-                    data_generator: |
-                      // HBC+ v1.2: only when there are separate sell prices (Grid Clock feed)
+                    data_generator: >
+                      // HBC+ v1.2: only when there are separate sell prices
+                      (Grid Clock feed)
+
                       const marks = entity.attributes.marks || [];
-                      if (!marks.some(iv => iv.sell !== undefined && iv.sell !== null && iv.sell !== iv.price)) return [];
-                      return marks.map(iv => ({ x: new Date(iv.start).getTime(), y: iv.sell }));
+
+                      if (!marks.some(iv => iv.sell !== undefined && iv.sell !==
+                      null && iv.sell !== iv.price)) return [];
+
+                      return marks.map(iv => ({ x: new Date(iv.start).getTime(),
+                      y: iv.sell }));
           - type: heading
             icon: mdi:information
             heading_style: subtitle
@@ -2487,7 +2657,17 @@ views:
             grid_options:
               columns: 4
           - type: markdown
-            content: <font color=grey>What your energy cost with the batteries, compared with what it would have cost without them, quarter by quarter at that quarter's buy and sell price. Fixed costs are left out. Today with batteries €{{ states('sensor.hbc_cost_with_battery_today') | float(0) | round(2) }}, without €{{ states('sensor.hbc_cost_without_battery_today') | float(0) | round(2) }}. {%- set m = state_attr('sensor.hbc_savings_total', 'quarters_missing') | int(0) -%} {%- if m > 0 %} {{ m }} quarters could not be valued (HA down or no price).{% endif %}</font>
+            content: >-
+              <font color=grey>What your energy cost with the batteries,
+              compared with what it would have cost without them, quarter by
+              quarter at that quarter's buy and sell price. Fixed costs are left
+              out. Today with batteries €{{
+              states('sensor.hbc_cost_with_battery_today') | float(0) | round(2)
+              }}, without €{{ states('sensor.hbc_cost_without_battery_today') |
+              float(0) | round(2) }}. {%- set m =
+              state_attr('sensor.hbc_savings_total', 'quarters_missing') |
+              int(0) -%} {%- if m > 0 %} {{ m }} quarters could not be valued
+              (HA down or no price).{% endif %}</font>
             text_only: true
       - type: grid
         column_span: 2
@@ -2538,7 +2718,21 @@ views:
                   action: perform-action
                   perform_action: script.hbc_apply_suggested_spread
           - type: markdown
-            content: "{%- set w = state_attr('sensor.hbc_round_trip_efficiency', 'warning') -%} <font color=grey>Energy out plus the change in stored energy, divided by energy in, measured at the battery's AC side.\n\nThe suggestion is the spread at which a charge/discharge cycle still pays: the loss on the expensive quarters plus the wear cost, rounded up. \n\nWith *Dynamic uses measured efficiency* on, Dynamic takes the loss out itself (efficiency × high − low) and the suggestion is the wear cost only.{% if w %} ⚠️ {{ w }}.{% endif %}</font>"
+            content: >-
+              {%- set w = state_attr('sensor.hbc_round_trip_efficiency',
+              'warning') -%} <font color=grey>Energy out plus the change in
+              stored energy, divided by energy in, measured at the battery's AC
+              side.
+
+
+              The suggestion is the spread at which a charge/discharge cycle
+              still pays: the loss on the expensive quarters plus the wear cost,
+              rounded up. 
+
+
+              With *Dynamic uses measured efficiency* on, Dynamic takes the loss
+              out itself (efficiency × high − low) and the suggestion is the
+              wear cost only.{% if w %} ⚠️ {{ w }}.{% endif %}</font>
             text_only: true
       - type: grid
         column_span: 2
@@ -2607,11 +2801,15 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Savings
 
-          **Savings** is what your energy cost with the batteries, compared without them.
-          _Round-trip efficiency and the suggested minimum spread help you tune Dynamic..._
+
+          **Savings** is what your energy cost with the batteries, compared
+          without them.
+
+          _Round-trip efficiency and the suggested minimum spread help you tune
+          Dynamic..._
   - type: sections
     title: Phase guard
     path: phases
@@ -2671,12 +2869,18 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Phase guard
 
-          **Phase guard** keeps each phase below its grid fuse and battery circuit, _e.g. one active battery per shared phase_.
-          **Peak shaving** keeps grid import and export below a limit, _e.g. for a capacity tariff_.
-          _Per phase: the active battery, grid and battery load, and charge and discharge room..._
+
+          **Phase guard** keeps each phase below its grid fuse and battery
+          circuit, _e.g. one active battery per shared phase_.
+
+          **Peak shaving** keeps grid import and export below a limit, _e.g. for
+          a capacity tariff_.
+
+          _Per phase: the active battery, grid and battery load, and charge and
+          discharge room..._
     cards: []
     sections:
       - type: grid
@@ -2701,21 +2905,40 @@ views:
               - condition: state
                 entity: binary_sensor.hbc_phase_limit_exceeded
                 state: 'on'
-            content: '{% set lim = states(''input_number.house_battery_phase_limit_w'') | float(3680) %} <ha-alert alert-type="error" title="Phase fuse overloaded">Grid power on {% for i in [1, 2, 3] if states(''sensor.p1_meter_power_phase_'' ~ i) | float(0) | abs > lim %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house load and the active batteries below.</ha-alert>'
+            content: >-
+              {% set lim = states('input_number.house_battery_phase_limit_w') |
+              float(3680) %} <ha-alert alert-type="error" title="Phase fuse
+              overloaded">Grid power on {% for i in [1, 2, 3] if
+              states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
+              %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
+              load and the active batteries below.</ha-alert>
           - type: markdown
             text_only: true
             visibility:
               - condition: state
                 entity: binary_sensor.hbc_phase_circuit_limit_exceeded
                 state: 'on'
-            content: '{% set circ = states(''input_number.house_battery_phase_circuit_limit_w'') | float(3680) %} <ha-alert alert-type="error" title="Battery circuit overloaded">The batteries on {% for i in [1, 2, 3] if states(''sensor.hbc_phase_l'' ~ i ~ ''_battery_power'') | float(0) | abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }} W. Check that only one battery per phase runs (Enforce).</ha-alert>'
+            content: >-
+              {% set circ =
+              states('input_number.house_battery_phase_circuit_limit_w') |
+              float(3680) %} <ha-alert alert-type="error" title="Battery circuit
+              overloaded">The batteries on {% for i in [1, 2, 3] if
+              states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
+              abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
+              W. Check that only one battery per phase runs
+              (Enforce).</ha-alert>
           - type: markdown
             text_only: true
             visibility:
               - condition: state
                 entity: input_select.house_battery_phase_guard_mode
                 state_not: Enforce
-            content: '<ha-alert alert-type="info" title="Phase guard is not enforcing">Phase guard is <b>{{ states(''input_select.house_battery_phase_guard_mode'') }}</b>: HBC+ does not act on these settings yet. Active and standby stay empty until Node-RED publishes hbc/phase/L1-L3.</ha-alert>'
+            content: >-
+              <ha-alert alert-type="info" title="Phase guard is not
+              enforcing">Phase guard is <b>{{
+              states('input_select.house_battery_phase_guard_mode') }}</b>: HBC+
+              does not act on these settings yet{% if is_state('input_select.house_battery_phase_guard_mode', 'Monitor') %}; a phase overload only gives a notification, no Full stop{% else %}; a phase overload gives no Full stop and no notification{% endif %}. Active and standby stay empty
+              until Node-RED publishes hbc/phase/L1-L3.</ha-alert>
           - type: tile
             entity: input_select.house_battery_phase_guard_mode
             name: Guard
@@ -2803,16 +3026,34 @@ views:
             grid_options:
               columns: 6
           - type: markdown
-            content: |-
-              {%- set n = states('input_number.house_battery_count') | int(0) -%}
+            content: >-
+              {%- set n = states('input_number.house_battery_count') | int(0)
+              -%}
+
               {%- set act = states('sensor.hbc_phase_l1_active') -%}
-              {%- set sb = state_attr('sensor.hbc_phase_l1_active', 'standby') | string -%}
+
+              {%- set sb = state_attr('sensor.hbc_phase_l1_active', 'standby') |
+              string -%}
+
               | Battery | SoC | Power | Role |
+
               |:--|--:|--:|:--|
-              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~ b ~ '_phase') == 'L1' %}
-              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~ '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+
+              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~
+              b ~ '_phase') == 'L1' %}
+
+              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
+              '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
+
               {%- else %}
+
               | – | | | no battery on L1 |
+
               {%- endfor %}
           - type: entities
             entities:
@@ -2913,16 +3154,34 @@ views:
             grid_options:
               columns: 6
           - type: markdown
-            content: |-
-              {%- set n = states('input_number.house_battery_count') | int(0) -%}
+            content: >-
+              {%- set n = states('input_number.house_battery_count') | int(0)
+              -%}
+
               {%- set act = states('sensor.hbc_phase_l2_active') -%}
-              {%- set sb = state_attr('sensor.hbc_phase_l2_active', 'standby') | string -%}
+
+              {%- set sb = state_attr('sensor.hbc_phase_l2_active', 'standby') |
+              string -%}
+
               | Battery | SoC | Power | Role |
+
               |:--|--:|--:|:--|
-              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~ b ~ '_phase') == 'L2' %}
-              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~ '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+
+              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~
+              b ~ '_phase') == 'L2' %}
+
+              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
+              '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
+
               {%- else %}
+
               | – | | | no battery on L2 |
+
               {%- endfor %}
           - type: entities
             entities:
@@ -3023,16 +3282,34 @@ views:
             grid_options:
               columns: 6
           - type: markdown
-            content: |-
-              {%- set n = states('input_number.house_battery_count') | int(0) -%}
+            content: >-
+              {%- set n = states('input_number.house_battery_count') | int(0)
+              -%}
+
               {%- set act = states('sensor.hbc_phase_l3_active') -%}
-              {%- set sb = state_attr('sensor.hbc_phase_l3_active', 'standby') | string -%}
+
+              {%- set sb = state_attr('sensor.hbc_phase_l3_active', 'standby') |
+              string -%}
+
               | Battery | SoC | Power | Role |
+
               |:--|--:|--:|:--|
-              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~ b ~ '_phase') == 'L3' %}
-              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~ '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) }} W | {%- set p = states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{ ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else 'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~ b) in sb else '–') }} |
+
+              {%- for b in range(1, n + 1) if states('input_select.marstek_m' ~
+              b ~ '_phase') == 'L3' %}
+
+              | M{{ b }} | {{ states('sensor.marstek_m' ~ b ~
+              '_battery_state_of_charge') }} % | {{ states('sensor.marstek_m' ~
+              b ~ '_battery_power') | int(0) }} W | {%- set p =
+              states('sensor.marstek_m' ~ b ~ '_battery_power') | int(0) -%} {{
+              ('active · ' ~ ('charge' if p > 5 else ('discharge' if p < -5 else
+              'idle'))) if ('M' ~ b) in act.split('+') else ('standby' if ('M' ~
+              b) in sb else '–') }} |
+
               {%- else %}
+
               | – | | | no battery on L3 |
+
               {%- endfor %}
           - type: entities
             entities:
@@ -3078,7 +3355,15 @@ views:
               rows: auto
               columns: 24
           - type: markdown
-            content: "<font color=grey><i>Use your batteries to reduce peak loads and reduce 'capacity tariff' (aka CAPTAR, aka capaciteitstarief). \nWhen enabled, the batteries will automatically charge or discharge (when able) to reduce peak loads on your **grid connection**. Active during every strategy except \"`Full Stop`\"</i>\n</font>"
+            content: >-
+              <font color=grey><i>Use your batteries to reduce peak loads and
+              reduce 'capacity tariff' (aka CAPTAR, aka capaciteitstarief). 
+
+              When enabled, the batteries will automatically charge or discharge
+              (when able) to reduce peak loads on your **grid connection**.
+              Active during every strategy except "`Full Stop`"</i>
+
+              </font>
             text_only: true
             grid_options:
               columns: 24
@@ -3105,8 +3390,10 @@ views:
                   entity: input_number.house_battery_control_power_limit_import
                   icon: mdi:home-import-outline
           - type: markdown
-            content: |-
-              <font color=grey><i>This also determines **Charge strategy** speed</i>
+            content: >-
+              <font color=grey><i>This also determines **Charge strategy**
+              speed</i>
+
               </font>
             text_only: true
             grid_options:
@@ -3133,8 +3420,10 @@ views:
                   type: input-number-entity
                   entity: input_number.house_battery_control_power_limit_export
           - type: markdown
-            content: |-
-              <font color=grey><i>This also determines **Sell strategy** discharge speed.</i>
+            content: >-
+              <font color=grey><i>This also determines **Sell strategy**
+              discharge speed.</i>
+
               </font>
             text_only: true
             grid_options:
@@ -3150,7 +3439,15 @@ views:
             entities:
               - entity: input_boolean.house_battery_control_has_power_limit_during_ev_charge
           - type: markdown
-            content: "<font color=grey><i>Keep batteries available for peak shaving even when the EV stop trigger is active. The EV stop trigger does stop any other strategies from executing.</i> \nℹ️ Your grid import limit should be larger than your EV charge power to prevent your EV from draining your home battery.\n</font>"
+            content: >-
+              <font color=grey><i>Keep batteries available for peak shaving even
+              when the EV stop trigger is active. The EV stop trigger does stop
+              any other strategies from executing.</i> 
+
+              ℹ️ Your grid import limit should be larger than your EV charge
+              power to prevent your EV from draining your home battery.
+
+              </font>
             text_only: true
             grid_options:
               columns: full
@@ -3175,8 +3472,13 @@ views:
             grid_options:
               rows: 1
           - type: markdown
-            content: |-
-              <font color="grey"><i>These settings tune how aggressive the system tries to keep the grid power at the desired power level. Too aggressive is unstable! Too safe will cost efficiency. This PID control can outperform Vendor made software by a great margin, according to community feedback.
+            content: >-
+              <font color="grey"><i>These settings tune how aggressive the
+              system tries to keep the grid power at the desired power level.
+              Too aggressive is unstable! Too safe will cost efficiency. This
+              PID control can outperform Vendor made software by a great margin,
+              according to community feedback.
+
               </i></font>
             text_only: true
           - type: heading
@@ -3187,7 +3489,9 @@ views:
               action: url
               url_path: https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#self-consumption-and-pid-tuning
           - type: markdown
-            content: <ha-alert alert-type="warning">High controller sensitivity, monitor your system.</ha-alert>
+            content: >-
+              <ha-alert alert-type="warning">High controller sensitivity,
+              monitor your system.</ha-alert>
             visibility:
               - condition: or
                 conditions:
@@ -3233,12 +3537,17 @@ views:
             grid_options:
               rows: 1
           - type: markdown
-            content: |-
-              <font color="grey"><i>Use **PID History** for tuning. It shows the internal controller values:
+            content: >-
+              <font color="grey"><i>Use **PID History** for tuning. It shows the
+              internal controller values:
+
 
               * **Input (W):** Grid power error (Current vs. Desired)
+
               * **Output (W):** Target battery power
+
               * **Output (W):** P-term + I-term + D-term
+
 
               </i></font>
             text_only: true
@@ -3261,10 +3570,12 @@ views:
                 name: D-term
             grid_options:
               columns: full
-            hours_to_show: 0.025
+            hours_to_show: 0.1
           - type: markdown
-            content: |-
-              <font color="grey"><i>Click on the labels in the legend to turn individual graphs on/off
+            content: >-
+              <font color="grey"><i>Click on the labels in the legend to turn
+              individual graphs on/off
+
               </i></font>
             text_only: true
             grid_options:
@@ -3318,7 +3629,14 @@ views:
       badges_wrap: scroll
       card:
         type: markdown
-        content: "### PID Control\nThe **PID controller** steers your batteries to keep grid usage near target, _e.g. 0 Watt_, and is used by: \n_Self-consumption, Charge PV, Charge (regulated), Peak shaving and more..._"
+        content: >-
+          ### PID Control
+
+          The **PID controller** steers your batteries to keep grid usage near
+          target, _e.g. 0 Watt_, and is used by: 
+
+          _Self-consumption, Charge PV, Charge (regulated), Peak shaving and
+          more..._
         text_only: true
     subview: false
     max_columns: 3
@@ -3373,10 +3691,13 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |-
+        content: >-
           ### Batteries
 
-          **Battery life**: calibration, which battery charges first, and when an idle battery stops.
+
+          **Battery life**: calibration, which battery charges first, and when
+          an idle battery stops.
+
           _Per battery: phase, cutoffs and max power..._
     cards: []
     sections:
@@ -3393,7 +3714,12 @@ views:
                 heading_style: subtitle
                 icon: mdi:battery-sync
               - type: markdown
-                content: <font color=grey>When a battery has not reached its charge cutoff for the set number of days, HBC+ charges it to 100 % once in the cheapest block after midnight (Charge Deadline). The charge cutoff goes to 100 % for that night and back afterwards. Notify only sends a notification.</font>
+                content: >-
+                  <font color=grey>When a battery has not reached its charge
+                  cutoff for the set number of days, HBC+ charges it to 100 %
+                  once in the cheapest block after midnight (Charge Deadline).
+                  The charge cutoff goes to 100 % for that night and back
+                  afterwards. Notify only sends a notification.</font>
                 text_only: true
               - type: entities
                 entities:
@@ -3406,13 +3732,25 @@ views:
                   - entity: sensor.hbc_calibration_status
                     name: Status
               - type: markdown
-                content: |
-                  {% set n = [states('input_number.house_battery_count') | int(0), 6] | min %}
-                  {% set lim = states('input_number.house_battery_calibration_days') | float(14) %}
-                  {% set days = state_attr('sensor.hbc_calibration_due', 'days') or {} %}
+                content: >
+                  {% set n = [states('input_number.house_battery_count') |
+                  int(0), 6] | min %}
+
+                  {% set lim =
+                  states('input_number.house_battery_calibration_days') |
+                  float(14) %}
+
+                  {% set days = state_attr('sensor.hbc_calibration_due', 'days')
+                  or {} %}
+
                   | Battery | Days since full |
+
                   | :--- | ---: |
-                  {% for i in range(1, n + 1) %}{% set d = days.get('M' ~ i) %}| M{{ i }} | {{ '–' if d is none else (d | round(0) | int) }}{{ ' ⚠️' if d is not none and d >= lim }} |
+
+                  {% for i in range(1, n + 1) %}{% set d = days.get('M' ~ i) %}|
+                  M{{ i }} | {{ '–' if d is none else (d | round(0) | int) }}{{
+                  ' ⚠️' if d is not none and d >= lim }} |
+
                   {% endfor %}
             grid_options:
               columns: 12
@@ -3462,7 +3800,7 @@ views:
       - type: grid
         cards:
           - type: markdown
-            content: '---'
+            content: ---
             grid_options:
               columns: full
             text_only: true
@@ -4020,10 +4358,12 @@ views:
       card:
         type: markdown
         text_only: true
-        content: |
+        content: >
           ### Settings
 
-          **Setup**, the **phase guard settings**, **notifications** and the **EV stop trigger**.
+
+          **Setup**, the **phase guard settings**, **notifications** and the
+          **EV stop trigger**.
     sections:
       - type: grid
         cards:
@@ -4043,11 +4383,17 @@ views:
             content: '### Step 2'
             text_only: true
           - type: markdown
-            content: |-
-              <ha-alert title="Setup Grid Power Sensor">HBC+ needs sensor.p1_meter_power and sensor.p1_meter_power_phase_1 … _3 (W, import positive).</ha-alert>
+            content: >-
+              <ha-alert title="Setup Grid Power Sensor">HBC+ needs
+              sensor.p1_meter_power and sensor.p1_meter_power_phase_1 … _3 (W,
+              import positive).</ha-alert>
+
               1. Edit the file `packages/hbc_config.yaml`
+
               1. Uncomment option A or B: every line between BEGIN and END
-              1. Replace each sensor marked `<< YOUR`, check the configuration and reload Template entities
+
+              1. Replace each sensor marked `<< YOUR`, check the configuration
+              and reload Template entities
             visibility:
               - condition: or
                 conditions:
@@ -4058,7 +4404,9 @@ views:
                     entity: sensor.p1_meter_power
                     state: unknown
           - type: markdown
-            content: <ha-alert title="Grid Power Sensor" alert-type="success">Configured</ha-alert>
+            content: >-
+              <ha-alert title="Grid Power Sensor"
+              alert-type="success">Configured</ha-alert>
             visibility:
               - condition: not
                 conditions:
@@ -4081,13 +4429,17 @@ views:
             content: '### Step 3'
             text_only: true
           - type: markdown
-            content: <ha-alert title="Setup Node-RED"> Import and deploy <font color=red>Node-RED</font> scripts.</ha-alert>
+            content: >-
+              <ha-alert title="Setup Node-RED"> Import and deploy <font
+              color=red>Node-RED</font> scripts.</ha-alert>
             visibility:
               - condition: state
                 entity: input_boolean.house_battery_control_has_node_red
                 state_not: 'on'
           - type: markdown
-            content: <ha-alert title="Node-RED" alert-type="success">Configured and script deployed</ha-alert>
+            content: >-
+              <ha-alert title="Node-RED" alert-type="success">Configured and
+              script deployed</ha-alert>
             visibility:
               - condition: state
                 entity: input_boolean.house_battery_control_has_node_red
@@ -4097,7 +4449,15 @@ views:
             content: '### Step 4'
           - type: markdown
             text_only: true
-            content: '{% set s = states(''input_select.house_battery_strategy_dynamic_data_source'') %}{% if s in [''None'', ''unknown'', ''unavailable''] %}<ha-alert title="Choose a tariff data source">Dynamic, Charge Deadline and the price guard need prices. Choose your source, and with Grid Clock your supplier.</ha-alert>{% else %}<ha-alert alert-type="success" title="Tariff data source">{{ s }}</ha-alert>{% endif %}'
+            content: >-
+              {% set s =
+              states('input_select.house_battery_strategy_dynamic_data_source')
+              %}{% if s in ['None', 'unknown', 'unavailable'] %}<ha-alert
+              title="Choose a tariff data source">Dynamic, Charge Deadline and
+              the price guard need prices. Choose your source, and with Grid
+              Clock your supplier.</ha-alert>{% else %}<ha-alert
+              alert-type="success" title="Tariff data source">{{ s
+              }}</ha-alert>{% endif %}
           - type: heading
             heading: Open Prices
             heading_style: subtitle
@@ -4109,7 +4469,10 @@ views:
             content: '### Step 5'
             text_only: true
           - type: markdown
-            content: <ha-alert title="(Optional) review power limits"> Use limits and peak shaving to reduce <font color=darkblue>peaks and overload risk</font>.</ha-alert>
+            content: >-
+              <ha-alert title="(Optional) review power limits"> Use limits and
+              peak shaving to reduce <font color=darkblue>peaks and overload
+              risk</font>.</ha-alert>
             visibility:
               - condition: and
                 conditions:
@@ -4136,7 +4499,9 @@ views:
                     entity: input_boolean.house_battery_control_has_power_limit_export
                     state_not: 'on'
           - type: markdown
-            content: <ha-alert title="Power limits" alert-type="success"> Batteries will help prevent peaks and overloads, when able.</ha-alert>
+            content: >-
+              <ha-alert title="Power limits" alert-type="success"> Batteries
+              will help prevent peaks and overloads, when able.</ha-alert>
             visibility:
               - condition: or
                 conditions:
@@ -4151,12 +4516,24 @@ views:
             content: '### Step 6'
           - type: markdown
             text_only: true
-            content: '{% set t = states(''input_text.house_battery_notify_targets'') %}{% if t in ['''', ''unknown'', ''unavailable''] %}<ha-alert title="(Optional) Notifications">Every notification now goes to <code>notify.notify</code>. Set your notify targets below and send a test.</ha-alert>{% else %}<ha-alert alert-type="success" title="Notifications">Sent to {{ t }}</ha-alert>{% endif %}'
+            content: >-
+              {% set t = states('input_text.house_battery_notify_targets') %}{%
+              if t in ['', 'unknown', 'unavailable'] %}<ha-alert
+              title="(Optional) Notifications">Every notification now goes to
+              <code>notify.notify</code>. Set your notify targets below and send
+              a test.</ha-alert>{% else %}<ha-alert alert-type="success"
+              title="Notifications">Sent to {{ t }}</ha-alert>{% endif %}
           - type: markdown
             content: '### Step 7'
             text_only: true
           - type: markdown
-            content: "Set the Master Battery Control to `Full Control` only after reviewing and checking all installation instructions. \n\nPick a battery charging strategy e.g. `self-consumption`, choose controller sensitivity `very safe` and you are done!"
+            content: >-
+              Set the Master Battery Control to `Full Control` only after
+              reviewing and checking all installation instructions. 
+
+
+              Pick a battery charging strategy e.g. `self-consumption`, choose
+              controller sensitivity `very safe` and you are done!
           - type: markdown
             content: '### Done'
             text_only: true
@@ -4222,7 +4599,9 @@ views:
                         entity: sensor.p1_meter_power
                         state: unknown
           - type: markdown
-            content: _Finishing hides this checklist and the setup banner on the Overview. Show them again with **Show/Hide onboarding**._
+            content: >-
+              _Finishing hides this checklist and the setup banner on the
+              Overview. Show them again with **Show/Hide onboarding**._
             grid_options:
               columns: full
               rows: auto
@@ -4255,7 +4634,10 @@ views:
               rows: 1
           - type: markdown
             text_only: true
-            content: <font color=grey>Setup is finished. *Show/Hide onboarding* brings the checklist back here, and the setup banner on the Overview.</font>
+            content: >-
+              <font color=grey>Setup is finished. *Show/Hide onboarding* brings
+              the checklist back here, and the setup banner on the
+              Overview.</font>
           - type: tile
             entity: input_boolean.house_battery_control_onboarding_finished
             name: Show/Hide onboarding
@@ -4315,7 +4697,12 @@ views:
             grid_options:
               rows: 1
           - type: markdown
-            content: '<font color=grey>Every HBC+ notification goes to the notify actions below, comma-separated (e.g. `notify.mobile_app_<phone>`). Empty = `notify.notify`. Send a test after changing the field: a typo in the name gives no notification, only an error in the HA log.</font>'
+            content: >-
+              <font color=grey>Every HBC+ notification goes to the notify
+              actions below, comma-separated (e.g. `notify.mobile_app_<phone>`).
+              Empty = `notify.notify`. Send a test after changing the field: a
+              typo in the name gives no notification, only an error in the HA
+              log.</font>
             text_only: true
           - type: entities
             entities:
@@ -4340,9 +4727,12 @@ views:
             grid_options:
               rows: 1
           - type: markdown
-            content: |-
-              <font color=grey>The Stop Trigger will OVERRULE ALL active strategies.
-              _E.g. use to disengage your home batteries when EV is charging_</font>
+            content: >-
+              <font color=grey>The Stop Trigger will OVERRULE ALL active
+              strategies.
+
+              _E.g. use to disengage your home batteries when EV is
+              charging_</font>
             text_only: true
           - type: entities
             entities:
@@ -4351,7 +4741,11 @@ views:
               - entity: input_select.house_battery_strategy_ev_stop_trigger_strategy
                 name: Trigger strategy
           - type: markdown
-            content: <font color=grey>Enter the `entity_id` of an `input_boolean` or `on/off template_sensor` in the field above. Choose whether an active trigger should fully stop the batteries or keep them in standby for peak shaving.</font>
+            content: >-
+              <font color=grey>Enter the `entity_id` of an `input_boolean` or
+              `on/off template_sensor` in the field above. Choose whether an
+              active trigger should fully stop the batteries or keep them in
+              standby for peak shaving.</font>
             text_only: true
           - type: tile
             grid_options:
@@ -4361,7 +4755,10 @@ views:
             vertical: false
             features_position: bottom
           - type: markdown
-            content: <font color=grey>The `EV stop trigger` should now indicate whether the trigger is active. Stop trigger 'on' = selected trigger strategy is applied.</font>
+            content: >-
+              <font color=grey>The `EV stop trigger` should now indicate whether
+              the trigger is active. Stop trigger 'on' = selected trigger
+              strategy is applied.</font>
             text_only: true
     max_columns: 4
   - type: sections
@@ -4387,7 +4784,50 @@ views:
             heading: 🕵️ Flow trace
             heading_style: subtitle
           - type: markdown
-            content: "**Strategy:** {{ states('input_select.house_battery_strategy')}}\n***\n{% set history = state_attr('sensor.home_battery_control_trace', 'history') or [] %} {% set start_ts = state_attr('sensor.home_battery_control_trace', 'start') %} {% set end_ts = state_attr('sensor.home_battery_control_trace', 'end') %} {% set start_dt = (start_ts / 1000) | as_datetime if start_ts is number else as_datetime(start_ts) %} {% set end_dt = (end_ts / 1000) | as_datetime if end_ts is number else as_datetime(end_ts) %} {% set total_dt = (end_dt - start_dt).total_seconds() if end_dt and start_dt else 0 %}\nFlows used\n| Step | Flow | Duration |\n| :--- | :--- | :--- |\n{% set first_ts = history[0].timestamp if history|length > 0 else end_ts %} {% set first_dt = (first_ts / 1000) | as_datetime if first_ts is number else as_datetime(first_ts) %} {% set d0 = (first_dt - start_dt).total_seconds() if first_dt and start_dt else 0 %} | 0 | Home battery start | `{{ \"{:.3f}\".format(d0) }}s` |\n{% for entry in history -%}\n  {%- set ts = entry.timestamp -%}\n  {%- set current_dt = (ts / 1000) | as_datetime if ts is number else as_datetime(ts) -%}\n  {%- if not loop.last -%}\n    {%- set next_ts = history[loop.index].timestamp -%}\n  {%- else -%}\n    {%- set next_ts = end_ts -%}\n  {%- endif -%}    \n  {%- set next_dt = (next_ts / 1000) | as_datetime if next_ts is number else as_datetime(next_ts) -%}\n  {%- set delta = (next_dt - current_dt).total_seconds() if next_dt and current_dt else 0 -%}\n  | {{ loop.index }} | {{ entry.flow }} | `{{ \"{:.3f}\".format(delta) }}s` |\n{% endfor %} | ✔️ | Home Battery Start | `Done` |\n\n**Total `{{ \"{:.3f}\".format(total_dt) }}s`** spent in strategy flows"
+            content: >-
+              **Strategy:** {{ states('input_select.house_battery_strategy')}}
+
+              ***
+
+              {% set history = state_attr('sensor.home_battery_control_trace',
+              'history') or [] %} {% set start_ts =
+              state_attr('sensor.home_battery_control_trace', 'start') %} {% set
+              end_ts = state_attr('sensor.home_battery_control_trace', 'end') %}
+              {% set start_dt = (start_ts / 1000) | as_datetime if start_ts is
+              number else as_datetime(start_ts) %} {% set end_dt = (end_ts /
+              1000) | as_datetime if end_ts is number else as_datetime(end_ts)
+              %} {% set total_dt = (end_dt - start_dt).total_seconds() if end_dt
+              and start_dt else 0 %}
+
+              Flows used
+
+              | Step | Flow | Duration |
+
+              | :--- | :--- | :--- |
+
+              {% set first_ts = history[0].timestamp if history|length > 0 else
+              end_ts %} {% set first_dt = (first_ts / 1000) | as_datetime if
+              first_ts is number else as_datetime(first_ts) %} {% set d0 =
+              (first_dt - start_dt).total_seconds() if first_dt and start_dt
+              else 0 %} | 0 | Home battery start | `{{ "{:.3f}".format(d0) }}s`
+              |
+
+              {% for entry in history -%}
+                {%- set ts = entry.timestamp -%}
+                {%- set current_dt = (ts / 1000) | as_datetime if ts is number else as_datetime(ts) -%}
+                {%- if not loop.last -%}
+                  {%- set next_ts = history[loop.index].timestamp -%}
+                {%- else -%}
+                  {%- set next_ts = end_ts -%}
+                {%- endif -%}    
+                {%- set next_dt = (next_ts / 1000) | as_datetime if next_ts is number else as_datetime(next_ts) -%}
+                {%- set delta = (next_dt - current_dt).total_seconds() if next_dt and current_dt else 0 -%}
+                | {{ loop.index }} | {{ entry.flow }} | `{{ "{:.3f}".format(delta) }}s` |
+              {% endfor %} | ✔️ | Home Battery Start | `Done` |
+
+
+              **Total `{{ "{:.3f}".format(total_dt) }}s`** spent in strategy
+              flows
       - type: grid
         cards:
           - type: heading
@@ -4401,9 +4841,12 @@ views:
             heading: 📋 Explanations (last 100 items)
             heading_style: subtitle
           - type: markdown
-            content: |
-              {% set logs = state_attr('sensor.home_battery_control_log', 'log') %}  {% if logs %}
+            content: >
+              {% set logs = state_attr('sensor.home_battery_control_log', 'log')
+              %}  {% if logs %}
+
               | Time |  | Flow | Node | Explanation |
+
               | :--- | :--- | :--- | :--- | :--- |
                 {%- for entry in logs %}
                 {%- set color = '#009ac7' -%}
@@ -4423,7 +4866,15 @@ views:
       card:
         type: markdown
         text_only: true
-        content: "### Logging\nNeed help figuring out what is going on? \nHit **Insights mode**. _Auto-off after 5min._\n\U0001F4D8 [Troubleshooting documentation](https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#troubleshooting)"
+        content: >-
+          ### Logging
+
+          Need help figuring out what is going on? 
+
+          Hit **Insights mode**. _Auto-off after 5min._
+
+          📘 [Troubleshooting
+          documentation](https://github.com/CodeRubbere/HASS-HBC-Plus/blob/main/docs/user-guide.en.md#troubleshooting)
       layout: center
       badges_position: top
       badges_wrap: scroll
