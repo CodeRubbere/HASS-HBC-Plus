@@ -69,6 +69,10 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 - **Version check** (F7) — every HBC+ tab registers its version and the packages have `sensor.hbc_package_version`;
   *HBC+ health* warns (*HBC+ version mismatch*, `sensor.hbc_health` attributes `version_ok`, `version_issues`) when
   tabs, or flows and packages, are of different HBC+ versions, or a tab is missing.
+- **Update check** — the Overview shows *HBC+ vX.Y.Z is available* under *Status & control* when GitHub has a newer
+  HBC+ release than your packages, with a link to the release notes. Home Assistant asks GitHub at start and every
+  6 hours (`sensor.hbc_latest_version`, `binary_sensor.hbc_update_available`); no token or personal data is sent.
+  Copy `packages/hbc_control.yaml` again and paste the dashboard again.
 
 ### Fixed
 - Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*

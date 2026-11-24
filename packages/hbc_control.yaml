@@ -895,6 +895,28 @@ template:
         icon: mdi:tag-outline
         state: "1.4.0"
 
+  # HBC+ v1.3 update check: on when GitHub has a newer HBC+ release than these packages
+  # (sensor.hbc_latest_version below vs sensor.hbc_package_version). Shown on the Overview
+  # under Status & control. Pre-releases and drafts are ignored.
+  - binary_sensor:
+      - name: "HBC update available"
+        unique_id: hbc_update_available
+        icon: mdi:update
+        state: >
+          {%- set a = states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') -%}
+          {%- set b = states('sensor.hbc_package_version') -%}
+          {%- if a is match('^\d+(\.\d+){0,2}$') and b is match('^\d+(\.\d+){0,2}$') -%}
+            {%- set pa = ((a.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
+            {%- set pb = ((b.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
+            {{ pa > pb }}
+          {%- else -%}
+            false
+          {%- endif -%}
+        attributes:
+          installed: "{{ states('sensor.hbc_package_version') }}"
+          latest: "{{ states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') }}"
+          release_url: "{{ state_attr('sensor.hbc_latest_version', 'html_url') or 'https://github.com/CodeRubbere/HASS-HBC-Plus/releases' }}"
+
   # HBC+ v1.0: local time for the dashboard badges (re-rendered every minute through now()),
   # so the dashboard needs no extra integration.
   - sensor:
@@ -1225,6 +1247,29 @@ template:
         attributes:
           status: "{{ state_attr('sensor.hbc_energy_prices_data', 'status') or 'unknown' }}"
           data_source: "{{ states('input_select.house_battery_strategy_dynamic_data_source') }}"
+
+###########################################################################################################
+# HBC+ v1.3 UPDATE CHECK
+# Latest HBC+ release on GitHub. Asked at Home Assistant start and every 6 hours (4 calls a day, far below
+# GitHub's limit of 60 an hour without a token); no account, token or personal data is sent.
+# Reads the latest published GitHub *release* (not a bare tag, not a pre-release).
+###########################################################################################################
+rest:
+  - resource: https://api.github.com/repos/CodeRubbere/HASS-HBC-Plus/releases/latest
+    scan_interval: 21600
+    timeout: 15
+    headers:
+      Accept: application/vnd.github+json
+      User-Agent: HBC-Plus-Home-Assistant
+    sensor:
+      - name: "HBC latest version"
+        unique_id: hbc_latest_version
+        icon: mdi:github
+        value_template: "{{ value_json.tag_name | default('unknown') }}"
+        json_attributes:
+          - name
+          - html_url
+          - published_at
 
 ###########################################################################################################
 # AUTOMATIONS - PRICE DATA ALERT (HBC+ v1.0)
