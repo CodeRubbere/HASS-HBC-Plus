@@ -48,15 +48,19 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 - **Price guard** — while prices are negative, stop exporting and charge instead; signals for a PV limiter. Off by default.
 - **New dashboard layout** — nine views in the order you use them: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging.
 
+## Works with Batterijplan
+
+[Batterijplan](https://github.com/satscan1/hbc-batterijplan) is a Home Assistant integration that can steer HBC+. With HBC+ on **Dynamic** and Batterijplan's **Live** switch on, Batterijplan sets the Dynamic modes every quarter. From v1.3 the dashboard shows this: a banner with Batterijplan's current action, the *Price intervals* chart coloured by its plan, and the Dynamic modes read-only while it steers (`packages/hbc_batterijplan.yaml`). Without Batterijplan nothing changes. Details: [Steered by Batterijplan](docs/user-guide.en.md#steered-by-batterijplan) · 🇳🇱 [Aangestuurd door Batterijplan](docs/gebruikershandleiding.nl.md#aangestuurd-door-batterijplan).
+
 ## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml` the battery calibration `hbc_calibration.yaml` and savings `hbc_savings.yaml` (HBC+) |
+| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml` the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml` and the Batterijplan indicator `hbc_batterijplan.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Prices, Charge & Sell, Timed & Dynamic, Savings, **Phase guard**, PID Control, Batteries, Settings and Logging |
 | `www/hbc-plus/` | The dashboard logo; copy it into your HA `www/` folder |
 | `assets/logo/` | The HBC+ logo as SVG and PNG: on light, on dark, one colour, app icon, GitHub social preview |
-| `node-red/hbc-plus-all-flows.json` | All 15 HBC+ Node-RED tabs in one import file |
+| `node-red/hbc-plus-all-flows.json` | All 16 HBC+ Node-RED tabs in one import file |
 | `node-red/*.json` | The same tabs as separate files |
 | `node-red/README.md` | Per-tab overview of what HBC+ changes |
 | `node-red/examples/` | Example tab for the shared price fetch |
@@ -130,7 +134,7 @@ Every part of HBC+ carries its own version; `tools/` keeps them right. Once per 
    `hbc-plus-vX.Y.Z.zip`, `versions.json` and notes (the CHANGELOG entry plus the files to copy).
 6. **Publish the draft** after reading it. A patch for an *older* line (a 1.2.x after 1.3.0): untick
    *Set as the latest release*, or Home Assistant's update check compares with that one.
-7. **After a merge between feature branches** (for example `main` into `feature/v1.4`): resolve version
+7. **After a merge between feature branches** (for example `main` into `feature/v1.3`): resolve version
    conflicts in favour of the branch's own version, then `python3 tools/set-version.py <branch version>` and
    `python3 tools/check-versions.py`.
 

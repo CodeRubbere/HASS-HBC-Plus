@@ -50,6 +50,26 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   new version; `tools/check-docs.py` checks that the English and Dutch guides are in step; `check-versions.py` also
   checks that every tab is identical in `hbc-plus-all-flows.json` and in its own file; `tools/hooks/pre-commit` runs
   the checks before each commit.
+- **Setup self-test** (F8) — one button on the *Batteries* view checks the setup (P1, battery entities,
+  master mode, heartbeat, health, the Node-RED flow, price sensor pin, notify targets, EV stop trigger) and
+  measures per battery on which phase it is connected (800 W for about 35 s per battery, up to three attempts).
+  A phase that differs from the phase map is applied only with *Apply phase map*. New package `hbc_selftest.yaml`,
+  new tab *HBC+ Self-test v1.3*, results in `sensor.hbc_self_test_status` and `sensor.hbc_self_test_phases`.
+- **Load forecast** (F9) — HBC+ learns the house use per quarter (working days and weekend days apart) and
+  forecasts the next 24 hours (`sensor.hbc_load_forecast`). Optionally (*Dynamic uses load forecast*, off by
+  default) Dynamic keeps only the cheap quarters the expensive quarters need, from the cheapest before each.
+  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Timed & Dynamic view.
+- **Steered by Batterijplan** (F10) — when [Batterijplan](https://github.com/satscan1/hbc-batterijplan) (Live) steers
+  Dynamic, the dashboard shows it: *Dynamic · managed by Batterijplan (Live)* on the Overview, a banner with
+  Batterijplan's action on the Prices and Timed & Dynamic views, the *Price intervals* chart coloured by its plan
+  (with a legend), and the three Dynamic modes read-only. New package `hbc_batterijplan.yaml`
+  (`binary_sensor.hbc_managed_by_batterijplan`); display only, without Batterijplan nothing changes.
+- **Managed by HELIOS banner** — when the *Helios* strategy is selected, the Overview, Prices and Timed & Dynamic
+  views show a *Managed by HELIOS* banner, like the Batterijplan one. Display only.
+- **HELIOS plan in the price chart** — with *Helios* selected, the *Price intervals* chart on the Prices and Timed &
+  Dynamic views is titled *Price intervals: HELIOS plan* and colours the future bars by the HBC+ sub-strategy HELIOS
+  planned (`input_number.helios_optimizer_energy_plan`, attribute `plan`), with a legend and the planned strategy in
+  the tooltip; past bars are grey. Without a HELIOS plan the chart shows the normal price marks. Display only.
 
 ### Changed
 - Phase guard on *Monitor*: a phase that stayed overloaded with the batteries part of the cause no longer switches
@@ -65,6 +85,26 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   (Logging *Live*) on.
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
   *Held by* on the Overview while a strategy hold is active.
+- Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
+  stops every battery). Strategy arbiter: requester `selftest` has priority 90.
+- Dashboard: the *Choose strategy* tile no longer offers *Self-test*.
+- Dashboard, *HBC+ is not steering the batteries*: when `sensor.p1_meter_power` is unavailable or has had no new value
+  for more than 5 minutes, the message says so and points to the P1 meter and its integration (HBC+ only runs a control
+  cycle on a P1 update) instead of *Check that Node-RED runs*.
+- Dashboard: the Batterijplan and HELIOS banners, and *Dynamic · managed by Batterijplan (Live)*, are hidden while the
+  heartbeat is stale: HBC+ is not steering then, so neither is Batterijplan or HELIOS.
+- Dashboard: the chart title *Price intervals: Batterijplan plan* is now *Price intervals: Batterijplan*; on the Prices
+  view the *Buy now* and *Sell now* tiles are *Buy price* and *Sell price*. New full-width *Executing now* card below
+  the price chart (Prices and Timed & Dynamic views) with the sub-strategy HBC+ runs now
+  (`input_text.house_battery_strategy_active_sub_strategy`).
+- Dashboard: *Price intervals: HBC+* (Prices and Timed & Dynamic views) has a legend like the Batterijplan and HELIOS
+  charts: Cheap, Regular, Expensive (the current mark in bold), the negative-price colours when they occur, the current
+  quarter and, with separate sell prices, the sell-price line.
+- Self-test: with the phase guard on *Enforce*, the *HBC+ phase planner* makes the battery under test the charger on its
+  phase, also when the phase map puts another battery there (before, that battery could stay idle: *did not charge*).
+  *Did not charge* now names the likely cause; the *Phase detection* card shows the phase guard mode.
+- Dynamic, *Determine dynamic strategy*: step 3b for the load forecast; with the switch off the marks are identical
+  to before. `sensor.hbc_energy_prices_data` has a new attribute `load_forecast`.
 
 ### Fixed
 - Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
@@ -87,10 +127,42 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   (`hours_to_show: 0.1`).
 
 ### Updating from 1.2
-Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml` and `hbc_savings.yaml`), delete the old
+Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml`, `hbc_savings.yaml`, `hbc_selftest.yaml`,
+`hbc_load_forecast.yaml` and `hbc_batterijplan.yaml`), delete the old
 HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard again. Had you set your own notify
 action? Put it in *Notify targets* and press *Send a test notification*. Full steps: *Updating from v1.2* in the user
-guide.
+guide. Then run the self-test once (*Batteries* → *Battery phase test*).
+
+## [1.2.1] – 21 November 2026
+
+Fixes for a fresh install, a separate *Pricing List* switch on the Prices view, and clearer installation steps.
+
+### Changed
+- Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
+  new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
+  (Logging *Live*) on. Copy `packages/hbc_control.yaml` again and paste the dashboard again.
+
+### Fixed
+- Fresh install: Self-consumption logged *Controller disabled — all PID gains are 0* on every tick. The script
+  *HBC+ phase guard: apply defaults* now also selects the PID preset *Safe* and sets its gains (Kp 0.3, Ki 0.3,
+  Kd 0.1).
+- Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
+  on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
+  Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
+- Prices view: the price list and the *Using the dynamic strategy* link stayed hidden when the Marketplace reported
+  `update.cheapest_energy_hours_update` as unknown or unavailable, as it often does on a fresh install.
+
+### Documentation
+- Installation: new section *Before you start — install from Marketplace* (Cheapest Energy Hours, card-mod,
+  apexcharts-card); card-mod is now listed as required.
+- Requirements as a bullet list, in the user guide and in a new *Requirements* section of the README.
+- The dashboard URL must be `home-battery-control-plus`, or the buttons that open other views lead nowhere.
+
+### Updating from 1.2.0
+Copy `packages/hbc_control.yaml` and `packages/hbc_phase_guard.yaml` again, check the configuration and restart HA.
+Delete the old HBC+ tabs in Node-RED, import `node-red/hbc-plus-all-flows.json` and deploy. Paste
+`dashboards/hbc_plus.yaml` again. If Self-consumption logs *Controller disabled*, choose the PID preset *Safe* on the
+PID Control view.
 
 ## [1.2.0] – planned 10 December 2026
 
