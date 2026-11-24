@@ -8,7 +8,8 @@ Where HBC+ keeps its version, per part:
                                              EXPECTED_PACKAGES list in 'HBC+ health'
   dashboard  dashboards/hbc_plus.yaml        {%- set dash = 'X.Y.Z' -%} in every card that needs it (the
                                              header, the version card, the update card, the Versions
-                                             table), and the numbers in two visibility conditions:
+                                             table), the Overview heading 'Status & control (vX.Y.Z)',
+                                             and the numbers in two visibility conditions:
                                              sensor.hbc_release_number (major x 100 + minor) and
                                              sensor.hbc_release_dashboard_number (major x 10000 +
                                              minor x 100 + patch)
@@ -66,6 +67,7 @@ CONST_RE = re.compile(r"(const VERSION = ')(" + VER + r")(';)")
 EXPECTED_RE = re.compile(r'(const EXPECTED_PACKAGES = )(\[[^\]]*\])(;)')
 DASH_RE = re.compile(r"(\{%-? set dash = ')(" + VER + r")(' -?%\})")
 CARD_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+(?:below|above): )(\d+)')
+HEADING_RE = re.compile(r'(heading: Status & control \(v)(' + VER + r')(\)\n)')
 DASH_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_dashboard_number\n\s+above: )(\d+)')
 
 
@@ -122,6 +124,8 @@ def collect(root):
         out['dashboard'][f'version card number #{i + 1}'] = int(m.group(2))
     for i, m in enumerate(DASH_NUM_RE.finditer(s)):
         out['dashboard'][f'update card number #{i + 1}'] = int(m.group(2))
+    for i, m in enumerate(HEADING_RE.finditer(s)):
+        out['dashboard'][f'dash heading #{i + 1}'] = m.group(2)
     return out
 
 
