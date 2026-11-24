@@ -1,6 +1,6 @@
-# HBC+ v1.2 — Gebruikershandleiding
+# HBC+ v1.3 — Gebruikershandleiding
 
-*16 november 2026* · 🇬🇧 [English version](user-guide.en.md)
+*24 november 2026* · 🇬🇧 [English version](user-guide.en.md)
 
 ## Wat HBC+ is
 
@@ -15,7 +15,7 @@ Naast de fasebewaking brengt HBC+ verbeteringen op drie vlakken:
 Daarnaast voegt het twee functies toe:
 
 - **Charge Deadline-strategie** — laadt vóór een deadline tot een doel (vol, SoC of energiereserve), in de goedkoopste kwartieren, met optionele PV-reserve en een vervolgstrategie zodra de deadline voorbij is. Zie [Charge Deadline](#charge-deadline).
-- **GridClock als databron** — Dynamic en Charge Deadline kunnen prijzen lezen uit de [Grid Clock](https://gridclock.eu)-integratie (`sensor.grid_clock_<zone>_prices`). De prijzen verversen automatisch zodra de standaardzone wijzigt. Zie [Dynamic](#dynamic).
+- **Grid Clock-prijzen** — de tariefbron *Grid Clock* leest all-in inkoop- en terugleverprijzen per kwartier voor je eigen leverancier uit de openbare [Grid Clock](https://gridclock.eu)-feed: geen account, token of registratie. De prijzen verversen automatisch na een wijziging van zone of leverancier. Zie [Grid Clock-feed](#grid-clock-feed).
 
 Alle wijzigingen staan uitgewerkt in de sectie [Verbeteringen in HBC+](#verbeteringen-in-hbc) hieronder; [Nieuw in HBC+ v1.1](#nieuw-in-hbc-v11) noemt wat er sinds v1.0 veranderde.
 
@@ -234,6 +234,7 @@ Kies de strategie in `input_select.house_battery_strategy`. De *Strategy arbiter
 | Timed | Een andere strategie per tijdvak (A t/m E) |
 | Dynamic | Een andere strategie voor goedkope, dure en normale prijsperiodes |
 | Full stop | Alle batterijen op stop, 0 W; het relais gaat open, dus geen sluimerverbruik |
+| Self-test | Alleen voor de zelftest bij installatie (zie [Zelftest bij installatie](#zelftest-bij-installatie)); de tegel *Choose strategy* biedt hem niet aan. Handmatig gekozen zet hij elke batterij stil, net als *Full stop* |
 | Helios | Gereserveerd voor een toekomstige HELIOS-integratie (hoort niet bij HBC+). Tot die flow geïnstalleerd is, draait een placeholder-tabblad *Full stop* en logt een waarschuwing. Zolang *Helios* gekozen is, tonen de views Overview, Prices en Timed & Dynamic een banner *Managed by HELIOS*, en toont de grafiek *Price intervals* het HELIOS-plan (de HBC+-substrategie per kwartier, uit `input_number.helios_optimizer_energy_plan`) |
 
 **EV-stoptrigger.** Zet het entity-id van een "EV laadt"-sensor of -boolean in `input_text.house_battery_strategy_ev_sensor_entity_id`. Zolang die `on` is, draait HBC+ de strategie uit `input_select.house_battery_strategy_ev_stop_trigger_strategy` (*Full stop* of *Standby / peak shave*), zodat de batterijen niet in de auto ontladen.
@@ -358,7 +359,7 @@ De prijzen worden ververst om middernacht, om 13:15 en 15:00, na een bronwissel,
 - de goedkope strategie *Charge* is (andere strategieën laden niet van het net);
 - de dure strategie niet *Sell* is (verkopen maakt de batterijen leeg, los van het huis).
 
-Anders, en met de schakelaar uit, werkt Dynamic precies zoals in v1.3. Een grote verandering in huis (warmtepomp, EV, iemand die erbij komt wonen) maakt het oude profiel onjuist: druk op *Forget the learned profile* en zet de schakelaar uit tot het opnieuw geleerd heeft. Met *Self-consumption* als normale strategie ontladen de batterijen ook buiten de dure kwartieren; een grotere marge vangt dat op.
+Anders, en met de schakelaar uit, werkt Dynamic precies zoals zonder voorspelling. Een grote verandering in huis (warmtepomp, EV, iemand die erbij komt wonen) maakt het oude profiel onjuist: druk op *Forget the learned profile* en zet de schakelaar uit tot het opnieuw geleerd heeft. Met *Self-consumption* als normale strategie ontladen de batterijen ook buiten de dure kwartieren; een grotere marge vangt dat op.
 
 ### Aangestuurd door Batterijplan
 
@@ -500,7 +501,9 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 - **F5 — Strategie-aanvragen vanuit Home Assistant.** Met `script.hbc_strategy_hold` en `script.hbc_strategy_release` kunnen automatiseringen en andere projecten via de Strategy arbiter een strategie vasthouden, met een time-out, zonder Node-RED (zie [Strategie-aanvragen vanuit Home Assistant](#strategie-aanvragen-vanuit-home-assistant)). Ook via MQTT (`hbc/arbiter/request`); actieve holds staan op de Overview (`sensor.hbc_strategy_holds`).
 - **F4 — Batterijkalibratie.** Een batterij die 14 dagen niet vol is geweest, laadt HBC+ één keer tot 100 % in het goedkoopste blok na middernacht, met Charge Deadline; de laadgrens gaat die nacht naar 100 % en daarna terug (zie [Batterijkalibratie](#batterijkalibratie)). Standaard aan (*Auto*).
 - **F1 — Besparing.** Een nieuwe view *Savings*: wat je energie kostte met de batterijen vergeleken met zonder, per dag, maand en jaar, gesplitst in opgeslagen PV en laden van het net (zie [Besparing en rendement](#besparing-en-rendement)).
-- **Dashboard.** Een nieuwe view *Savings*; *Battery calibration* op de view Batteries, *Notifications* op de view Settings, en *Held by* op de Overview zolang een hold actief is.
+- **Dashboard.** Een nieuwe view *Savings*; *Battery calibration* op de view Batteries, *Notifications* op de view Settings, en *Held by* op de Overview zolang een hold actief is. Op de views Prices en Timed & Dynamic toont een kaart *Executing now* over de volle breedte onder de prijsgrafiek de sub-strategie die HBC+ nu uitvoert, en de grafiek *Price intervals: HBC+* heeft een legenda: Cheap, Regular, Expensive (de huidige markering vet), de kleuren voor negatieve prijzen als die voorkomen, het huidige kwartier en, met aparte terugleverprijzen, de lijn van de terugleverprijs. Op de view Prices heten de tegels *Buy now* en *Sell now* nu *Buy price* en *Sell price*. De nieuwe strategie-optie *Self-test* is alleen voor de zelftest bij installatie, dus de tegel *Choose strategy* biedt hem niet aan.
+- **Managed by HELIOS.** Is de strategie *Helios* gekozen, dan tonen de views Overview, Prices en Timed & Dynamic een banner *Managed by HELIOS*, net als die van Batterijplan. De grafiek *Price intervals* heet dan *Price intervals: HELIOS plan* en kleurt de komende kwartieren naar de HBC+-sub-strategie die HELIOS plande (`input_number.helios_optimizer_energy_plan`, attribuut `plan`), met een legenda en de geplande strategie in de tooltip; voorbije kwartieren zijn grijs. Zonder HELIOS-plan toont de grafiek de gewone prijsmarkeringen. Alleen weergave.
+- **Duidelijker *HBC+ is not steering the batteries*.** Is `sensor.p1_meter_power` niet beschikbaar of kwam er al meer dan 5 minuten geen nieuwe waarde, dan zegt de melding dat en wijst ze naar de P1-meter en zijn integratie (HBC+ draait alleen een regelcyclus bij een P1-update), in plaats van *Check that Node-RED runs*. Zolang HBC+ niet stuurt, zijn de banners van Batterijplan en HELIOS en *Dynamic · managed by Batterijplan (Live)* verborgen: die sturen dan ook niet.
 - **F2 — Gemeten rendement.** `sensor.hbc_round_trip_efficiency` over 7 dagen, en een voorgestelde *Minimum spread* die je met één knop overneemt. Optioneel koppelt Dynamic op wat een kWh na verliezen echt oplevert (*Dynamic uses measured efficiency*, standaard uit).
 - **F6 — Vermogenssetpoint voor Charge en Sell.** Een flow die *Charge* of *Sell* aanroept, kan een totaalvermogen meegeven in `msg.power_setpoint`; de batterijen draaien dan op dat vermogen in plaats van op hun maximum, binnen de faseregels en de netgrens (zie [Charge en Sell](#charge-en-sell)). Bedoeld voor een HELIOS-flow die het vermogen uitvoert dat Helios plande. Zonder setpoint verandert er niets.
 - **F7 — Versiecheck.** Elk HBC+-tabblad meldt nu zijn HBC+-versie, en de packages hebben `sensor.hbc_package_version`. *HBC+ health* vergelijkt die elke 30 s: een tabblad van een andere versie, een ontbrekend tabblad of packages van een andere versie geven de waarschuwing *HBC+ version mismatch* (in `sensor.hbc_health`, dus de dashboardmelding toont hem) en de attributen `version_ok` en `version_issues`. Een mix van oude en nieuwe flows leek eerder in orde en faalde op vreemde manieren, bijvoorbeeld een oud Dynamic-tabblad dat geen prijzen vond.
@@ -513,8 +516,8 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 - **Fix: verbinding met Home Assistant kwijt.** Verliest Node-RED de verbinding met Home Assistant, dan faalt elke node die HA aanroept met `NoConnectionError`. Dat gaf een reeks *Unhandled exception*-fouten, meestal van *HBC+ Strategy Timed >> Render settings*, zodat de melding naar Timed wees. Nu is het één waarschuwing, *No connection to Home Assistant since HH:MM*, elke 5 minuten herhaald zolang het duurt, met een regel *Fix*: bekijk het log van Home Assistant en van Node-RED rond dat tijdstip. HBC+ pakt het vanzelf weer op zodra de verbinding terug is. Timed slaat het verversen van zijn instellingen over zolang er geen verbinding is en houdt de laatste instellingen.
 - **Fix: grafiek PID analysis.** Op de view PID Control kon de grafiek *PID analysis* *Unable to load history: Invalid start_time* tonen. Hij vroeg maar 90 s geschiedenis op, en Home Assistant weigert een starttijd die later ligt dan zijn eigen klok, dus een telefoon of computer waarvan de klok meer dan 90 s voorliep op de HA-server brak de grafiek. Hij toont nu de laatste 6 minuten. Plak het dashboard opnieuw om deze fix te krijgen.
 - **Fix: Grid Clock onder een andere naam.** Elke tariefbron waarvan de naam met *Grid Clock* begint (*Grid Clock feed*, *Grid Clock BE*, …) leest nu de Grid Clock-feed. Eerder gaf zo'n oudere naam geen prijzen.
-- **Fix: Node-RED-stap bij een nieuwe installatie.** Het dashboard kon *Step 3 — Setup Node-RED* blijven tonen terwijl de flows gedeployed waren, omdat Node-RED 2 seconden na de eerste deploy nog niet met Home Assistant verbonden was. HBC+ meldt Node-RED nu als klaar telkens wanneer het met Home Assistant verbindt.
-- **Fix: fasebewaking op Monitor zet de batterijen niet meer stil.** Een fase die overbelast bleef met de batterijen als meeveroorzaker, zette de strategie ook op *Monitor* op *Full stop*, terwijl Monitor belooft niets te veranderen. Daardoor stopten de batterijen tijdens het in bedrijf nemen als een limiet te laag stond, bijvoorbeeld als de auto en de batterijen tegelijk laadden. Op *Monitor* meldt HBC+ nu alleen wat hij gedaan zou hebben (*HBC+: phase overload (Monitor)*); *Full stop* volgt alleen op *Enforce*. De melding op de view Phase guard zegt dat nu ook.
+- **Fix: Node-RED-stap bij een nieuwe installatie** (ook in v1.2.1). Het dashboard kon *Step 3 — Setup Node-RED* blijven tonen terwijl de flows gedeployed waren, omdat Node-RED 2 seconden na de eerste deploy nog niet met Home Assistant verbonden was. HBC+ meldt Node-RED nu als klaar telkens wanneer het met Home Assistant verbindt.
+- **Fix: fasebewaking op Monitor zet de batterijen niet meer stil** (ook in v1.2.2). Een fase die overbelast bleef met de batterijen als meeveroorzaker, zette de strategie ook op *Monitor* op *Full stop*, terwijl Monitor belooft niets te veranderen. Daardoor stopten de batterijen tijdens het in bedrijf nemen als een limiet te laag stond, bijvoorbeeld als de auto en de batterijen tegelijk laadden. Op *Monitor* meldt HBC+ nu alleen wat hij gedaan zou hebben (*HBC+: phase overload (Monitor)*); *Full stop* volgt alleen op *Enforce*. De melding op de view Phase guard zegt dat nu ook.
 - **Updatemelding per onderdeel.** Elke release bevat `versions.json`, met de versie van elk onderdeel. Home Assistant leest die mee met de releasecheck. Is een onderdeel ouder dan de nieuwste release van jouw versielijn, bijvoorbeeld één bestand van een patchrelease dat je niet kopieerde, dan zegt de Overview *Not every part of HBC+ vX.Y.Z is installed* en noemt de onderdelen, het dashboard inbegrepen. Nieuw: `sensor.hbc_release_manifest`, `sensor.hbc_outdated_parts`.
 - **Release-zip.** Vanaf v1.3 heeft een release onder *Assets* **hbc-plus-vX.Y.Z.zip**, met alleen wat je installeert (zie [Installatie](#installatie)).
 
@@ -529,7 +532,7 @@ Daarnaast zou het plannerplafond de som van alle batterijen zijn (6 × 2500 = 15
 
 ## Nieuw in HBC+ v1.2
 
-*In ontwikkeling — release gepland op 10 december 2026*
+*20 november 2026*
 
 v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027: vanaf dan levert een teruggeleverde kWh minder op dan een afgenomen kWh kost.
 
@@ -539,6 +542,7 @@ v1.2 maakt HBC+ klaar voor het einde van salderen in Nederland op 1 januari 2027
 - **F8 — Prijsbewaking.** Stopt met terugleveren en laadt juist bij negatieve prijzen, met signalen voor een PV-begrenzer (zie [Prijsbewaking (price guard)](#prijsbewaking-price-guard)).
 - **Nieuwe indeling van het dashboard.** Negen views in de volgorde waarin je ze gebruikt: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings en Logging (zie [Dashboard](#dashboard)). De adressen van de views blijven gelijk, dus links en bladwijzers blijven werken.
 - **Logo.** HBC+ heeft een logo, in de kop van het dashboard en bovenaan de README. Kopieer `www/hbc-plus/` naar de map `www/` van HA (zie [Stap 2](#stap-2--home-assistant-packages)); alle logobestanden staan in `assets/logo/`.
+- **v1.2.2 — Fasebewaking op Monitor zet de batterijen niet meer stil.** Een fase die overbelast bleef met de batterijen als meeveroorzaker, zette de strategie ook op *Monitor* op *Full stop*, terwijl Monitor belooft niets te veranderen. Op *Monitor* meldt HBC+ nu alleen wat hij gedaan zou hebben (*HBC+: phase overload (Monitor)*); *Full stop* volgt alleen op *Enforce*. Bijwerken vanaf v1.2.1: kopieer `packages/hbc_phase_guard.yaml` opnieuw, herstart HA en plak het dashboard opnieuw; de flows zijn niet veranderd.
 
 Met de standaardinstellingen werkt v1.2 precies als v1.1. Offline gecontroleerd: met terugleverprijs = inkoopprijs geeft Dynamic in 96 prijslijsten dezelfde markeringen, strategie en spreads, en met de prijsbewaking op Off is de strategiekeuze voor elke strategie gelijk.
 
@@ -814,6 +818,7 @@ HBC+ is een complete, zelfstandige installatie: alle packages, flows en het dash
 - **Dashboard-URL**: `home-battery-control-plus`. De knoppen die een andere view openen linken naar dat adres; de naam van het dashboard zelf maakt niet uit (zie [Stap 4](#stap-4--dashboard)).
 - **Dashboard**: `custom:apexcharts-card` en `card-mod` (beide Marketplace). apexcharts-card tekent de prijs- en historiegrafieken; card-mod geeft het dashboard zijn opmaak (kaders rond de grafieken, de rand van de badge *Health*).
 - **Prijzen**: [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours)-macro (Marketplace) en een prijsintegratie. Nodig voor Dynamic en Charge Deadline.
+- **Optioneel**: een zonneverwachting (bijvoorbeeld Forecast.Solar of Solcast) voor het Charge-doel *solar forecast* en de zoncontrole van de [batterijkalibratie](#batterijkalibratie); de integratie Workday (`binary_sensor.workday_sensor`), zodat de [voorspelling van het huisverbruik](#voorspelling-huisverbruik) een feestdag als weekenddag telt.
 
 De tekenconventies moeten kloppen: `sensor.marstek_mN_battery_power` is positief tijdens **laden**, `sensor.p1_meter_power_phase_N` is positief bij **import**. Gebruikt je meter het omgekeerde teken, corrigeer dat dan met een template-sensor vóór de installatie, anders wordt de zekeringruimte verkeerd berekend.
 
@@ -929,7 +934,7 @@ Herlaad na het installeren van card-mod en apexcharts-card de browser (in de Hom
 4. *Deploy* → *Modified flows*, op een rustig moment. HBC+ schrijft na een deploy één keer modus en vermogen opnieuw naar de batterijen; dat is normaal.
 5. Voor meldingen hoef je hier niets in te stellen: de node *Notify phone* van *HBC+ Battery Oscillation Guard* roept `script.hbc_notify` aan. Stap 6 zegt waar je het doel instelt.
 
-**Eigen flows** kunnen een strategie aanvragen via de *Strategy arbiter*: een link call naar *Strategy request* met `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`. Geef de aanvrager een prioriteit in de node *Arbitrate*; de Battery Oscillation Guard heeft 100, elke andere naam voor de aanvrager krijgt 50, en bij gelijke prioriteit wint de hold die het eerst kwam. Een handmatige keuze wint altijd en wordt de nieuwe basis.
+**Eigen flows** kunnen een strategie aanvragen via de *Strategy arbiter*: een link call naar *Strategy request* met `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`. Geef de aanvrager een prioriteit in de node *Arbitrate*; de Battery Oscillation Guard heeft 100, de zelftest (`selftest`) 90, de batterijkalibratie (`calibration`) 40, en elke andere naam voor de aanvrager krijgt 50, en bij gelijke prioriteit wint de hold die het eerst kwam. Een handmatige keuze wint altijd en wordt de nieuwe basis.
 
 ### Strategie-aanvragen vanuit Home Assistant
 
@@ -1022,7 +1027,7 @@ Een nieuwe HBC+-versie komt als nieuwe release op de [Releases-pagina](https://g
 1. **Maak een back-up** zoals in stap 1.
 2. **Lees de release notes** op hernoemde of verwijderde bestanden, en verwijder die uit de map `packages/` van HA (in v1.0 werden `house_battery_control.yaml`, `house_battery_control_config.yaml`, `house_battery_deadline_charge.yaml` en `nodered_heartbeat.yaml` hernoemd naar `hbc_control.yaml`, `hbc_config.yaml`, `hbc_deadline_charge.yaml` en `hbc_heartbeat.yaml`).
 3. **Packages:** kopieer de nieuwe `packages/*.yaml` over de oude heen, behalve `hbc_config.yaml`: dat bestand is van jou en wordt nooit vervangen. Heb je zelf een ander package aangepast, neem die wijziging dan over in het nieuwe bestand. Daarna *Configuratie controleren* en HA herstarten.
-4. **Flows:** Node-RED kan bij een import geen flow-tabblad vervangen (het slaat het over of importeert een kopie), dus verwijder eerst de oude tabbladen. Dubbelklik in de Node-RED-editor op elk tabblad waarvan de naam met *HBC+* begint en kies *Delete*; laat je eigen flows staan en deploy nog niet. *Importeer* daarna `node-red/hbc-plus-all-flows.json`; meldt Node-RED dat de servernode *HA System* al bestaat, laat die dan uitgevinkt. Daarna *Deploy*. De tabbladen komen terug met dezelfde node-id's; linkt een eigen flow naar een HBC+-tabblad, open dan de link-node en controleer of die nog naar het juiste doel wijst. Wijzigingen die je in HBC+-tabbladen maakte zijn weg, dus zet je notify-actie in *Notify phone* opnieuw.
+4. **Flows:** Node-RED kan bij een import geen flow-tabblad vervangen (het slaat het over of importeert een kopie), dus verwijder eerst de oude tabbladen. Dubbelklik in de Node-RED-editor op elk tabblad waarvan de naam met *HBC+* begint en kies *Delete*; laat je eigen flows staan en deploy nog niet. *Importeer* daarna `node-red/hbc-plus-all-flows.json`; meldt Node-RED dat de servernode *HA System* al bestaat, laat die dan uitgevinkt. Daarna *Deploy*. De tabbladen komen terug met dezelfde node-id's; linkt een eigen flow naar een HBC+-tabblad, open dan de link-node en controleer of die nog naar het juiste doel wijst. Wijzigingen die je in HBC+-tabbladen maakte zijn weg. Vanaf v1.3 staan de meldingsdoelen in *Notify targets* op de view Settings, buiten de flows, dus die blijven staan (bijwerken vanaf v1.2 of ouder: zie [Bijwerken vanaf v1.2](#bijwerken-vanaf-v12), stap 5).
 5. **Dashboard:** heeft de release `dashboards/hbc_plus.yaml` gewijzigd, plak hem dan opnieuw in de ruwe configuratie-editor. Kopieer ook `www/hbc-plus/` opnieuw als de release die map heeft gewijzigd.
 6. **Nieuwe instellingen:** een helper die nieuw is in een release start op zijn minimum. Stel hem direct na het bijwerken in; de release notes noemen hem (bijvoorbeeld *Battery circuit per phase*). *HBC+ phase guard: apply defaults* zet hem ook, maar zet ook de fasekaart terug.
 
@@ -1121,7 +1126,16 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | `sensor.hbc_last_run` | `hbc_heartbeat.yaml` | Tijd van de laatste HBC+-heartbeat (MQTT `hbc/heartbeat`) |
 | `binary_sensor.hbc_heartbeat_stale` | `hbc_heartbeat.yaml` | Aan als er meer dan 5 minuten geen heartbeat (geen goede regelcyclus) was; in *Full control* geeft dit de batterijen terug aan hun firmware |
 | `sensor.hbc_health` | `hbc_heartbeat.yaml` | Gezondheid van de regellus via MQTT `hbc/health`: `ok`, `warning` of `error` (3+ fouten in 10 minuten); attributen `errors_10m`, `warnings_10m`, totalen, `last_error`, `last_warning`; v1.3: `flows_version`, `packages_version`, `version_ok`, `version_issues` |
-| `sensor.hbc_package_version` | `hbc_control.yaml` | v1.3: HBC+-versie van de packages; de versiecheck in *HBC+ health* vergelijkt de flows ermee (major.minor moet gelijk zijn) |
+| `sensor.hbc_package_version` | `hbc_control.yaml` | v1.3: de nieuwste geïnstalleerde HBC+-versie (packagebestanden en flows); attributen `files` (versie per packagebestand), `flows` en `mixed` (true als major.minor verschilt). De updatecheck vergelijkt GitHub ermee |
+| `sensor.hbc_version_<bestand>` | elk packagebestand | v1.3: versie van dat packagebestand, bijvoorbeeld `sensor.hbc_version_hbc_notify`; *HBC+ health* vergelijkt elk met de flows, en de tabel *Versions* op de view Settings toont ze |
+| `sensor.hbc_release_number` | `hbc_control.yaml` | v1.3: de geïnstalleerde release als getal (major × 100 + minor: 1.3 = 103), voor de controle van het dashboard op zijn eigen versie |
+| `sensor.hbc_latest_version` | `hbc_control.yaml` | v1.3: tag van de nieuwste gepubliceerde HBC+-release op GitHub, opgevraagd bij het opstarten en elke 6 uur; attribuut `html_url` (de release notes) |
+| `sensor.hbc_release_manifest` | `hbc_control.yaml` | v1.3: de release in `versions.json` bij die tag; attribuut `parts` (elk onderdeel met zijn versie) |
+| `sensor.hbc_outdated_parts` | `hbc_control.yaml` | v1.3: aantal geïnstalleerde onderdelen ouder dan de nieuwste release van jouw versielijn; attribuut `parts` (`bestand: geïnstalleerd → release`) |
+| `sensor.hbc_release_dashboard_number` | `hbc_control.yaml` | v1.3: de dashboardversie van die release als getal, voor de eigen updatemelding van het dashboard |
+| `binary_sensor.hbc_update_available` | `hbc_control.yaml` | v1.3: aan als GitHub een nieuwere release heeft of een onderdeel verouderd is; attributen `newer`, `outdated`, `installed`, `latest`, `release_url` |
+| `input_boolean.house_battery_control_show_price_list` | `hbc_control.yaml` | De badge *Pricing List* op de view Prices: toont of verbergt de prijslijst (*Price marks visualisation*) |
+| `input_text.house_battery_strategy_active_sub_strategy` | `hbc_control.yaml` | De sub-strategie die HBC+ nu uitvoert, geschreven door Node-RED; getoond als *Executing* en in de kaart *Executing now* |
 | `sensor.hbc_energy_prices_data` | `hbc_control.yaml` | De huidige prijslijst voor het dashboard; attribuut `status` is `ok`, `stale` of `no_data` |
 | `binary_sensor.hbc_price_data_missing` | `hbc_control.yaml` | Aan als er een tariefbron gekozen is maar geen geldige prijzen beschikbaar zijn |
 | `input_text.house_battery_strategy_dynamic_price_sensor` | `hbc_control.yaml` | Optioneel: legt de prijssensor voor Dynamic vast (zie R4) |
@@ -1155,6 +1169,10 @@ De template-sensoren en het alarm draaien alleen in Home Assistant en blijven du
 | `binary_sensor.hbc_export_price_negative`, `binary_sensor.hbc_import_price_negative` | `hbc_price_guard.yaml` | Prijstoestand als aan/uit, voor automatiseringen en PV-begrenzers |
 | `binary_sensor.hbc_pv_curtail_advised` | `hbc_price_guard.yaml` | Terugleveren kost geld en de batterijen zijn vol |
 | `binary_sensor.hbc_phase_shared` | `hbc_price_guard.yaml` | Een fase heeft twee batterijen in de fasekaart |
+### Meldingen, strategie-holds, kalibratie en besparing (v1.3)
+
+| Entiteit | Package | Wat het is |
+| --- | --- | --- |
 | `input_text.house_battery_notify_targets` | `hbc_notify.yaml` | Waar HBC+-meldingen heen gaan: notify-acties, met komma's gescheiden; leeg = `notify.notify` (v1.3) |
 | `script.hbc_notify` | `hbc_notify.yaml` | Stuurt een HBC+-melding (`title`, `message`) naar elk doel; gebruikt door alle HBC+-automatiseringen en de Oscillation Guard (v1.3) |
 | `script.hbc_strategy_hold`, `script.hbc_strategy_release` | `hbc_strategy_arbiter.yaml` | Een strategie vasthouden of vrijgeven via de Strategy arbiter vanuit HA (v1.3); hetzelfde via MQTT `hbc/arbiter/request`, antwoord op `hbc/arbiter/result` |
@@ -1208,14 +1226,14 @@ Het dashboard *Home Battery Control Plus* heeft tien views, in de volgorde waari
 | View | Waarvoor |
 | --- | --- |
 | Overview | Status en bediening: meldingen, *Control Mode* (mastermodus), strategiekeuze, net- en batterijvermogen nu, de laatste 24 uur, en per batterij SoC, vermogen, maximaal vermogen en fase |
-| Prices | Grafiek met prijsintervallen, inkoop- en terugleverprijs nu, *Tariff data source* (met Grid Clock: zone, leverancier en, in België, netbeheerder), prijsmarkeringen (met *Insights mode* aan) en de prijsbewaking |
+| Prices | Grafiek *Price intervals* met legenda, de kaart *Executing now* (de sub-strategie die HBC+ nu uitvoert), *Buy price* en *Sell price*, *Tariff data source* (met Grid Clock: zone, leverancier en, in België, netbeheerder), de prijslijst (aan en uit met de badge *Pricing List*) en de prijsbewaking. Stuurt Batterijplan (Live) of HELIOS, dan toont een banner dat en toont de grafiek hun plan |
 | Charge & Sell | Doelen en vervolgstrategie voor Charge, Sell en Charge Deadline |
-| Timed & Dynamic | De tijdvakken van Timed, en de strategieën die Dynamic gebruikt in gewone, goedkope en dure periodes, en de voorspelling van het huisverbruik |
+| Timed & Dynamic | De tijdvakken van Timed, en de strategieën die Dynamic gebruikt in gewone, goedkope en dure periodes, en de voorspelling van het huisverbruik; de prijsgrafiek, *Executing now* en de banner van Batterijplan of HELIOS zoals op de view Prices |
 | Savings | Besparing vandaag, deze maand en dit jaar, kosten per dag, opgeslagen PV en laden van het net per maand, rendement en de voorgestelde *Minimum spread* |
 | Phase guard | Status van de fasebewaking, de kaarten L1 · L2 · L3, netvermogensgrenzen en peak shaving |
 | PID Control | PID-preset en -afstelling, en de PID-historie |
 | Batteries | Batterijlevensduur (batterijkalibratie, batterijprioriteit, stoppen na inactiviteit, hysterese), de *Battery phase test* (zelftest), en per batterij: fase, cutoff-capaciteiten en maximaal vermogen |
-| Settings | De checklist *Setup*, de instellingen van de fasebewaking, *Notify targets* met een testknop, en de EV-stoptrigger |
+| Settings | De checklist *Setup*, de instellingen van de fasebewaking, *Notify targets* met een testknop, de EV-stoptrigger, en de tabel *Versions* (elk onderdeel met zijn versie, een onderdeel van een andere release in rood) |
 | Logging (spinnen-icoon) | *Flow trace* en *Insights*: de route van de laatste tick en de uitleg van elke node; zet *Insights mode* aan (gaat na 5 min vanzelf uit) |
 
 Op de Overview verschijnen meldingen alleen als er iets aandacht nodig heeft:
@@ -1229,6 +1247,10 @@ Op de Overview verschijnen meldingen alleen als er iets aandacht nodig heeft:
 - **Dynamic strategy: Full Stop** — Dynamic is gekozen terwijl *Tariff data source* op *None* staat.
 - **Price guard** — de prijsbewaking overschrijft een strategie; de melding noemt de actie.
 - **Held by** — er is een hold in de Strategy arbiter actief: wie welke strategie vasthoudt, en tot wanneer.
+- **Managed by HELIOS**, en *Dynamic · managed by Batterijplan (Live)* onder *Choose strategy* — HELIOS of Batterijplan beslist wat de batterijen doen (zie [Aangestuurd door Batterijplan](#aangestuurd-door-batterijplan)). Verborgen zolang HBC+ niet stuurt.
+- **HBC+ vX.Y.Z is available** — onder *Status & control*: GitHub heeft een nieuwere HBC+-release dan je geïnstalleerd hebt (`binary_sensor.hbc_update_available`), met een link naar de release notes.
+- **Not every part of HBC+ vX.Y.Z is installed** — een packagebestand, de flows of het dashboard is ouder dan de nieuwste release van jouw versielijn; de melding noemt ze (`sensor.hbc_outdated_parts`).
+- **Dashboard vX does not match HBC+ vY** — het dashboard is van een andere release dan je packages en flows: plak `dashboards/hbc_plus.yaml` van dezelfde release.
 
 De view **Phase guard** beantwoordt drie vragen in één oogopslag: welke batterij werkt er op elke fase, hoe dicht zit elke fase bij zijn zekering, en waarom. Van boven naar beneden:
 
@@ -1285,10 +1307,13 @@ Twee meters per fase volgen vanzelf de instellingen van de fasebewaking, in % va
 | Voorspelling: *Not used now: load profile still learning* | Minder dan 7 werkdagen of 4 weekenddagen geleerd | Wachten; `days_wd` / `days_we` op `sensor.hbc_load_profile` tonen de voortgang |
 | Voorspelling blijft 0 / het profiel groeit niet | Een energieteller van `hbc_savings.yaml` is niet beschikbaar, of HA lag eruit tijdens het kwartier | Controleer `sensor.hbc_grid_import_energy` en `sensor.hbc_battery_charge_energy`; attribuut `last` op `sensor.hbc_load_profile` toont het laatste kwartier (`w` = −1: overgeslagen) |
 | De batterijen zijn leeg voor het einde van de dure uren | Voorspelling te laag (nieuw apparaat, koudegolf) of normale strategie Self-consumption | Verhoog *Margin*, of *Forget the learned profile* na een grote verandering |
+| Geen melding *HBC+ vX.Y.Z is available*, terwijl er een nieuwere release is | Home Assistant vraagt GitHub alleen bij het opstarten en elke 6 uur, en heeft daarvoor internet nodig | Wacht op de volgende check of herstart HA; `sensor.hbc_latest_version` toont wat GitHub antwoordde (`unknown`: geen antwoord) |
+| *Not every part of HBC+ vX.Y.Z is installed* | Niet elk bestand van een (patch)release is gekopieerd, of het dashboard is niet opnieuw geplakt | Kopieer de onderdelen die de melding noemt (de tabel *Versions* op de view Settings toont ze allemaal) en herstart HA; plak voor het dashboard `dashboards/hbc_plus.yaml` opnieuw |
+| *Send a test notification* verstuurt niets | Een verkeerde naam in *Notify targets*, of `hbc_notify.yaml` ontbreekt | Gebruik de naam van een notify-actie zoals in *Ontwikkelhulpmiddelen* → *Acties* (bijvoorbeeld `notify.mobile_app_<telefoon>`), met komma's gescheiden; kopieer `hbc_notify.yaml` en herstart HA. De zelftest controleert de doelen ook |
 
 Wil je zien wat HBC+ besliste en waarom, open dan de view **Logging** (spinnen-icoon) en zet *Insights mode* aan. Voor waarschuwingen en fouten is *Insights mode* niet nodig: die staan altijd in het Node-RED-log (hetzelfde bericht hooguit eens per minuut) en in `sensor.hbc_health`.
 
-Elk tabblad heeft een commentaar **📖 How this flow works – HBC+ v1.2**: open het en lees de Info-zijbalk. Het laatste guard-resultaat staat in de Node-RED global context als `hbcplus_guard_last`; correcties gaan ook naar het HBC+-debugboard.
+Elk tabblad heeft een commentaar **📖 How this flow works – HBC+ v1.3**: open het en lees de Info-zijbalk. Het laatste guard-resultaat staat in de Node-RED global context als `hbcplus_guard_last`; correcties gaan ook naar het HBC+-debugboard.
 
 ## Hulp en feedback
 

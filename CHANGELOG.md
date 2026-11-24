@@ -5,6 +5,8 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 
 ## [1.3.0] – planned 22 December 2026
 
+Includes everything in 1.2.1 and 1.2.2.
+
 ### Added
 - **Savings** (F1) — new *Savings* view: what your energy cost with the batteries compared with without them, per day,
   month and year, split into stored PV and charging from the grid. New package `hbc_savings.yaml`.
@@ -72,17 +74,10 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   the tooltip; past bars are grey. Without a HELIOS plan the chart shows the normal price marks. Display only.
 
 ### Changed
-- Phase guard on *Monitor*: a phase that stayed overloaded with the batteries part of the cause no longer switches
-  to *Full stop*. On *Monitor* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* now only
-  writes to the logbook and notifies what it would have done (*HBC+: phase overload (Monitor)*); *Full stop* only
-  happens on *Enforce*. The note on the Phase guard view says so too.
 - **Problem alert** — the Overview alert *HBC+ keeps logging errors* shows how long ago the latest message
   was and a *Fix* line for known problems (new attribute `hint` on `sensor.hbc_health`, also in the
   notification). About 90 s after the last message it turns blue with the time it clears, instead of staying
   red for the full 10-minute window after the cause is fixed.
-- Prices view: the *Insights mode* badge is now **Pricing List** (`input_boolean.house_battery_control_show_price_list`,
-  new). It only shows or hides the price list (*Price marks visualisation*) and no longer switches Insight mode
-  (Logging *Live*) on.
 - Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
   *Held by* on the Overview while a strategy hold is active.
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
@@ -109,12 +104,6 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 ### Fixed
 - Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
   gave no prices; it now reads the Grid Clock feed.
-- Fresh install: Self-consumption logged *Controller disabled — all PID gains are 0* on every tick. The script
-  *HBC+ phase guard: apply defaults* now also selects the PID preset *Safe* and sets its gains (Kp 0.3, Ki 0.3,
-  Kd 0.1).
-- Fresh install: the dashboard kept showing *Step 3 — Setup Node-RED* after the flows were deployed. Node-RED turned
-  on `input_boolean.house_battery_control_has_node_red` only once, 2 s after deploy, often before it was connected to
-  Home Assistant. It now also does this each time it (re)connects (tab *HBC+ Home Battery Start*).
 - Lost connection to Home Assistant: every node that calls HA failed with `NoConnectionError` and was logged as an
   *Unhandled exception* error, usually first from *HBC+ Strategy Timed >> Render settings* (its 30-s settings refresh),
   so the alert pointed at Timed. It is now ONE warning per outage, *No connection to Home Assistant since HH:MM*,
@@ -126,12 +115,29 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   so a browser clock more than 90 s ahead of the HA server broke the graph. It now shows 6 minutes
   (`hours_to_show: 0.1`).
 
+### Documentation
+- README, user guide (English and Dutch) and `node-red/README.md` describe v1.3: new dashboard parts and alerts, the
+  update and version-check entities in the configuration reference, troubleshooting for the update notice and test
+  notifications, optional requirements (solar forecast, Workday). New release notes `docs/release-notes/v1.3.md`.
+
 ### Updating from 1.2
 Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml`, `hbc_savings.yaml`, `hbc_selftest.yaml`,
 `hbc_load_forecast.yaml` and `hbc_batterijplan.yaml`), delete the old
 HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard again. Had you set your own notify
 action? Put it in *Notify targets* and press *Send a test notification*. Full steps: *Updating from v1.2* in the user
 guide. Then run the self-test once (*Batteries* → *Battery phase test*).
+
+## [1.2.2] – 24 November 2026
+
+The phase guard on *Monitor* no longer stops the batteries; only *Enforce* does. The Node-RED flows are unchanged
+(still v1.2.1): no need to import them again.
+
+### Changed
+- Phase guard on *Monitor*: a phase that stayed overloaded with the batteries part of the cause no longer switches
+  to *Full stop*. On *Monitor* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* now only
+  writes to the logbook and notifies what it would have done (*HBC+: phase overload (Monitor)*); *Full stop* only
+  happens on *Enforce*. The note on the Phase guard view says so too.
+  Copy `packages/hbc_phase_guard.yaml` again and paste the dashboard again.
 
 ## [1.2.1] – 21 November 2026
 
@@ -164,7 +170,7 @@ Delete the old HBC+ tabs in Node-RED, import `node-red/hbc-plus-all-flows.json` 
 `dashboards/hbc_plus.yaml` again. If Self-consumption logs *Controller disabled*, choose the PID preset *Safe* on the
 PID Control view.
 
-## [1.2.0] – planned 10 December 2026
+## [1.2.0] – 20 November 2026
 
 Ready for the end of Dutch net metering on 1 January 2027: from then on an exported kWh earns less than an
 imported kWh costs. With default settings v1.2 behaves exactly like v1.1.

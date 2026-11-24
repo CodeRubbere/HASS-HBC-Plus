@@ -12,9 +12,9 @@ This project is designed for hobbyists who want full control over their home bat
 ![License](https://img.shields.io/github/license/gitcodebob/marstek-venus-rs485-node-red)
 [![GitHub stars](https://img.shields.io/github/stars/CodeRubbere/HASS-HBC-Plus?style=flat)](https://github.com/CodeRubbere/HASS-HBC-Plus/stargazers)
 
-**Current version: v1.1** (16 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.1](docs/user-guide.en.md#whats-new-in-hbc-v11)
+**Current version: v1.2.2** (24 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
 
-**Next: v1.2**, planned for 10 December 2026, ready for the end of Dutch net metering · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12) · [Changelog](CHANGELOG.md)
+**Next: v1.3**, planned for 22 December 2026 · [What's new in v1.3](docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
 
 > 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
 
@@ -34,19 +34,27 @@ Battery packages contributed by the community:
 - **Phase guard** — a phase map for up to 6 batteries (M1–M6), one active battery per phase by default, and per-phase headroom under both the grid fuse and the battery circuit, computed from the P1 meter every tick. Optional *Shared headroom* mode.
 - **Correct planner ceiling** — Charge Deadline plans with the max power per phase, not the sum of all batteries.
 - **Charge Deadline strategy** — charges to a target (full, SoC or energy reserve) before a deadline, in the cheapest quarter-hours, with optional PV reserve and a follow-up strategy once the deadline has passed.
-- **GridClock as data source** — Dynamic and Charge Deadline can read prices from the [Grid Clock](https://gridclock.eu) integration (`sensor.grid_clock_<zone>_prices`). Prices refresh automatically when the default zone changes.
+- **Grid Clock prices** — the tariff source *Grid Clock* reads all-in buy and sell prices per quarter for your own supplier from the public [Grid Clock](https://gridclock.eu) feed: no account, token or registration. Prices refresh automatically after a change of zone or supplier.
+- **Buy and sell prices** — Dynamic values *Sell* at what an exported kWh really earns, ready for the end of Dutch net metering on 1 January 2027.
+- **Price guard** — while prices are negative, stop exporting and charge instead; signals for a PV limiter. Off by default.
 - **Phase guard view** on the dashboard and an overload alarm in Home Assistant that works even when Node-RED is down.
 - **Shared price fetch** — the *API call to Data Source* group in *HBC+ Strategy Dynamic* is a link-call subroutine: any flow can fetch the current price list with one **link call** to *Dynamic Fetch from Data Source* (timeout ≥ 30 s), optionally for another source (`msg.dynamic.data_source`) or from the cache (`msg.dynamic_use_cache`). The caller always gets a reply in `msg.dynamic`: fresh prices, the last valid prices (`stale`) when the source fails, or `no_data`. Errors inside the group are caught, so a caller never waits for a timeout.
 - **Safety, performance and stability** improvements (a fail-safe phase guard on *Enforce*, a *Full stop* when the batteries keep a phase overloaded, a heartbeat fallback that only counts working control cycles, battery values that never turn into NaN, warnings and errors that always reach the Node-RED log and `sensor.hbc_health`, fewer Modbus writes, one fast read node, bug fixes).
 
 With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without phase rules. Only *Enforce* applies them.
 
-**Coming in v1.2** (in development, planned for 10 December 2026, ready for the end of Dutch net metering on 1 January 2027):
+**Coming in v1.3** (in development, planned for 22 December 2026):
 
-- **Grid Clock feed** — the tariff source *Grid Clock* now has all-in buy and sell prices per quarter for your own supplier, public and without a token.
-- **Buy and sell prices** — Dynamic values *Sell* at the real sell price; a sell price sensor and a sell line in the price chart.
-- **Price guard** — while prices are negative, stop exporting and charge instead; signals for a PV limiter. Off by default.
-- **New dashboard layout** — nine views in the order you use them: Overview, Prices, Charge & Sell, Timed & Dynamic, Phase guard, PID Control, Batteries, Settings and Logging.
+- **Savings** — what your energy cost with the batteries compared with without them, per day, month and year, and the measured round-trip efficiency with a suggested *Minimum spread*.
+- **Battery calibration** — a battery that has not been full for 14 days is charged to 100 % once, in the cheapest block of the night.
+- **Setup self-test** — one button checks the setup and measures on which phase each battery is connected.
+- **Load forecast** — HBC+ learns how much the house uses per quarter; optionally Dynamic charges only what the expensive quarters need.
+- **One notification setting** — *Notify targets* on the Settings view, with a test button.
+- **Strategy requests from Home Assistant** — hold a strategy from an automation or over MQTT, with a time-out, without Node-RED.
+- **Power setpoint for Charge and Sell** — a flow such as HELIOS can run Charge or Sell at a planned power instead of the maximum.
+- **Batterijplan and HELIOS on the dashboard** — banners and the price chart show who steers and what they plan.
+- **Update and version check** — the Overview says when a newer release is out, and which part of your installation is of another version.
+- **Release zip** — `hbc-plus-vX.Y.Z.zip` under *Assets*, with only what you install.
 
 ## Works with Batterijplan
 
@@ -56,7 +64,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 
 | Path | Contents |
 | --- | --- |
-| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml` the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml` and the Batterijplan indicator `hbc_batterijplan.yaml` (HBC+) |
+| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml`, the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml` and the Batterijplan indicator `hbc_batterijplan.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Prices, Charge & Sell, Timed & Dynamic, Savings, **Phase guard**, PID Control, Batteries, Settings and Logging |
 | `www/hbc-plus/` | The dashboard logo; copy it into your HA `www/` folder |
 | `assets/logo/` | The HBC+ logo as SVG and PNG: on light, on dark, one colour, app icon, GitHub social preview |
@@ -79,6 +87,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 - **Dashboard URL**: `home-battery-control-plus`, so the buttons that open other views work. The name does not matter; the URL cannot be changed later.
 - **Dashboard**: `apexcharts-card` and `card-mod` (both Marketplace).
 - **Prices**: the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration, for Dynamic and Charge Deadline.
+- **Optional**: a solar forecast (for example Forecast.Solar or Solcast) for the Charge goal *solar forecast* and the sun check of the battery calibration; the Workday integration (`binary_sensor.workday_sensor`), so the load forecast counts a public holiday as a weekend day.
 
 Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#requirements).
 
@@ -91,11 +100,12 @@ Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#
 4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
 5. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
 6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml`, set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
-7. Run in **Monitor** for a few days, then switch to **Enforce**.
+7. Set *Notify targets* on the **Settings** view and press *Send a test notification*; run the self-test once on the **Batteries** view (*Battery phase test*).
+8. Run in **Monitor** for a few days, then switch to **Enforce**.
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
 
-**Updating from v1.0?** Follow [Updating from v1.0](docs/user-guide.en.md#updating-from-v10): new packages and notifications, and the old HBC+ tabs are deleted before the import.
+**Updating?** Follow [Updating from v1.2](docs/user-guide.en.md#updating-from-v12): new packages (among them the required `hbc_notify.yaml`), and the old HBC+ tabs are deleted before the import. The general steps for every release: [Updating HBC+](docs/user-guide.en.md#updating-hbc).
 
 Questions or bugs: open an issue at [github.com/CodeRubbere/HASS-HBC-Plus/issues](https://github.com/CodeRubbere/HASS-HBC-Plus/issues).
 

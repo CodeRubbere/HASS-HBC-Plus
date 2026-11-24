@@ -1,7 +1,7 @@
-# HBC+ - complete Node-RED flow set (v1.2, release planned 2026-12-10)
+# HBC+ - complete Node-RED flow set (v1.3, release planned 2026-12-22)
 
 Everything Node-RED needs for HBC+ (Home Battery Control Plus), a standalone home battery controller with the phase guard for
-2 batteries per phase. All tabs are named `HBC+ ... v1.2`. Node-RED cannot replace a flow tab on import (it skips it or
+2 batteries per phase. All tabs are named `HBC+ ... v1.3`. Node-RED cannot replace a flow tab on import (it skips it or
 imports a copy), so delete the old HBC+ tabs before you import a new version (see *Install*).
 
 **Quickest install:** import `hbc-plus-all-flows.json` (all 16 tabs, HA server config node once).
@@ -35,6 +35,24 @@ bump `VERSION` in every *HBC+ version* node, in *HBC+ health* and in `packages/h
 | `hbc-plus-all-flows.json` | all of the above | one import file |
 | `examples/price-fetch-example.json` | HBC+ Example: price fetch | **new** - example of the shared price fetch (dynamic link call, reading the price now); not in the all-flows file |
 
+## Changes in v1.3
+- **All tabs:** names end in v1.3; every tab has a node *HBC+ version* that registers its version for the version check.
+- **Start:** *HBC+ health* runs the version check (tabs, flows against every package file: *HBC+ version mismatch*,
+  `version_ok`, `version_issues`), adds a *Fix* hint (`hint`) for known problems, and turns a lost Home Assistant
+  connection into one warning per outage (*No connection to Home Assistant since HH:MM*, every 5 min); *Once per
+  (re)connect* turns on `input_boolean.house_battery_control_has_node_red` on every (re)connect and clears that warning.
+- **Charge / Sell:** optional power setpoint `msg.power_setpoint = { for, w, by }` scales *Max power solution* down,
+  within the phase rules and the import or export limit; *Import/Export at max power / setpoint* is now a function.
+  Charge ignores the setpoint while the price guard charges at negative prices.
+- **Dynamic:** *Determine dynamic strategy* step 3b uses the load forecast (optional; switch off: identical marks);
+  *Data source settings* reads every source name that starts with *Grid Clock* as the Grid Clock feed.
+- **Timed:** new node *HA connected?*: the 30-s settings refresh is skipped without a connection.
+- **Strategy arbiter:** requests from Home Assistant (event `hbc_arbiter_request`, MQTT `hbc/arbiter/request`, group
+  *Requests from Home Assistant*), answers on `hbc_arbiter_result` and `hbc/arbiter/result`; requester `selftest`
+  gets priority 90, `calibration` 40.
+- **Battery Oscillation Guard:** *Notify phone* calls `script.hbc_notify` (set *Notify targets* on the Settings view).
+- **New tab *HBC+ Self-test v1.3*:** the setup self-test (flow check and phase detection).
+
 ## Changes in v1.2
 - **Dynamic:** *Data source settings* has a second output for the source *Grid Clock* (the Grid Clock feed): *Grid Clock feed request* -> *Grid Clock feed* (http request, ETag) -> *Grid Clock feed parse* -> *Cleanup*; the status goes to the HA event `hbc_gridclock_status`. New *Price split* (before *Cache data source*) gives every source a sell list (sell = buy without the feed). *Determine dynamic strategy* adds `sell` and `neg` to every mark and values the HIGH side at the sell price when the expensive strategy is *Sell* (otherwise the v1.1 code runs unchanged). New group *Grid Clock suppliers* fills the supplier and grid-operator selects from `index.json`. *Selected* applies the price guard. *Index request* waits for HA's states and never guesses a zone; *HA (re)started* reloads the index after every (re)connect, so the chosen supplier and grid operator show again after a restart. The old *Grid Clock* (integration) case is gone.
 - **Start:** *Read HA states (fast)* reads the price-guard entities as optional (a missing one is never a fallback). *Strategy selection* builds `msg.price_override` once per tick and applies it to the top-level strategy; *HBC+ price guard status* fires `hbc_price_guard_status` when it changes.
@@ -53,10 +71,10 @@ The table above shows each tab's changes compared with HBC. New in v1.1 (details
 - **Layout:** tabs tidied; the junctions in Charge and Sell are gone (same connections).
 - **All tabs:** names end in v1.1.
 
-Flows of your own can request a strategy through the *Strategy arbiter* (link call to *Strategy request*, `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`); see the arbiter tab's Info.
+Flows of your own can request a strategy through the *Strategy arbiter* (link call to *Strategy request*, `msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`); see the arbiter tab's Info. Priorities: Oscillation Guard 100, `selftest` 90, any other requester 50, `calibration` 40. From v1.3 Home Assistant automations can do the same with `script.hbc_strategy_hold` / `script.hbc_strategy_release`.
 
 ## Documentation
-Every tab has a **📖 How this flow works - HBC+ v1.2** comment (open it and look in the Info sidebar):
+Every tab has a **📖 How this flow works - HBC+ v1.3** comment (open it and look in the Info sidebar):
 what the flow does, how it runs, and what HBC+ changes or does not change in it.
 
 ## Safety rules built in
