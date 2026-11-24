@@ -887,13 +887,120 @@ input_select:
 # TEMPLATE SENSORS
 ###########################################################################################################
 template:
-  # HBC+ version of these packages. Node-RED compares its flows with it (version check in
-  # 'HBC+ health', Start tab) and warns in sensor.hbc_health when they differ. Bump on a release.
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_control"
+        unique_id: hbc_version_hbc_control
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
+  # Summary: the NEWEST HBC+ version found in the packages (sensor.hbc_version_*) and the flows
+  # (sensor.hbc_health, attribute flows_version). A minor release replaces every part; a patch release only
+  # the parts it changed, so the newest version is the release the user installed. Used by the update check
+  # and the Overview. 'mixed' is true when major.minor differs; 'HBC+ health' then warns which part.
   - sensor:
       - name: "HBC package version"
         unique_id: hbc_package_version
         icon: mdi:tag-outline
-        state: "1.4.0"
+        state: >
+          {%- set ns = namespace(k=[]) -%}
+          {%- set vals = states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_')
+                         | map(attribute='state') | list -%}
+          {%- set fl = state_attr('sensor.hbc_health', 'flows_version') -%}
+          {%- for v in vals + ([fl | string] if fl else []) if v is match('^\d+(\.\d+){0,2}$') -%}
+            {%- set k = ((v.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
+            {%- if k > ns.k -%}{%- set ns.k = k -%}{%- endif -%}
+          {%- endfor -%}
+          {{ ns.k | join('.') if ns.k else 'unknown' }}
+        attributes:
+          files: >
+            {%- set ns = namespace(d={}) -%}
+            {%- for s in states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_') -%}
+              {%- set ns.d = dict(ns.d, **{s.entity_id[19:]: s.state}) -%}
+            {%- endfor -%}
+            {{ ns.d }}
+          flows: "{{ state_attr('sensor.hbc_health', 'flows_version') }}"
+          mixed: >
+            {%- set vals = (states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_')
+                           | map(attribute='state') | list)
+                           + [state_attr('sensor.hbc_health', 'flows_version') | string] -%}
+            {{ vals | select('match', '^\d+\.\d+') | map('regex_replace', '^(\d+\.\d+).*$', '\\1')
+               | unique | list | count > 1 }}
+
+  # Release as a number (major x 100 + minor: 1.3.x = 103) from sensor.hbc_package_version. The dashboard's
+  # version card compares its own version with it in a visibility condition, which can only compare numbers.
+  - sensor:
+      - name: "HBC release number"
+        unique_id: hbc_release_number
+        icon: mdi:tag-outline
+        availability: >
+          {{ states('sensor.hbc_package_version') is match('^\d+\.\d+') }}
+        state: >
+          {%- set v = states('sensor.hbc_package_version').split('.') -%}
+          {{ (v[0] | int(0)) * 100 + (v[1] | int(0)) }}
+
+  # HBC+ v1.3: parts that are older than the latest release (from the manifest above), when that release is of
+  # the same major.minor as what is installed. State: how many; attribute parts: "file: have → release".
+  # The dashboard checks itself against the manifest (sensor.hbc_release_dashboard_number).
+  - sensor:
+      - name: "HBC outdated parts"
+        unique_id: hbc_outdated_parts
+        icon: mdi:file-alert-outline
+        state: >
+          {%- set m = state_attr('sensor.hbc_release_manifest', 'parts') or {} -%}
+          {%- set rel = states('sensor.hbc_release_manifest') -%}
+          {%- set inst = states('sensor.hbc_package_version') -%}
+          {%- set files = state_attr('sensor.hbc_package_version', 'files') or {} -%}
+          {%- set fl = state_attr('sensor.hbc_health', 'flows_version') -%}
+          {%- set ns = namespace(out=[]) -%}
+          {%- if rel is match('^\d+\.\d+') and inst is match('^\d+\.\d+')
+                and rel.split('.')[:2] == inst.split('.')[:2] -%}
+            {%- for part, want in m.items() if part != 'dashboard'
+                  and not (part == 'flows' and not fl) and not (part != 'flows' and not files) -%}
+              {%- set have = fl if part == 'flows' else files.get(part) -%}
+              {%- set w = ((want.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
+              {%- set h = (((have | string).split('.') | map('int') | list) + [0, 0, 0])[:3]
+                          if (have | string) is match('^\d+(\.\d+)*$') else [0, 0, 0] -%}
+              {%- if h < w -%}
+                {%- set ns.out = ns.out + [('Node-RED flows' if part == 'flows' else part ~ '.yaml')
+                                           ~ ': ' ~ (have or 'missing') ~ ' → ' ~ want] -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {{ ns.out | count }}
+        attributes:
+          parts: >
+            {%- set m = state_attr('sensor.hbc_release_manifest', 'parts') or {} -%}
+            {%- set rel = states('sensor.hbc_release_manifest') -%}
+            {%- set inst = states('sensor.hbc_package_version') -%}
+            {%- set files = state_attr('sensor.hbc_package_version', 'files') or {} -%}
+            {%- set fl = state_attr('sensor.hbc_health', 'flows_version') -%}
+            {%- set ns = namespace(out=[]) -%}
+            {%- if rel is match('^\d+\.\d+') and inst is match('^\d+\.\d+')
+                  and rel.split('.')[:2] == inst.split('.')[:2] -%}
+              {%- for part, want in m.items() if part != 'dashboard'
+                    and not (part == 'flows' and not fl) and not (part != 'flows' and not files) -%}
+                {%- set have = fl if part == 'flows' else files.get(part) -%}
+                {%- set w = ((want.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
+                {%- set h = (((have | string).split('.') | map('int') | list) + [0, 0, 0])[:3]
+                            if (have | string) is match('^\d+(\.\d+)*$') else [0, 0, 0] -%}
+                {%- if h < w -%}
+                  {%- set ns.out = ns.out + [('Node-RED flows' if part == 'flows' else part ~ '.yaml')
+                                             ~ ': ' ~ (have or 'missing') ~ ' → ' ~ want] -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {{ ns.out }}
+      - name: "HBC release dashboard number"
+        unique_id: hbc_release_dashboard_number
+        icon: mdi:tag-outline
+        availability: >
+          {{ (state_attr('sensor.hbc_release_manifest', 'parts') or {}).get('dashboard', '')
+             is match('^\d+\.\d+\.\d+$') }}
+        state: >
+          {%- set p = state_attr('sensor.hbc_release_manifest', 'parts').dashboard.split('.') -%}
+          {{ (p[0] | int) * 10000 + (p[1] | int) * 100 + (p[2] | int) }}
 
   # HBC+ v1.3 update check: on when GitHub has a newer HBC+ release than these packages
   # (sensor.hbc_latest_version below vs sensor.hbc_package_version). Shown on the Overview
@@ -902,17 +1009,27 @@ template:
       - name: "HBC update available"
         unique_id: hbc_update_available
         icon: mdi:update
+        # on: a newer release on GitHub, or parts older than the latest release (sensor.hbc_outdated_parts)
         state: >
           {%- set a = states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') -%}
           {%- set b = states('sensor.hbc_package_version') -%}
+          {%- set newer = false -%}
           {%- if a is match('^\d+(\.\d+){0,2}$') and b is match('^\d+(\.\d+){0,2}$') -%}
-            {%- set pa = ((a.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
-            {%- set pb = ((b.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
-            {{ pa > pb }}
-          {%- else -%}
-            false
+            {%- set newer = ((a.split('.') | map('int') | list) + [0, 0, 0])[:3]
+                            > ((b.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
           {%- endif -%}
+          {{ newer or states('sensor.hbc_outdated_parts') | int(0) > 0 }}
         attributes:
+          newer: >
+            {%- set a = states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') -%}
+            {%- set b = states('sensor.hbc_package_version') -%}
+            {%- if a is match('^\d+(\.\d+){0,2}$') and b is match('^\d+(\.\d+){0,2}$') -%}
+              {{ ((a.split('.') | map('int') | list) + [0, 0, 0])[:3]
+                 > ((b.split('.') | map('int') | list) + [0, 0, 0])[:3] }}
+            {%- else -%}
+              false
+            {%- endif -%}
+          outdated: "{{ state_attr('sensor.hbc_outdated_parts', 'parts') or [] }}"
           installed: "{{ states('sensor.hbc_package_version') }}"
           latest: "{{ states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') }}"
           release_url: "{{ state_attr('sensor.hbc_latest_version', 'html_url') or 'https://github.com/CodeRubbere/HASS-HBC-Plus/releases' }}"
@@ -1271,6 +1388,24 @@ rest:
           - html_url
           - published_at
 
+  # HBC+ v1.3 release manifest: the version of every part in the latest release (versions.json in the
+  # repository, at the release tag). Lets HBC+ name each part that is older than that release, also after a
+  # patch release where only some files changed. Fetched with the release check (start, every 6 hours, and
+  # right after a new release is seen); an older release without versions.json simply gives no manifest.
+  - resource_template: >-
+      https://raw.githubusercontent.com/CodeRubbere/HASS-HBC-Plus/{{ states('sensor.hbc_latest_version') }}/versions.json
+    scan_interval: 21600
+    timeout: 15
+    headers:
+      User-Agent: HBC-Plus-Home-Assistant
+    sensor:
+      - name: "HBC release manifest"
+        unique_id: hbc_release_manifest
+        icon: mdi:format-list-checks
+        value_template: "{{ value_json.release | default('unknown') }}"
+        json_attributes:
+          - parts
+
 ###########################################################################################################
 # AUTOMATIONS - PRICE DATA ALERT (HBC+ v1.0)
 ###########################################################################################################
@@ -1278,6 +1413,20 @@ rest:
 # baseline strategy and Charge Deadline has no cheap windows. Cleared again as soon as prices are back.
 # Notifications go through script.hbc_notify (hbc_notify.yaml); set where they go on the Settings view.
 automation:
+  # HBC+ v1.3: fetch the release manifest as soon as a new release is seen (its URL contains the release tag).
+  - id: hbc_release_manifest_refresh
+    alias: "HBC+: fetch the release manifest after a new release"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: sensor.hbc_latest_version
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.hbc_release_manifest
   - id: hbc_price_data_alert
     alias: "HBC+: alert when the tariff source delivers no prices"
     mode: restart
@@ -1349,7 +1498,13 @@ recorder:
       # current attributes only (apexcharts data_generator), never its history.
       - sensor.hbc_energy_prices_data
       - sensor.hbc_time
+      - sensor.hbc_release_number
+      - sensor.hbc_release_manifest
+      - sensor.hbc_release_dashboard_number
+      - sensor.hbc_outdated_parts
     entity_globs:
+      # HBC+ version sensors: fixed per release, history adds nothing
+      - sensor.hbc_version_*
       # PID control signals (updated every 2-40 seconds during operation)
       # HBC+ 2026-11-15: the P, I and D terms are recorded again: the 'PID analysis' graph on the
       # PID Control view draws them, and Node-RED writes them at most once per 10 s (on change).

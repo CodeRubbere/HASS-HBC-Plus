@@ -62,3 +62,15 @@ script:
               data:
                 title: "{{ title }}"
                 message: "{{ message }}"
+
+###########################################################################################################
+# VERSION
+###########################################################################################################
+template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_notify"
+        unique_id: hbc_version_hbc_notify
+        icon: mdi:tag-outline
+        state: "1.4.0"

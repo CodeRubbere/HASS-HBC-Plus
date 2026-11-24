@@ -18,6 +18,14 @@
 ###########################################################################################################
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_batterijplan"
+        unique_id: hbc_version_hbc_batterijplan
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
   - binary_sensor:
       - name: HBC managed by Batterijplan
         unique_id: hbc_managed_by_batterijplan

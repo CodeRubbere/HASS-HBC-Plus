@@ -134,6 +134,14 @@ mqtt:
       icon: mdi:shield-alert-outline
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_phase_guard"
+        unique_id: hbc_version_hbc_phase_guard
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
   - sensor:
       - name: "HBC+ phase L1 battery power"
         unique_id: hbc_phase_l1_battery_power

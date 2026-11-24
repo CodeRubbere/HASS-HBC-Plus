@@ -52,6 +52,14 @@ input_text:
     max: 100
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_gridclock"
+        unique_id: hbc_version_hbc_gridclock
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
   # Status of the last feed fetch, from the event Node-RED fires after every fetch.
   # Entity id: sensor.hbc_grid_clock_feed (HA derives it from the name below; keep the name).
   - trigger:

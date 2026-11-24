@@ -8,3 +8,6 @@
 # local backups / secrets
 *.bak
 secrets.yaml
+
+# Python (tools/)
+__pycache__/

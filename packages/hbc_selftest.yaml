@@ -336,6 +336,14 @@ script:
           entity_id: sensor.hbc_self_test_phases
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_selftest"
+        unique_id: hbc_version_hbc_selftest
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
   - trigger:
       - trigger: event
         event_type: hbc_selftest_progress

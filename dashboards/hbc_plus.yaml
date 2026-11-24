@@ -34,8 +34,9 @@ views:
         type: markdown
         text_only: true
         content: >-
-          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v1.4"
-          alt="HBC+ Home Battery Control Plus" height="72"><br>v1.4</center>
+          {%- set dash = '1.4.0' -%} {%- set mm = dash.split('.')[:2] | join('.') -%}
+          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v{{ mm }}"
+          alt="HBC+ Home Battery Control Plus" height="72"><br>v{{ mm }}</center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
@@ -49,17 +50,54 @@ views:
           - type: markdown
             text_only: true
             visibility:
-              - condition: state
-                entity: binary_sensor.hbc_update_available
-                state: 'on'
-            content: >-
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: binary_sensor.hbc_update_available
+                    state: 'on'
+                  - condition: numeric_state
+                    entity: sensor.hbc_release_dashboard_number
+                    above: 10400
+            content: |-
+              {%- set dash = '1.4.0' -%}
               {%- set u = 'binary_sensor.hbc_update_available' -%}
-              <ha-alert alert-type="info" title="HBC+ v{{ state_attr(u,
-              'latest') }} is available"><br>You run v{{ state_attr(u, 'installed')
-              }}. The release notes say what is new and how to update.</ha-alert>
+              {%- set latest = state_attr(u, 'latest') -%}
+              {%- set out = state_attr(u, 'outdated') or [] -%}
+              {%- set md = (state_attr('sensor.hbc_release_manifest', 'parts') or {}).get('dashboard', '') -%}
+              {%- if md is match('^\d+\.\d+\.\d+$') and md.split('.')[:2] == dash.split('.')[:2]
+                    and (md.split('.') | map('int') | list) > (dash.split('.') | map('int') | list) -%}
+                {%- set out = out + ['Dashboard: ' ~ dash ~ ' → ' ~ md] -%}
+              {%- endif -%}
+              {%- if state_attr(u, 'newer') -%}
+              <ha-alert alert-type="info" title="HBC+ v{{ latest }} is available"><br>You run v{{ state_attr(u, 'installed') }}. The release notes say what is new and how to update.</ha-alert>
+              {%- elif out -%}
+              <ha-alert alert-type="info" title="Not every part of HBC+ v{{ latest }} is installed"><br>Copy these parts from the release: <br>{{ out | join('<br>') }}</ha-alert>
+              {%- endif %}
 
 
               [Open release notes]({{ state_attr(u, 'release_url') }})
+          - type: markdown
+            text_only: true
+            visibility:
+              - condition: or
+                conditions:
+                  - condition: numeric_state
+                    entity: sensor.hbc_release_number
+                    below: 104
+                  - condition: numeric_state
+                    entity: sensor.hbc_release_number
+                    above: 104
+            content: >-
+              {%- set dash = '1.4.0' -%} {%- set inst =
+              states('sensor.hbc_package_version') -%} {%- set dn = (dash.split('.')[0]
+              | int) * 100 + (dash.split('.')[1] | int) -%} {%- set newer =
+              states('sensor.hbc_release_number') | int(0) > dn -%}
+              <ha-alert alert-type="warning" title="Dashboard v{{ dash }} does not
+              match HBC+ v{{ inst }}"><br>{% if newer %}Paste
+              dashboards/hbc_plus.yaml of v{{ inst }} again in the raw
+              configuration editor of this dashboard.{% else %}This dashboard is
+              newer than your packages and flows: copy the packages and import the
+              flows of v{{ dash }}.{% endif %}</ha-alert>
           - type: markdown
             text_only: true
             content: >-
@@ -138,15 +176,15 @@ views:
               }}"><br>This notice clears by itself around {{ ((newest +
               timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the
               last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }}
-              warning{{ 's' if w != 1 }}. Latest: <i>{{ last | e }}</i>{% if
+              warning{{ 's' if w != 1 }}.<br><br><b>Latest:</b> <i>{{ last | e }}</i>{% if
               hint %}<br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
 
               {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h,
               'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors'
               if is_state(h, 'error') else 'HBC+ logged a problem' }}"><br>{{ e }}
               error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }} in
-              the last 10 minutes. Latest{{ ' (' ~ relative_time(at) ~ ' ago)'
-              if at else '' }}: <i>{{ last | e }}</i>{% if hint
+              the last 10 minutes.<br><br><b>Latest{{ ' (' ~ relative_time(at) ~ ' ago)'
+              if at else '' }}:</b> <i>{{ last | e }}</i>{% if hint
               %}<br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed the
               cause? This notice clears by itself after 10 minutes without new
               errors or warnings.</small></ha-alert>
@@ -5596,8 +5634,6 @@ views:
                   data:
                     title: 'HBC+: test'
                     message: Test notification from the Settings view.
-      - type: grid
-        cards:
           - type: heading
             heading: EV Stop Trigger
             heading_style: title
@@ -5638,6 +5674,38 @@ views:
               the trigger is active. Stop trigger 'on' = selected trigger
               strategy is applied.</font>
             text_only: true
+      - type: grid
+        cards:
+          - type: heading
+            heading: Versions
+            heading_style: title
+            icon: mdi:tag-multiple-outline
+            grid_options:
+              rows: 1
+          - type: markdown
+            text_only: true
+            content: |-
+              {%- set dash = '1.4.0' -%}
+              {%- set rel = states('sensor.hbc_package_version') -%}
+              {%- set mm = rel.split('.')[:2] | join('.') -%}
+              {%- set fl = state_attr('sensor.hbc_health', 'flows_version') or '—' -%}
+              {%- set files = state_attr('sensor.hbc_package_version', 'files') or {} -%}
+              {%- macro ver(v) -%}{{ v if (v | string).split('.')[:2] | join('.') == mm else '<font color=red>' ~ v ~ '</font>' }}{%- endmacro -%}
+              <font color=grey>Every part of HBC+ and its version. A minor release (1.3 → 1.4) replaces every part; a patch release (1.3.0 → 1.3.1) only the parts it changed, so patch numbers may differ. A part in red is of another release: see the update steps in the user guide.</font>
+
+              | Part | Version |
+              |:--|:--|
+              | **HBC+ release** | **{{ rel }}** |
+              | Node-RED flows | {{ ver(fl) }} |
+              | Dashboard | {{ ver(dash) }} |
+              {% for k, v in files | dictsort -%}
+              | `{{ k }}.yaml` | {{ ver(v) }} |
+              {% endfor %}
+              {%- set issues = state_attr('sensor.hbc_health', 'version_issues') or [] -%}
+              {%- if issues %}
+
+              <ha-alert alert-type="warning" title="HBC+ version mismatch"><br>{{ issues | join('<br>') }}</ha-alert>
+              {%- endif %}
     max_columns: 4
   - type: sections
     title: Logging

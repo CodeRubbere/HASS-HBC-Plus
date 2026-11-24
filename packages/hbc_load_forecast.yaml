@@ -71,6 +71,14 @@ automation:
           value: 15
 
 template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_load_forecast"
+        unique_id: hbc_version_hbc_load_forecast
+        icon: mdi:tag-outline
+        state: "1.4.0"
+
   # --- learn: every quarter, the quarter that just ended -------------------------------------------------------
   - triggers:
       - trigger: time_pattern

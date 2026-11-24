@@ -73,6 +73,25 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
   HBC+ release than your packages, with a link to the release notes. Home Assistant asks GitHub at start and every
   6 hours (`sensor.hbc_latest_version`, `binary_sensor.hbc_update_available`); no token or personal data is sent.
   Copy `packages/hbc_control.yaml` again and paste the dashboard again.
+- **Version check per part** — every package file has its own version (`sensor.hbc_version_<file>`) and *HBC+ health*
+  also checks those against the flows, so one old or missing package file now gives *HBC+ version mismatch* too.
+  The dashboard checks itself: a card on the Overview says when it is of another release than the packages and
+  flows. `sensor.hbc_package_version` is now the newest version installed (packages and flows), with the
+  attributes `files`, `flows` and `mixed`; new `sensor.hbc_release_number`. A *Versions* table on the Settings
+  view lists every part. A minor release replaces every part; a patch release only the parts it changed, and its
+  notes say which. For maintainers: `tools/set-version.py`, `tools/check-versions.py` and a GitHub Action that
+  checks a release tag.
+- **Update notice per part** — a release carries `versions.json` (every part and its version); Home Assistant reads
+  it at the release tag (`sensor.hbc_release_manifest`), and the Overview lists each part older than the latest release
+  of your version line, the dashboard included (*Not every part of HBC+ vX.Y.Z is installed*;
+  `sensor.hbc_outdated_parts`, `sensor.hbc_release_dashboard_number`). The dashboard header takes its version from the
+  same constant as the other version cards.
+- **Release zip** — a release has `hbc-plus-vX.Y.Z.zip` under *Assets* with only what users install. For maintainers:
+  the GitHub Action makes a draft release with the zip, `versions.json` and notes (CHANGELOG entry plus the files to
+  copy) on a tag; `tools/release-files.py` lists what changed since the last tag and refuses a changed part without a
+  new version; `tools/check-docs.py` checks that the English and Dutch guides are in step; `check-versions.py` also
+  checks that every tab is identical in `hbc-plus-all-flows.json` and in its own file; `tools/hooks/pre-commit` runs
+  the checks before each commit.
 
 ### Fixed
 - Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
