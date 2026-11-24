@@ -48,6 +48,20 @@ views:
             icon: mdi:gamepad-variant-outline
           - type: markdown
             text_only: true
+            visibility:
+              - condition: state
+                entity: binary_sensor.hbc_update_available
+                state: 'on'
+            content: >-
+              {%- set u = 'binary_sensor.hbc_update_available' -%}
+              <ha-alert alert-type="info" title="HBC+ v{{ state_attr(u,
+              'latest') }} is available">You run v{{ state_attr(u, 'installed')
+              }}. The release notes say what is new and how to update.</ha-alert>
+
+
+              [Open release notes]({{ state_attr(u, 'release_url') }})
+          - type: markdown
+            text_only: true
             content: >-
               {%- set checks = [
                 states('input_number.house_battery_count') | int(0) > 0,
