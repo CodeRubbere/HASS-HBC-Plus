@@ -15,6 +15,7 @@
 #   - script.hbc_phase_guard_defaults: run once after the first restart to set the defaults
 #   - automation hbc_phase_guard_settings_changed: notifies when one of the safety settings changes, and by whom
 #   - automation hbc_phase_overload_full_stop: Full stop when a phase stays overloaded by the batteries
+#     (guard on Enforce; on Monitor it only notifies)
 #     (helpers without 'initial:' start at their minimum / first option; they are restored after that)
 #
 # Signs (confirmed): sensor.marstek_mN_battery_power > 0 = charging; sensor.p1_meter_power_phase_N > 0 = import.
@@ -557,7 +558,9 @@ automation:
   # "Part of the cause": batteries above the battery circuit, or the phase above the grid fuse while the
   # batteries push the same way (charging on import, discharging on export). A house load alone that
   # overloads the grid fuse while the batteries discharge is not stopped: they are helping.
-  # Only with the guard on Monitor or Enforce, i.e. once the limits under Phase guard settings (Settings view) are set.
+  # Full stop only with the guard on Enforce. On Monitor (HBC+ 2026-11-24) it only reports what it would have done
+  # (logbook + notification) and changes nothing, so a limit set too low while commissioning does not stop the
+  # batteries. On Off it does nothing.
   - id: hbc_phase_overload_full_stop
     alias: "HBC+: Full stop when a phase stays overloaded by the batteries"
     mode: single
@@ -591,6 +594,7 @@ automation:
         {{ ns.bad }}
     actions:
       - variables:
+          enforce: "{{ is_state('input_select.house_battery_phase_guard_mode', 'Enforce') }}"
           before: "{{ states('input_select.house_battery_strategy') }}"
           on_phase: >-
             {% set ns = namespace(ids=[]) %}
@@ -602,15 +606,17 @@ automation:
             {{ ns.ids }}
       - if:
           - condition: template
-            value_template: "{{ before != 'Full stop' }}"
+            value_template: "{{ enforce and before != 'Full stop' }}"
         then:
           - action: input_select.select_option
             target:
               entity_id: input_select.house_battery_strategy
             data:
               option: "Full stop"
-      # HBC not running: stop the batteries on that phase directly
+      # HBC not running (Enforce only): stop the batteries on that phase directly
       - if:
+          - condition: template
+            value_template: "{{ enforce }}"
           - condition: state
             entity_id: binary_sensor.hbc_heartbeat_stale
             state: "on"
@@ -634,19 +640,24 @@ automation:
           name: HBC+ phase overload
           message: >-
             Phase {{ bad_phases | join(', ') }} overloaded for 10 s with the batteries part of the cause.
-            Strategy {{ before }} -> Full stop.
+            {{ 'Strategy ' ~ before ~ ' -> Full stop.' if enforce else 'Guard on Monitor: nothing changed (on Enforce: ' ~ before ~ ' -> Full stop).' }}
       - action: persistent_notification.create
         data:
           notification_id: hbc_phase_overload
-          title: "HBC+: phase overload - Full stop"
+          title: "{{ 'HBC+: phase overload - Full stop' if enforce else 'HBC+: phase overload (Monitor)' }}"
           message: >-
             Phase {{ bad_phases | join(', ') }} stayed above its limit for 10 s, with the batteries part of the
-            cause. HBC+ switched from {{ before }} to Full stop. Check the Phase guard view, then choose your strategy again.
+            cause. {% if enforce %}HBC+ switched from {{ before }} to Full stop. Check the Phase guard view, then choose
+            your strategy again.{% else %}The phase guard is on Monitor, so HBC+ changed nothing; on Enforce it would have
+            switched from {{ before }} to Full stop. Check the grid fuse and battery circuit under Phase guard settings
+            (Settings view) before you switch to Enforce.{% endif %}
       - action: script.hbc_notify
         continue_on_error: true
         data:
-          title: "HBC+: phase overload - Full stop"
-          message: "Phase {{ bad_phases | join(', ') }} overloaded by the batteries; strategy {{ before }} -> Full stop."
+          title: "{{ 'HBC+: phase overload - Full stop' if enforce else 'HBC+: phase overload (Monitor)' }}"
+          message: >-
+            Phase {{ bad_phases | join(', ') }} overloaded by the batteries;
+            {{ 'strategy ' ~ before ~ ' -> Full stop.' if enforce else 'guard on Monitor, nothing changed (on Enforce: ' ~ before ~ ' -> Full stop).' }}
 
 # The planner status is display-only (current attributes on the Phase guard view); keep it out of the database.
 # HBC+ 2026-11-15: the per-phase battery power and headroom sensors too. They follow the P1 phase sensors,

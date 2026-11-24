@@ -881,10 +881,11 @@ views:
                     state: unknown
           - type: vertical-stack
             cards:
-              - type: heading
-                heading: 'Price intervals: HBC+'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>HBC+</b>
                 visibility:
                   - condition: state
                     entity: binary_sensor.hbc_managed_by_batterijplan
@@ -893,8 +894,9 @@ views:
                     entity: input_select.house_battery_strategy
                     state_not: Helios
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -923,17 +925,19 @@ views:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state_not: Helios
-              - type: heading
-                heading: 'Price intervals: HELIOS Optimizer'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>HELIOS Optimizer</b>
                 visibility:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state: Helios
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -959,17 +963,19 @@ views:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state: Helios
-              - type: heading
-                heading: 'Price intervals: Batterijplan'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>Batterijplan</b>
                 visibility:
                   - condition: state
                     entity: binary_sensor.hbc_managed_by_batterijplan
                     state: 'on'
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -2615,10 +2621,11 @@ views:
                     state: unknown
           - type: vertical-stack
             cards:
-              - type: heading
-                heading: 'Price intervals: HBC+'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>HBC+</b>
                 visibility:
                   - condition: state
                     entity: binary_sensor.hbc_managed_by_batterijplan
@@ -2627,8 +2634,9 @@ views:
                     entity: input_select.house_battery_strategy
                     state_not: Helios
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -2657,17 +2665,19 @@ views:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state_not: Helios
-              - type: heading
-                heading: 'Price intervals: HELIOS Optimizer'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>HELIOS Optimizer</b>
                 visibility:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state: Helios
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -2693,17 +2703,19 @@ views:
                   - condition: state
                     entity: input_select.house_battery_strategy
                     state: Helios
-              - type: heading
-                heading: 'Price intervals: Batterijplan'
-                heading_style: title
-                icon: mdi:chart-bar
+              - type: markdown
+                text_only: true
+                content: >-
+                  <ha-icon icon="mdi:chart-bar"></ha-icon>&nbsp; Price
+                  intervals: <b>Batterijplan</b>
                 visibility:
                   - condition: state
                     entity: binary_sensor.hbc_managed_by_batterijplan
                     state: 'on'
                 card_mod:
-                  style: |
-                    ha-card { padding: 12px 16px 0 16px !important; }
+                  style: >
+                    ha-card { padding: 12px 16px 0 16px !important; font-size:
+                    18px; }
               - type: markdown
                 text_only: true
                 content: >-
@@ -3654,7 +3666,7 @@ views:
               <ha-alert alert-type="info" title="Phase guard is not
               enforcing"><br>Phase guard is <b>{{
               states('input_select.house_battery_phase_guard_mode') }}</b>: HBC+
-              does not act on these settings yet. Active and standby stay empty
+              does not act on these settings yet{% if is_state('input_select.house_battery_phase_guard_mode', 'Monitor') %}; a phase overload only gives a notification, no Full stop{% else %}; a phase overload gives no Full stop and no notification{% endif %}. Active and standby stay empty
               until Node-RED publishes hbc/phase/L1-L3.</ha-alert>
           - type: tile
             entity: input_select.house_battery_phase_guard_mode
@@ -4899,12 +4911,6 @@ views:
             icon: mdi:power-plug-battery
             heading: Marstek M4
             heading_style: title
-          - type: glance
-            entities:
-              - entity: sensor.marstek_m4_battery_state_of_charge
-                name: M4 SoC
-              - entity: sensor.marstek_m4_ac_power
-                name: M4 Power
           - type: vertical-stack
             cards:
               - type: markdown
@@ -4986,12 +4992,6 @@ views:
             icon: mdi:power-plug-battery
             heading: Marstek M5
             heading_style: title
-          - type: glance
-            entities:
-              - entity: sensor.marstek_m5_battery_state_of_charge
-                name: M5 SoC
-              - entity: sensor.marstek_m5_ac_power
-                name: M5 Power
           - type: vertical-stack
             cards:
               - type: markdown
@@ -5073,12 +5073,6 @@ views:
             icon: mdi:power-plug-battery
             heading: Marstek M6
             heading_style: title
-          - type: glance
-            entities:
-              - entity: sensor.marstek_m6_battery_state_of_charge
-                name: M6 SoC
-              - entity: sensor.marstek_m6_ac_power
-                name: M6 Power
           - type: vertical-stack
             cards:
               - type: markdown

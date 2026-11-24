@@ -8,7 +8,7 @@ HBC+ (Home Battery Control Plus) v1.2 controls up to six home batteries from Hom
 
 Besides the phase guard, HBC+ brings improvements in three areas:
 
-- **Safety and security** — per-phase main-fuse protection, a strict one-battery-per-phase rule when the phase guard fails on *Enforce*, an HA automation that switches to *Full stop* when the batteries keep a phase overloaded, an HA alarm that works without Node-RED, and a heartbeat that hands the batteries back to their firmware when the control loop stops or no longer works, and warnings and errors that always reach the Node-RED log and `sensor.hbc_health`.
+- **Safety and security** — per-phase main-fuse protection, a strict one-battery-per-phase rule when the phase guard fails on *Enforce*, an HA automation that switches to *Full stop* when the batteries keep a phase overloaded (on *Enforce*; on *Monitor* it only notifies), an HA alarm that works without Node-RED, and a heartbeat that hands the batteries back to their firmware when the control loop stops or no longer works, and warnings and errors that always reach the Node-RED log and `sensor.hbc_health`.
 - **Performance** — one fast read node instead of ~43 separate reads, the PID step and the Timed period choice merged with settings caches, and fewer Modbus writes per tick.
 - **Stability** — bug fixes (among others: total helpers reset to 0 after a restart, a price cache that kept old prices after a source change, the debug board), battery values that never turn into NaN (one unavailable battery no longer stops the others), and one consistent HA server node in every flow file.
 
@@ -88,9 +88,9 @@ Next to the loop, *HBC+ health* publishes the warnings and errors of the last 10
 
 | Mode | What HBC+ does | Use it for |
 | --- | --- | --- |
-| Off | Planner and guard pass every message untouched: no phase rules. | One battery per phase, or to rule HBC+ out while debugging |
-| Monitor (default) | Computes and publishes what it *would* do; node status shows `would: …`. Changes nothing. | Commissioning; checking the plumbing before batteries share a phase |
-| Enforce | Applies the phase rules in the planner, the strategies, the guard and the master switch. | Normal operation with two batteries on a phase |
+| Off | Planner and guard pass every message untouched: no phase rules, and no *Full stop* or notification on a phase overload. | One battery per phase, or to rule HBC+ out while debugging |
+| Monitor (default) | Computes and publishes what it *would* do; node status shows `would: …`. Changes nothing: a phase overload only gives a notification, no *Full stop*. | Commissioning; checking the plumbing before batteries share a phase |
+| Enforce | Applies the phase rules in the planner, the strategies, the guard and the master switch. A phase that the batteries keep overloaded switches to *Full stop* (R10). | Normal operation with two batteries on a phase |
 
 Every changed node was tested against the original with the same inputs: Off and Monitor give identical output.
 
@@ -478,7 +478,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 | Someone changes a battery in the Marstek app | The read-back differs from the setpoint; *Set Batteries* rewrites it; the HA alarm catches an overload within 10 s. |
 | Guard mode *Off* | No phase rules; only safe with one battery per phase. |
 | Planner or guard error on *Enforce* | *Set Batteries* applies the strict rule: per shared phase only the lowest M-number runs, at most battery circuit − margin (R9). |
-| A phase stays overloaded for 10 s with the batteries part of the cause | HA switches the strategy to *Full stop* and notifies you; if HBC is not running, HA stops the batteries on that phase itself (R10). |
+| A phase stays overloaded for 10 s with the batteries part of the cause | On *Enforce* HA switches the strategy to *Full stop* and notifies you; if HBC is not running, HA stops the batteries on that phase itself. On *Monitor* it only notifies you (R10). |
 
 ### Design decisions
 
@@ -486,7 +486,7 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 - **One battery per phase is the default.** *Shared headroom* (both at once within the fuse room) is an option in the settings.
 - **Extension with three Marsteks (M4–M6).** Default phase map M1/M4 L1, M2/M5 L2, M3/M6 L3, changeable per battery.
 - **Safety over speed.** Handover is break-before-make, and a battery without a fresh read-back counts as busy.
-- **Fail-safe on Enforce, fail-open elsewhere.** On *Off* and *Monitor* an error in a new step changes nothing; on *Enforce* it falls back to the strict one-battery-per-phase rule (R9). The HA alarm works independently of Node-RED and switches to *Full stop* when the batteries keep a phase overloaded (R10).
+- **Fail-safe on Enforce, fail-open elsewhere.** On *Off* and *Monitor* an error in a new step changes nothing; on *Enforce* it falls back to the strict one-battery-per-phase rule (R9). The HA alarm works independently of Node-RED; when the batteries keep a phase overloaded it switches to *Full stop* on *Enforce* and only notifies on *Monitor* (R10).
 - **Signs:** battery power is positive while charging, P1 phase power is positive on import.
 - **Monitor first.** The phase guard can run with one battery per phase; then nothing changes and you test the plumbing for free, before a second battery joins a phase.
 
@@ -516,7 +516,10 @@ On top of that, the planner ceiling would be the sum of all batteries (6 × 2500
 - **F2 — Measured round-trip efficiency.** `sensor.hbc_round_trip_efficiency` over 7 days, and a suggested *Minimum spread* you can take over with one button. Optionally Dynamic pairs on what a kWh really earns after losses (*Dynamic uses measured efficiency*, off by default).
 - **F7 — Version check.** Every HBC+ tab now registers its HBC+ version, and the packages have `sensor.hbc_package_version`. *HBC+ health* compares them every 30 s: a tab of another version, a missing tab, or packages of another version give the warning *HBC+ version mismatch* (in `sensor.hbc_health`, so the dashboard alert shows it) and the attributes `version_ok` and `version_issues`. A mix of old and new flows used to look fine and fail in odd ways, for example an old Dynamic tab that found no prices.
 - **Clearer problem alert.** The Overview alert *HBC+ keeps logging errors* shows how long ago the latest message was, a *Fix* line for known problems (a missing entity, a version mismatch, a failing Modbus write, a battery that ignores commands, a lost HA connection, a time-out), and turns blue with the time it clears once no new messages arrive. Before, it stayed red for 10 minutes after you fixed the cause. The fix is also in `sensor.hbc_health` (attribute `hint`) and in the notification.
+- **Fix: lost connection to Home Assistant.** When Node-RED loses its connection to Home Assistant, every node that calls HA fails with `NoConnectionError`. That used to show as a stream of *Unhandled exception* errors, usually from *HBC+ Strategy Timed >> Render settings*, so the alert pointed at Timed. Now it is one warning, *No connection to Home Assistant since HH:MM*, repeated every 5 minutes while it lasts, with a *Fix* line: check the Home Assistant log and the Node-RED log around that time. HBC+ picks up again by itself once the connection is back. Timed skips its settings refresh while there is no connection and keeps the last settings.
+- **Fix: PID analysis graph.** On the PID Control view the *PID analysis* graph could show *Unable to load history: Invalid start_time*. It asked for only 90 s of history, and Home Assistant refuses a start time later than its own clock, so a phone or computer whose clock ran more than 90 s ahead of the HA server broke the graph. It now shows the last 6 minutes. Paste the dashboard again to get this fix.
 - **Fix: Grid Clock under another name.** Every tariff source whose name starts with *Grid Clock* (*Grid Clock feed*, *Grid Clock BE*, …) now reads the Grid Clock feed. Before, such an older name gave no prices.
+- **Fix: phase guard on Monitor no longer stops the batteries.** A phase that stayed overloaded with the batteries part of the cause switched the strategy to *Full stop* on *Monitor* too, while Monitor promises to change nothing. That stopped the batteries during commissioning when a limit was set too low, for example with the car and the batteries charging together. On *Monitor* HBC+ now only notifies you what it would have done (*HBC+: phase overload (Monitor)*); *Full stop* only happens on *Enforce*. The note on the Phase guard view says so too.
 
 ### Updating from v1.2
 
@@ -724,7 +727,7 @@ Besides the phase guard, HBC+ contains the changes below: B1–B8, R1–R4, P1�
 **R10 — The overload alarms only raised an alarm.**
 
 - *Problem:* `binary_sensor.hbc_phase_limit_exceeded` and `binary_sensor.hbc_phase_circuit_limit_exceeded` turned on after 10 s of overload, but nothing acted on them.
-- *Fix:* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* in `hbc_phase_guard.yaml` sets the strategy to *Full stop* when one of them turns on and the batteries on that phase are part of the cause: above the battery circuit, or the phase above the grid fuse while the batteries push the same way (charging on import, discharging on export). A house load alone, with the batteries discharging, is not stopped: the batteries are helping. The Strategy arbiter treats the change as a manual choice, so HBC itself stops the batteries. If HBC is not running (heartbeat stale), HA also sets the batteries on that phase to RS485 *enable* + forcible *stop*. It writes to the logbook, creates a persistent notification and sends a notification (`script.hbc_notify`). It only acts in *Full control* with the guard on *Monitor* or *Enforce* (the limits are set). Choose your strategy again once the cause is clear.
+- *Fix:* the automation *HBC+: Full stop when a phase stays overloaded by the batteries* in `hbc_phase_guard.yaml` sets the strategy to *Full stop* when one of them turns on and the batteries on that phase are part of the cause: above the battery circuit, or the phase above the grid fuse while the batteries push the same way (charging on import, discharging on export). A house load alone, with the batteries discharging, is not stopped: the batteries are helping. The Strategy arbiter treats the change as a manual choice, so HBC itself stops the batteries. If HBC is not running (heartbeat stale), HA also sets the batteries on that phase to RS485 *enable* + forcible *stop*. It writes to the logbook, creates a persistent notification and sends a notification (`script.hbc_notify`). It only acts in *Full control* with the guard on *Enforce*. On *Monitor* it changes nothing: it writes to the logbook and notifies you what it would have done (title *HBC+: phase overload (Monitor)*), so a limit set too low while commissioning does not stop the batteries. On *Off* it does nothing. Choose your strategy again once the cause is clear.
 
 **R11 — A battery that ignored commands went unnoticed.**
 
@@ -763,7 +766,7 @@ On a busy Node-RED every extra node hop goes through the message queue again, an
 
 **P2 — PID step in Self-consumption.** Was: 13 nodes in a row plus 7 reads of PID settings. Now: one *PID step* function; seven of the original bodies are copied verbatim, *Calculate corrections* differs only by the feed-forward block (F1). A template reads Kp, Ki, Kd, idle time, hysteresis and both damping values into flow context every 60 s, at start and whenever a helper changes; if the cache is older than 10 minutes, *PID step* reads straight from HA. Also: five *Max 1 per 10 s* delays before the writes to the PID helpers, and *Trace* is a function node instead of JSONata.
 
-**P3 — Pick period in Timed.** Was: 20 reads, 5 config functions, 5 period switches and ~15 change and switch nodes. Now: one *Pick period* function with the same logic (periods A to E, the first matching window wins, a window may run past midnight, start = end is an empty period). It uses HA's time, so Node-RED's own timezone does not matter. *Timed settings cache* renders all period settings every 30 s and on every change; if the snapshot is older than 5 minutes, the old chain runs instead.
+**P3 — Pick period in Timed.** Was: 20 reads, 5 config functions, 5 period switches and ~15 change and switch nodes. Now: one *Pick period* function with the same logic (periods A to E, the first matching window wins, a window may run past midnight, start = end is an empty period). It uses HA's time, so Node-RED's own timezone does not matter. *Timed settings cache* renders all period settings every 30 s and on every change; if the snapshot is older than 5 minutes, the old chain runs instead. Without a connection to Home Assistant the refresh is skipped (*HA connected?*) and the last snapshot stays in use.
 
 **P4 — Fewer Modbus writes.** The write design stays (awaited writes, *Write limiter*, 30 s failsafe, *Collect completions*, *Write latency*). On top of it: the **mode** is written only when it changes, when the read-back differs for more than 20 s, or as a 60 s keep-alive (before, it was written every tick); for **power** only the register of the current mode is written, and nothing in `stop`; *Next write* runs the writes one by one per battery, power first, then mode. Tested with 13 simulated scenarios.
 
@@ -979,7 +982,7 @@ On the **Batteries** view, under each *Marstek M1…M6*, set *Connected to phase
 | `packages/hbc_heartbeat.yaml`, automation *alert when the control loop keeps logging errors* | HBC+ logged 3 or more errors in 10 minutes, for 5 minutes in a row |
 | `packages/hbc_control.yaml`, automation *alert when the tariff source delivers no prices* | The tariff source delivered no valid prices for 30 minutes |
 | `packages/hbc_phase_guard.yaml`, automation *notify when a phase guard safety setting changes* | Someone or something changed guard mode, sharing, a fuse limit, the margin or the phase map |
-| `packages/hbc_phase_guard.yaml`, automation *Full stop when a phase stays overloaded by the batteries* | A phase stayed overloaded for 10 s with the batteries part of the cause, and HBC+ switched to *Full stop* |
+| `packages/hbc_phase_guard.yaml`, automation *Full stop when a phase stays overloaded by the batteries* | A phase stayed overloaded for 10 s with the batteries part of the cause, and HBC+ switched to *Full stop* (on *Monitor*: what it would have done, nothing changed) |
 | `packages/hbc_selftest.yaml`, script *HBC+: run the setup self-test* | The self-test is finished, with the result |
 
 ### Securing your setup
@@ -1183,7 +1186,7 @@ The template sensors and the alarm run in Home Assistant only, so they keep work
 Run HBC+ in *Monitor* for a few days before any two batteries share a phase. With one battery per phase, Enforce changes nothing either, so you can test the plumbing for free.
 
 1. **Check the measurements.** On the Phase guard view, *Batteries* per phase must match each battery's own power sensor, and *Grid vs fuse* × the fuse must match your meter (for example 10 % of 7360 W = 736 W). Check the signs: charging shows positive battery power, import shows positive grid power.
-2. **Watch Monitor for a few days.** In Node-RED, the status of *HBC+ phase planner* and *HBC+ phase guard* shows `would: …`. With one battery per phase, the active battery must always be that battery and `sensor.hbc_phase_findings` should stay at 0 except when the fuse room binds.
+2. **Watch Monitor for a few days.** In Node-RED, the status of *HBC+ phase planner* and *HBC+ phase guard* shows `would: …`. With one battery per phase, the active battery must always be that battery and `sensor.hbc_phase_findings` should stay at 0 except when the fuse room binds. A notification *HBC+: phase overload (Monitor)* means a phase stayed above its limit with the batteries part of the cause: check the grid fuse and battery circuit first, because on *Enforce* that switches to *Full stop*.
 3. **Switch to Enforce** under *Phase guard settings* on the Settings view. Nothing should change while each phase has one battery.
 4. **Add the second battery on a phase** (for example Marstek M4 on L1): create its `marstek_m4_*` entities, raise `input_number.house_battery_count`, set `input_select.marstek_m4_phase` = L1.
 5. **Test, in this order**, while watching the Phase guard view:
@@ -1254,6 +1257,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | After an update the HBC+ tabs are still the old version, or appear twice | The old tabs were not deleted before the import: Node-RED skips a flow that already exists, or imports a copy | Delete every HBC+ tab, import `hbc-plus-all-flows.json` again and deploy ([Updating HBC+](#updating-hbc)) |
 | A dashboard button does not open the right view | The dashboard URL is not `home-battery-control-plus` | Add a new dashboard named *Home Battery Control Plus*, paste `dashboards/hbc_plus.yaml`, and delete the old one (Step 4) |
 | The dashboard header shows a broken image instead of the logo | `www/hbc-plus/` is not in the HA `www/` folder, or that folder was created after the last restart | Copy `www/hbc-plus/` into the HA `www/` folder and restart Home Assistant (Step 2) |
+| *PID analysis* (PID Control view) shows *Unable to load history: Invalid start_time* | Dashboard from before v1.3: the graph asks for only 90 s of history, and the clock of your phone or computer runs more than 90 s ahead of the HA server | Paste the dashboard of this release again (it shows 6 minutes); also sync the clocks of the device and the HA server (NTP) |
 | Link call to *Dynamic Fetch from Data Source* times out | The timeout is shorter than the fetch, or the link call no longer points to the section (for example after a re-import) | Set the timeout to at least 30 s; open the link call and pick *Dynamic Fetch from Data Source* again |
 | Dashboard: *No energy prices*, or `binary_sensor.hbc_price_data_missing` on | The tariff source delivers no prices (integration down, sensor renamed, wrong sensor auto-detected) | Check the price integration; set `input_text.house_battery_strategy_dynamic_price_sensor` to the right sensor; the status of *Data source settings* in the Dynamic tab shows which sensor is used |
 | Dynamic status yellow: *(last prices)* | The last fetch failed; the previous prices of the same source are still in use | Nothing to do if it clears on the next run; otherwise as above |
@@ -1265,6 +1269,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | The *Setup* checklist shows *Setup Node-RED* | The Start flow has not run yet | Import and deploy the flows (Step 3); check the *HA System* server node |
 | The strategy you choose does not stick, or changes by itself | A hold in the Strategy arbiter (Oscillation Guard or a flow of your own) | Look at `input_text.hbc_strategy_arbiter` and the HA logbook; a manual choice becomes the new base, the hold ends when its requester releases it |
 | Strategy suddenly *Full stop*; notification *HBC+: phase overload - Full stop* | A phase stayed overloaded for 10 s with the batteries part of the cause (R10) | Check the Phase guard view and the limits; then choose your strategy again |
+| Notification *HBC+: phase overload (Monitor)* | A phase stayed overloaded for 10 s with the batteries part of the cause while the guard is on *Monitor*; nothing was changed | Check the grid fuse and battery circuit under *Phase guard settings*: a limit set too low triggers this, for example when the car and the batteries charge at the same time. On *Enforce* this would switch to *Full stop* |
 | Warning *… keeps ignoring commands* | The battery does not follow HBC+ (RS485 switched off in the Marstek app, firmware mode, Modbus problem) | Check RS485 control and the work mode of that battery |
 | *Grid Clock feed* shows `error`, reason `HTTP 404` | No feed file for this zone or supplier (yet), or the supplier was removed | Choose another supplier; the list refreshes at start and daily at 00:10 |
 | The supplier list only shows *Market price (no supplier)* | The supplier index could not be loaded (no internet, or the Dynamic tab not deployed) | Check the status of the *Grid Clock suppliers* group in the Dynamic tab; it retries at start and daily |
