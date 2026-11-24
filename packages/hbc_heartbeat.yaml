@@ -204,20 +204,29 @@ automation:
                 data:
                   notification_id: hbc_health
                   title: "HBC+: errors in the control loop"
-                  message: >-
+                  message: |-
                     HBC+ logged {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in the last 10 minutes.
-                    Last error ({{ as_timestamp(state_attr('sensor.hbc_health', 'last_error_at'), 0) | timestamp_custom('%H:%M') }}):
+
+                    **Last error ({{ as_timestamp(state_attr('sensor.hbc_health', 'last_error_at'), 0) | timestamp_custom('%H:%M') }}):**<br>
                     {{ state_attr('sensor.hbc_health', 'last_error') }}
-                    {% if state_attr('sensor.hbc_health', 'hint') %}Fix: {{ state_attr('sensor.hbc_health', 'hint') }}{% endif %}
+                    {%- if state_attr('sensor.hbc_health', 'hint') %}
+
+                    **Fix:**<br>
+                    {{ state_attr('sensor.hbc_health', 'hint') }}
+                    {%- endif %}
+
                     Details are in the Node-RED log. Fixed the cause? This clears by itself after 10 minutes without new errors.
               - action: script.hbc_notify
                 continue_on_error: true
                 data:
                   title: "HBC+: errors in the control loop"
-                  message: >-
+                  message: |-
                     {{ state_attr('sensor.hbc_health', 'errors_10m') }} errors in 10 min. Last:
                     {{ state_attr('sensor.hbc_health', 'last_error') }}
-                    {% if state_attr('sensor.hbc_health', 'hint') %}Fix: {{ state_attr('sensor.hbc_health', 'hint') }}{% endif %}
+                    {%- if state_attr('sensor.hbc_health', 'hint') %}
+                    Fix:
+                    {{ state_attr('sensor.hbc_health', 'hint') }}
+                    {%- endif %}
           - conditions:
               - condition: trigger
                 id: ok

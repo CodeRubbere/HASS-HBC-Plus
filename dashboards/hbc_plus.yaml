@@ -161,18 +161,18 @@ views:
               {%- if quiet -%} <ha-alert alert-type="info" title="No new HBC+ {{
               what }} since {{ (newest | as_local).strftime('%H:%M')
               }}"><br>This notice clears by itself around {{ ((newest +
-              timedelta(minutes=10)) | as_local).strftime('%H:%M') }}. In the
+              timedelta(minutes=10)) | as_local).strftime('%H:%M') }}.<br> In the
               last 10 minutes: {{ e }} error{{ 's' if e != 1 }} and {{ w }}
-              warning{{ 's' if w != 1 }}.<br><br><b>Latest:</b> <i>{{ last | e }}</i>{% if
-              hint %}<br><br><b>Fix:</b> {{ hint | e }}{% endif %}</ha-alert>
+              warning{{ 's' if w != 1 }}.<br><br><b>Latest:</b><br><i>{{ last | e }}</i>{% if
+              hint %}<br><br><b>Fix:</b><br>{{ hint | e }}{% endif %}</ha-alert>
 
               {%- else -%} <ha-alert alert-type="{{ 'error' if is_state(h,
               'error') else 'warning' }}" title="{{ 'HBC+ keeps logging errors'
               if is_state(h, 'error') else 'HBC+ logged a problem' }}"><br>{{ e
               }} error{{ 's' if e != 1 }} and {{ w }} warning{{ 's' if w != 1 }}
               in the last 10 minutes.<br><br><b>Latest{{ ' (' ~ relative_time(at) ~ '
-              ago)' if at else '' }}:</b> <i>{{ last | e }}</i>{% if hint
-              %}<br><br><b>Fix:</b> {{ hint | e }}{% endif %}<br><small>Fixed
+              ago)' if at else '' }}:</b><br><i>{{ last | e }}</i>{% if hint
+              %}<br><br><b>Fix:</b><br>{{ hint | e }}{% endif %}<br><small>Fixed
               the cause? This notice clears by itself after 10 minutes without
               new errors or warnings.</small></ha-alert>
 
@@ -4837,10 +4837,20 @@ views:
               {% for k, v in files | dictsort -%}
               | `{{ k }}.yaml` | {{ ver(v) }} |
               {% endfor %}
-              {%- set issues = state_attr('sensor.hbc_health', 'version_issues') or [] -%}
-              {%- if issues %}
+              {%- set items = state_attr('sensor.hbc_health', 'version_items') or [] -%}
+              {%- set exp = state_attr('sensor.hbc_health', 'version_expected') or mm -%}
+              {%- for part, title in [('flow', 'Node-RED flow'), ('package', 'Package file'), ('config', 'hbc_config.yaml setting')] -%}
+              {%- set rows = items | selectattr('part', 'eq', part) | list -%}
+              {%- if rows %}
 
-              <ha-alert alert-type="warning" title="HBC+ version mismatch"><br>{{ issues | join('<br>') }}</ha-alert>
+              <ha-alert alert-type="warning" title="HBC+ {{ title }} version mismatch"><br>{% for r in rows -%}
+              {{ r.name }} {{ ('v' ~ r.version) if r.version else ('missing' if part == 'config' else 'missing (or older than this check)') }}<br>
+              {%- endfor %}<small>Expected: v{{ exp }}.x</small></ha-alert>
+              {%- endif -%}
+              {%- endfor -%}
+              {%- if dash.split('.')[:2] | join('.') != exp and rel is match('^\\d+\\.\\d+') %}
+
+              <ha-alert alert-type="warning" title="HBC+ Dashboard version mismatch"><br>Dashboard v{{ dash }}<br><small>Expected: v{{ exp }}.x</small></ha-alert>
               {%- endif %}
     max_columns: 4
   - type: sections
