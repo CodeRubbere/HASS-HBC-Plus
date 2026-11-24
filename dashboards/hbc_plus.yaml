@@ -55,7 +55,7 @@ views:
             content: >-
               {%- set u = 'binary_sensor.hbc_update_available' -%}
               <ha-alert alert-type="info" title="HBC+ v{{ state_attr(u,
-              'latest') }} is available">You run v{{ state_attr(u, 'installed')
+              'latest') }} is available"><br>You run v{{ state_attr(u, 'installed')
               }}. The release notes say what is new and how to update.</ha-alert>
 
 
@@ -70,7 +70,7 @@ views:
                 states('input_select.house_battery_strategy_dynamic_data_source') not in ['None', 'unknown', 'unavailable'],
                 is_state('input_select.marstek_master_battery_mode', 'Full control') ] -%}
               <ha-alert alert-type="info" title="Setup: {{ checks | select |
-              list | count }} of {{ checks | count }} steps done">Finish the
+              list | count }} of {{ checks | count }} steps done"><br>Finish the
               setup on the Settings view.</ha-alert>
 
 
@@ -91,7 +91,7 @@ views:
             content: >-
               {%- set t = states('sensor.hbc_last_run') | as_datetime(None) -%}
               <ha-alert alert-type="error" title="HBC+ is not steering the
-              batteries">No good control cycle {{ 'for ' ~ relative_time(t) if t
+              batteries"><br>No good control cycle {{ 'for ' ~ relative_time(t) if t
               else 'since Home Assistant started' }}. Home Assistant has handed
               the batteries back to their own firmware. Check that Node-RED
               runs.</ha-alert>
@@ -151,7 +151,7 @@ views:
             content: >-
               {% set lim = states('input_number.house_battery_phase_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Phase fuse
-              overloaded">Grid power on {% for i in [1, 2, 3] if
+              overloaded"><br>Grid power on {% for i in [1, 2, 3] if
               states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
               %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
               load and the active batteries.</ha-alert>
@@ -168,7 +168,7 @@ views:
               {% set circ =
               states('input_number.house_battery_phase_circuit_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Battery circuit
-              overloaded">The batteries on {% for i in [1, 2, 3] if
+              overloaded"><br>The batteries on {% for i in [1, 2, 3] if
               states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
               abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
               W. Check that only one battery per phase runs
@@ -2922,7 +2922,7 @@ views:
             content: >-
               {% set lim = states('input_number.house_battery_phase_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Phase fuse
-              overloaded">Grid power on {% for i in [1, 2, 3] if
+              overloaded"><br>Grid power on {% for i in [1, 2, 3] if
               states('sensor.p1_meter_power_phase_' ~ i) | float(0) | abs > lim
               %}L{{ i }} {% endfor %} is above {{ lim | int }} W. Check house
               load and the active batteries below.</ha-alert>
@@ -2936,7 +2936,7 @@ views:
               {% set circ =
               states('input_number.house_battery_phase_circuit_limit_w') |
               float(3680) %} <ha-alert alert-type="error" title="Battery circuit
-              overloaded">The batteries on {% for i in [1, 2, 3] if
+              overloaded"><br>The batteries on {% for i in [1, 2, 3] if
               states('sensor.hbc_phase_l' ~ i ~ '_battery_power') | float(0) |
               abs > circ %}L{{ i }} {% endfor %} draw more than {{ circ | int }}
               W. Check that only one battery per phase runs
@@ -2949,7 +2949,7 @@ views:
                 state_not: Enforce
             content: >-
               <ha-alert alert-type="info" title="Phase guard is not
-              enforcing">Phase guard is <b>{{
+              enforcing"><br>Phase guard is <b>{{
               states('input_select.house_battery_phase_guard_mode') }}</b>: HBC+
               does not act on these settings yet{% if is_state('input_select.house_battery_phase_guard_mode', 'Monitor') %}; a phase overload only gives a notification, no Full stop{% else %}; a phase overload gives no Full stop and no notification{% endif %}. Active and standby stay empty
               until Node-RED publishes hbc/phase/L1-L3.</ha-alert>
@@ -4398,7 +4398,7 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="Setup Grid Power Sensor">HBC+ needs
+              <ha-alert title="Setup Grid Power Sensor"><br>HBC+ needs
               sensor.p1_meter_power and sensor.p1_meter_power_phase_1 … _3 (W,
               import positive).</ha-alert>
 
@@ -4420,7 +4420,7 @@ views:
           - type: markdown
             content: >-
               <ha-alert title="Grid Power Sensor"
-              alert-type="success">Configured</ha-alert>
+              alert-type="success"><br>Configured</ha-alert>
             visibility:
               - condition: not
                 conditions:
@@ -4444,7 +4444,7 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="Setup Node-RED"> Import and deploy <font
+              <ha-alert title="Setup Node-RED"><br> Import and deploy <font
               color=red>Node-RED</font> scripts.</ha-alert>
             visibility:
               - condition: state
@@ -4452,7 +4452,7 @@ views:
                 state_not: 'on'
           - type: markdown
             content: >-
-              <ha-alert title="Node-RED" alert-type="success">Configured and
+              <ha-alert title="Node-RED" alert-type="success"><br>Configured and
               script deployed</ha-alert>
             visibility:
               - condition: state
@@ -4467,10 +4467,10 @@ views:
               {% set s =
               states('input_select.house_battery_strategy_dynamic_data_source')
               %}{% if s in ['None', 'unknown', 'unavailable'] %}<ha-alert
-              title="Choose a tariff data source">Dynamic, Charge Deadline and
+              title="Choose a tariff data source"><br>Dynamic, Charge Deadline and
               the price guard need prices. Choose your source, and with Grid
               Clock your supplier.</ha-alert>{% else %}<ha-alert
-              alert-type="success" title="Tariff data source">{{ s
+              alert-type="success" title="Tariff data source"><br>{{ s
               }}</ha-alert>{% endif %}
           - type: heading
             heading: Open Prices
@@ -4484,7 +4484,7 @@ views:
             text_only: true
           - type: markdown
             content: >-
-              <ha-alert title="(Optional) review power limits"> Use limits and
+              <ha-alert title="(Optional) review power limits"><br> Use limits and
               peak shaving to reduce <font color=darkblue>peaks and overload
               risk</font>.</ha-alert>
             visibility:
@@ -4514,7 +4514,7 @@ views:
                     state_not: 'on'
           - type: markdown
             content: >-
-              <ha-alert title="Power limits" alert-type="success"> Batteries
+              <ha-alert title="Power limits" alert-type="success"><br> Batteries
               will help prevent peaks and overloads, when able.</ha-alert>
             visibility:
               - condition: or
@@ -4533,10 +4533,10 @@ views:
             content: >-
               {% set t = states('input_text.house_battery_notify_targets') %}{%
               if t in ['', 'unknown', 'unavailable'] %}<ha-alert
-              title="(Optional) Notifications">Every notification now goes to
+              title="(Optional) Notifications"><br>Every notification now goes to
               <code>notify.notify</code>. Set your notify targets below and send
               a test.</ha-alert>{% else %}<ha-alert alert-type="success"
-              title="Notifications">Sent to {{ t }}</ha-alert>{% endif %}
+              title="Notifications"><br>Sent to {{ t }}</ha-alert>{% endif %}
           - type: markdown
             content: '### Step 7'
             text_only: true
