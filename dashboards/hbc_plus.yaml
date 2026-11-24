@@ -34,9 +34,9 @@ views:
         type: markdown
         text_only: true
         content: >-
-          {%- set dash = '1.3.0' -%} {%- set mm = dash.split('.')[:2] | join('.') -%}
-          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v{{ mm }}"
-          alt="HBC+ Home Battery Control Plus" height="72"><br>v{{ mm }}</center>
+          {%- set dash = '1.3.0' -%}
+          <center><img src="/local/hbc-plus/hbc-plus-dashboard.svg?v=v{{ dash }}"
+          alt="HBC+ Home Battery Control Plus" height="72"></center>
       layout: center
       badges_position: bottom
       badges_wrap: scroll
@@ -44,7 +44,7 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Status & control
+            heading: Status & control (v1.3.0)
             heading_style: title
             icon: mdi:gamepad-variant-outline
           - type: markdown

@@ -15,7 +15,8 @@ What it changes:
   flows      const VERSION in every 'HBC+ version' node and in 'HBC+ health'; the EXPECTED_PACKAGES
              list (kept in step with packages/); on a minor release also every tab name
              '<tab> vX.Y', references to it, and 'Part of **HBC+ vX.Y**' / 'HBC+ vX.Y (open the'
-  dashboard  the dash constants (header, version card, update card, Versions table) and the numbers in
+  dashboard  the dash constants (header, version card, update card, Versions table), the version in the
+             Overview heading 'Status & control (vX.Y.Z)', and the numbers in
              the visibility conditions of the version card and the update card
   manifest   versions.json, written from all of the above
 """
@@ -25,7 +26,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hbc_versions import (CARD_NUM_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, collect,  # noqa: E402
+from hbc_versions import (CARD_NUM_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, collect,  # noqa: E402
                           dump_flows, flow_files, full_num, load_flows, manifest_text, mm, num, package_names,
                           package_re, read, strings, tab_labels, write)
 
@@ -93,6 +94,7 @@ def main():
         s = DASH_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
         s = CARD_NUM_RE.sub(lambda m: m.group(1) + str(num(new)), s)
         s = DASH_NUM_RE.sub(lambda m: m.group(1) + str(full_num(new)), s)
+        s = HEADING_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
         write(p, s)
         changed.append('dashboards/hbc_plus.yaml')
     write(os.path.join(root, 'versions.json'), manifest_text(root))
