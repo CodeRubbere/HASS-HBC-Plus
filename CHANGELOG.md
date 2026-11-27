@@ -8,6 +8,8 @@ All notable changes to HBC+ (Home Battery Control Plus). The user guide has the 
 Includes everything in 1.2.1 and 1.2.2.
 
 ### Added
+- **Dutch dashboard** — `dashboards/hbc_plus.nl.yaml`: the same dashboard in Dutch (same views, entities and URL).
+  `tools/set-version.py` and `tools/check-versions.py` keep its version numbers in step with `hbc_plus.yaml`.
 - **Savings** (F1) — new *Savings* view: what your energy cost with the batteries compared with without them, per day,
   month and year, split into stored PV and charging from the grid. New package `hbc_savings.yaml`.
 - **Measured round-trip efficiency** (F2) — `sensor.hbc_round_trip_efficiency` over 7 days and a suggested *Minimum

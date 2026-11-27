@@ -6,7 +6,8 @@ Where HBC+ keeps its version, per part:
   flows      node-red/*.json                 const VERSION = 'X.Y.Z' (every 'HBC+ version' node and
                                              'HBC+ health'), tab names '<tab> vX.Y', and the
                                              EXPECTED_PACKAGES list in 'HBC+ health'
-  dashboard  dashboards/hbc_plus.yaml        {%- set dash = 'X.Y.Z' -%} in every card that needs it (the
+  dashboard  dashboards/hbc_plus.yaml        (and the Dutch dashboards/hbc_plus.nl.yaml, same numbers)
+                                             {%- set dash = 'X.Y.Z' -%} in every card that needs it (the
                                              header, the version card, the update card, the Versions
                                              table), the Overview heading 'Status & control (vX.Y.Z)',
                                              and the numbers in two visibility conditions:
@@ -71,7 +72,8 @@ DASH_RE = re.compile(r"(\{%-? set dash = ')(" + VER + r")(' -?%\})")
 CARD_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+(?:below|above): )(\d+)(?!\d|\n\s+below:)')
 # 'Exactly this release' (sensor.hbc_release_number = N): above: N-1 / below: N+1
 CARD_RANGE_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+above: )(\d+)(\n\s+below: )(\d+)')
-HEADING_RE = re.compile(r'(heading: Status & control \(v)(' + VER + r')(\)\n)')
+HEADING_RE = re.compile(r'(heading: Status & (?:control|bediening) \(v)(' + VER + r')(\)\n)')
+DASHBOARDS = ['hbc_plus.yaml', 'hbc_plus.nl.yaml']   # English and Dutch dashboard: same version numbers
 DASH_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_dashboard_number\n\s+above: )(\d+)')
 
 
@@ -123,17 +125,22 @@ def collect(root):
             out['flows'][f'{f} tab "{lab}"'] = m.group(1) if m else None
     out['package_lists'] = [json.loads(m.group(2)) for m in PKG_LIST_RE.finditer(
         read(os.path.join(root, 'packages', 'hbc_control.yaml')))]
-    s = read(os.path.join(root, 'dashboards', 'hbc_plus.yaml'))
-    for i, m in enumerate(DASH_RE.finditer(s)):
-        out['dashboard'][f'dash constant #{i + 1}'] = m.group(2)
-    for i, m in enumerate(CARD_NUM_RE.finditer(s)):
-        out['dashboard'][f'version card number #{i + 1}'] = int(m.group(2))
-    for i, m in enumerate(CARD_RANGE_RE.finditer(s)):
-        out['dashboard'][f'release range #{i + 1}'] = (int(m.group(2)), int(m.group(4)))
-    for i, m in enumerate(DASH_NUM_RE.finditer(s)):
-        out['dashboard'][f'update card number #{i + 1}'] = int(m.group(2))
-    for i, m in enumerate(HEADING_RE.finditer(s)):
-        out['dashboard'][f'dash heading #{i + 1}'] = m.group(2)
+    for d in DASHBOARDS:
+        dp = os.path.join(root, 'dashboards', d)
+        if not os.path.exists(dp):
+            continue
+        s = read(dp)
+        t = '' if d == 'hbc_plus.yaml' else f' ({d})'
+        for i, m in enumerate(DASH_RE.finditer(s)):
+            out['dashboard'][f'dash constant{t} #{i + 1}'] = m.group(2)
+        for i, m in enumerate(CARD_NUM_RE.finditer(s)):
+            out['dashboard'][f'version card number{t} #{i + 1}'] = int(m.group(2))
+        for i, m in enumerate(CARD_RANGE_RE.finditer(s)):
+            out['dashboard'][f'release range{t} #{i + 1}'] = (int(m.group(2)), int(m.group(4)))
+        for i, m in enumerate(DASH_NUM_RE.finditer(s)):
+            out['dashboard'][f'update card number{t} #{i + 1}'] = int(m.group(2))
+        for i, m in enumerate(HEADING_RE.finditer(s)):
+            out['dashboard'][f'dash heading{t} #{i + 1}'] = m.group(2)
     return out
 
 
@@ -207,7 +214,7 @@ def part_of(path):
         return 'hbc_config (yours: compare by hand)'
     if path.startswith('node-red/') and path.endswith('.json') and '/examples/' not in path:
         return 'flows'
-    if path == 'dashboards/hbc_plus.yaml':
+    if path in ('dashboards/hbc_plus.yaml', 'dashboards/hbc_plus.nl.yaml'):
         return 'dashboard'
     if path.startswith('www/hbc-plus/'):
         return 'www'

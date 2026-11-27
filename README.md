@@ -68,6 +68,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | --- | --- |
 | `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml`, the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml`, the Batterijplan indicator `hbc_batterijplan.yaml` and the dashboard helpers `hbc_dashboard.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Batteries, PID Control, **Phase guard**, Savings, Settings and Logging |
+| `dashboards/hbc_plus.nl.yaml` | The same dashboard in Dutch (use one of the two) |
 | `www/hbc-plus/` | The dashboard logo; copy it into your HA `www/` folder |
 | `assets/logo/` | The HBC+ logo as SVG and PNG: on light, on dark, one colour, app icon, GitHub social preview |
 | `node-red/hbc-plus-all-flows.json` | All 16 HBC+ Node-RED tabs in one import file |
@@ -101,7 +102,7 @@ Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
 4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
 5. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
-6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml`, make it *Admin only* (anyone who can open it can steer the batteries), set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
+6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml` (Dutch: `dashboards/hbc_plus.nl.yaml`), make it *Admin only* (anyone who can open it can steer the batteries), set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
 7. Set *Notify targets* on the **Settings** view and press *Send a test notification*; run the self-test once on the **Batteries** view (*Battery phase test*).
 8. Press **HBC+** under *Controller* on the Overview to let HBC+ steer, and pick a *Control mode*.
 9. Run the phase guard in **Monitor** for a few days, then switch to **Enforce**.
