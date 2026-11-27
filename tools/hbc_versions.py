@@ -66,6 +66,7 @@ def flow_files(root):
 
 CONST_RE = re.compile(r"(const VERSION = ')(" + VER + r")(';)")
 EXPECTED_RE = re.compile(r'(const EXPECTED_PACKAGES = )(\[[^\]]*\])(;)')
+PKG_LIST_RE = re.compile(r'(\{%- set hbc_packages = )(\[[^\]]*\])( -%\})')   # hbc_control.yaml, sensor.hbc_package_version
 DASH_RE = re.compile(r"(\{%-? set dash = ')(" + VER + r")(' -?%\})")
 CARD_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+(?:below|above): )(\d+)(?!\d|\n\s+below:)')
 # 'Exactly this release' (sensor.hbc_release_number = N): above: N-1 / below: N+1
@@ -120,6 +121,8 @@ def collect(root):
         for lab in tab_labels(data):
             m = re.search(r' v(\d+\.\d+)$', lab)
             out['flows'][f'{f} tab "{lab}"'] = m.group(1) if m else None
+    out['package_lists'] = [json.loads(m.group(2)) for m in PKG_LIST_RE.finditer(
+        read(os.path.join(root, 'packages', 'hbc_control.yaml')))]
     s = read(os.path.join(root, 'dashboards', 'hbc_plus.yaml'))
     for i, m in enumerate(DASH_RE.finditer(s)):
         out['dashboard'][f'dash constant #{i + 1}'] = m.group(2)

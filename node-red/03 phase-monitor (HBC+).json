@@ -140,7 +140,7 @@
         "type": "debug",
         "z": "hbcp0phase0tab01",
         "name": "Phase monitor errors",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,

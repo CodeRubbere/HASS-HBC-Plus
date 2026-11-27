@@ -74,7 +74,7 @@ Met de fasebewaking op *Off* of *Monitor* stuurt HBC+ de batterijen zonder faser
 | `node-red/*.json` | Dezelfde tabbladen als losse bestanden |
 | `node-red/README.md` | Per tabblad wat HBC+ verandert (Engels) |
 | `node-red/examples/` | Voorbeeldtabblad voor de gedeelde prijsophaling |
-| `tools/` | Voor beheerders: `set-version.py` zet de versie van een release en schrijft `versions.json`; `check-versions.py` (versies, gelijke flowbestanden, `versions.json`), `check-docs.py` (Engelse en Nederlandse handleiding gelijk, CHANGELOG-regel) en `release-files.py` (wat er sinds de laatste tag veranderd is, en dat elk gewijzigd onderdeel een nieuwe versie heeft). `hooks/pre-commit` draait de eerste twee vóór elke commit (`git config core.hooksPath tools/hooks`). De GitHub Action in `.github/workflows/` draait ze bij elke push en maakt bij een tag een concept-release met de zip |
+| `tools/` | Voor beheerders: `set-version.py` zet de versie van een release en schrijft `versions.json`; `check-versions.py` (versies, gelijke flowbestanden, de lijsten met packages, `versions.json`), `check-docs.py` (Engelse en Nederlandse handleiding gelijk, CHANGELOG-regel) en `release-files.py` (wat er sinds de laatste tag veranderd is, en dat elk gewijzigd onderdeel een nieuwe versie heeft). `hooks/pre-commit` draait de eerste twee vóór elke commit (`git config core.hooksPath tools/hooks`). De GitHub Action in `.github/workflows/` draait ze bij elke push en maakt bij een tag een concept-release met de zip |
 | `versions.json` | Het release-manifest: elk onderdeel en zijn versie. Home Assistant leest het bij de release-tag om te zeggen welke onderdelen ouder zijn dan de release |
 | `docs/` | Handleiding in het Engels en Nederlands, en de release notes per versie |
 

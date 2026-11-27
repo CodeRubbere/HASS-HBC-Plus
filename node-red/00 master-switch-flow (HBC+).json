@@ -306,7 +306,7 @@
         "z": "2f2abfd43828aebf",
         "g": "e42a2f65a42ee154",
         "name": "Done",
-        "active": true,
+        "active": false,
         "tosidebar": false,
         "console": false,
         "tostatus": false,
@@ -576,5 +576,38 @@
         "modules": {
             "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
+    },
+    {
+        "id": "hbcp13mstrcat1",
+        "type": "catch",
+        "z": "2f2abfd43828aebf",
+        "name": "Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 578,
+        "wires": [
+            [
+                "hbcp13mstrlog1"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13mstrlog1",
+        "type": "function",
+        "z": "2f2abfd43828aebf",
+        "name": "Log error (HBC+ logger)",
+        "func": "// HBC+ v1.3: a Catch node keeps the errors it catches out of the Node-RED log.\n// Hand them to the HBC+ logger: Node-RED log (max once a minute per message) and hbc/health.\nconst handle = global.get('unhandledException');\nif (typeof handle === 'function') handle(this);\nelse node.error(`${(msg.error && msg.error.message) || 'unknown error'}`);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 578,
+        "wires": [
+            []
+        ]
     }
 ]

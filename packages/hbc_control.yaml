@@ -899,14 +899,17 @@ template:
   # (sensor.hbc_health, attribute flows_version). A minor release replaces every part; a patch release only
   # the parts it changed, so the newest version is the release the user installed. Used by the update check
   # and the Overview. 'mixed' is true when major.minor differs; 'HBC+ health' then warns which part.
+  # hbc_packages is the list of package files (without hbc_config.yaml); tools/set-version.py keeps it in step
+  # with packages/ and tools/check-versions.py checks it. A fixed list instead of looping over states.sensor:
+  # such a loop makes HA re-render this sensor on every sensor change (P1 included), up to once a second.
   - sensor:
       - name: "HBC package version"
         unique_id: hbc_package_version
         icon: mdi:tag-outline
         state: >
+          {%- set hbc_packages = ["hbc_batterijplan", "hbc_calibration", "hbc_control", "hbc_dashboard", "hbc_deadline_charge", "hbc_gridclock", "hbc_heartbeat", "hbc_help", "hbc_load_forecast", "hbc_notify", "hbc_phase_guard", "hbc_price_guard", "hbc_savings", "hbc_selftest", "hbc_strategy_arbiter"] -%}
           {%- set ns = namespace(k=[]) -%}
-          {%- set vals = states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_')
-                         | map(attribute='state') | list -%}
+          {%- set vals = hbc_packages | map('regex_replace', '^', 'sensor.hbc_version_') | map('states') | list -%}
           {%- set fl = state_attr('sensor.hbc_health', 'flows_version') -%}
           {%- for v in vals + ([fl | string] if fl else []) if v is match('^\d+(\.\d+){0,2}$') -%}
             {%- set k = ((v.split('.') | map('int') | list) + [0, 0, 0])[:3] -%}
@@ -915,15 +918,16 @@ template:
           {{ ns.k | join('.') if ns.k else 'unknown' }}
         attributes:
           files: >
+            {%- set hbc_packages = ["hbc_batterijplan", "hbc_calibration", "hbc_control", "hbc_dashboard", "hbc_deadline_charge", "hbc_gridclock", "hbc_heartbeat", "hbc_help", "hbc_load_forecast", "hbc_notify", "hbc_phase_guard", "hbc_price_guard", "hbc_savings", "hbc_selftest", "hbc_strategy_arbiter"] -%}
             {%- set ns = namespace(d={}) -%}
-            {%- for s in states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_') -%}
-              {%- set ns.d = dict(ns.d, **{s.entity_id[19:]: s.state}) -%}
+            {%- for n in hbc_packages if states('sensor.hbc_version_' ~ n) not in ['unknown', 'unavailable'] -%}
+              {%- set ns.d = dict(ns.d, **{n: states('sensor.hbc_version_' ~ n)}) -%}
             {%- endfor -%}
             {{ ns.d }}
           flows: "{{ state_attr('sensor.hbc_health', 'flows_version') }}"
           mixed: >
-            {%- set vals = (states.sensor | selectattr('entity_id', 'match', 'sensor\.hbc_version_')
-                           | map(attribute='state') | list)
+            {%- set hbc_packages = ["hbc_batterijplan", "hbc_calibration", "hbc_control", "hbc_dashboard", "hbc_deadline_charge", "hbc_gridclock", "hbc_heartbeat", "hbc_help", "hbc_load_forecast", "hbc_notify", "hbc_phase_guard", "hbc_price_guard", "hbc_savings", "hbc_selftest", "hbc_strategy_arbiter"] -%}
+            {%- set vals = (hbc_packages | map('regex_replace', '^', 'sensor.hbc_version_') | map('states') | list)
                            + [state_attr('sensor.hbc_health', 'flows_version') | string] -%}
             {{ vals | select('match', '^\d+\.\d+') | map('regex_replace', '^(\d+\.\d+).*$', '\\1')
                | unique | list | count > 1 }}
@@ -1088,10 +1092,13 @@ template:
             {{ ns.out }}
 
   # HBC+ v1.3: the apps and services HBC+ needs. MQTT: set up (it owns entities) and connected (HBC+'s own MQTT
-  # sensors turn unavailable when the broker connection drops). Node-RED: running ('HBC+ health' republishes at
-  # least every 5 minutes, so no report for 11 minutes means it stopped). With the Supervisor, the Mosquitto broker
+  # sensors turn unavailable when the broker connection drops). Node-RED: running, judged by the heartbeat
+  # (sensor.hbc_last_run, a new timestamp every run), so no heartbeat for 11 minutes means it stopped. Not by
+  # sensor.hbc_health: HA's MQTT sensor does not write an unchanged payload again, so its last_reported stands
+  # still while Node-RED keeps republishing the same health report. With the Supervisor, the Mosquitto broker
   # and Node-RED apps also show their version, from their update entity; without one (an external broker or a
-  # standalone Node-RED) that is information, not a problem. State: how many required ones do not work.
+  # standalone Node-RED) that is information, not a problem. MQTT is built into Home Assistant and has no version
+  # of its own: it shows the Home Assistant Core version (from update.home_assistant_core_update, if present). State: how many required ones do not work.
   - sensor:
       - name: "HBC apps"
         unique_id: hbc_apps
@@ -1100,18 +1107,20 @@ template:
           {%- set mq = integration_entities('mqtt') | count > 0 -%}
           {%- set h = states.sensor.hbc_health -%}
           {%- set mq_up = mq and h is not none and h.state != 'unavailable' -%}
-          {%- set nr = h is not none and h.state not in ['unknown', 'unavailable']
-                       and (now() - h.last_reported).total_seconds() < 660 -%}
+          {%- set r = states.sensor.hbc_last_run -%}
+          {%- set nr = r is not none and r.state not in ['unknown', 'unavailable', '']
+                       and (now() - r.last_reported).total_seconds() < 660 -%}
           {{ (0 if mq_up else 1) + (0 if nr or not mq_up else 1) }}
         attributes:
           items: >
             {%- set mq = integration_entities('mqtt') | count > 0 -%}
             {%- set h = states.sensor.hbc_health -%}
             {%- set mq_up = mq and h is not none and h.state != 'unavailable' -%}
-            {%- set age = ((now() - h.last_reported).total_seconds() / 60) | round(0) | int
-                          if h is not none and h.state not in ['unknown', 'unavailable'] else none -%}
+            {%- set r = states.sensor.hbc_last_run -%}
+            {%- set age = ((now() - r.last_reported).total_seconds() / 60) | round(0) | int
+                          if r is not none and r.state not in ['unknown', 'unavailable', ''] else none -%}
             {%- set nr = age is not none and age < 11 -%}
-            {%- set a = namespace(mo=none, no=none) -%}
+            {%- set a = namespace(mo=none, no=none, core=none) -%}
             {%- for s in states.update if s.state not in ['unavailable', 'unknown'] -%}
               {%- set t = (s.attributes.get('title') or '') | lower -%}
               {%- if a.mo is none and (s.entity_id == 'update.mosquitto_broker_update' or t == 'mosquitto broker') -%}
@@ -1120,9 +1129,14 @@ template:
               {%- if a.no is none and (s.entity_id == 'update.node_red_update' or t == 'node-red') -%}
                 {%- set a.no = s -%}
               {%- endif -%}
+              {%- if a.core is none and (s.entity_id == 'update.home_assistant_core_update' or t == 'home assistant core') -%}
+                {%- set a.core = s -%}
+              {%- endif -%}
             {%- endfor -%}
             {{ [
-                 {'name': 'MQTT', 'type': 'Integration', 'installed': none, 'latest': none,
+                 {'name': 'MQTT', 'type': 'Integration',
+                  'installed': a.core.attributes.get('installed_version') if a.core is not none else none,
+                  'latest': none,
                   'status': 'ok' if mq_up else ('not connected' if mq else 'not set up')},
                  {'name': 'Mosquitto broker', 'type': 'App',
                   'installed': a.mo.attributes.get('installed_version') if a.mo is not none else none,

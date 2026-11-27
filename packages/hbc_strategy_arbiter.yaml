@@ -20,7 +20,8 @@ input_text:
 #     data: {requester: hpvc}
 # The scripts fire the HA event hbc_arbiter_request; the Strategy arbiter tab answers with hbc_arbiter_result,
 # which the scripts return as their response ({requester, action, ok, result}).
-# Rules (checked in Node-RED): requester 1-32 characters a-z, 0-9 or _ ('guard' and 'manual' are reserved);
+# Rules (checked in Node-RED): requester 1-32 characters a-z, 0-9 or _ ('guard' and 'manual' are reserved;
+# over MQTT also 'selftest' and 'calibration', and the strategy 'Self-test');
 # the strategy must be an option of input_select.house_battery_strategy; every hold expires after timeout_min
 # (default 120, max 1440) so a crashed automation never keeps a strategy forever. Priority 50 (calibration 40,
 # Oscillation Guard 100); a manual choice always wins and overrides the hold until it is released.
@@ -159,6 +160,9 @@ automation:
           strategy: "{{ req.get('strategy', '') }}"
           reason: "{{ req.get('reason', 'MQTT') }}"
           timeout_min: "{{ req.get('timeout_min', 120) }}"
+          # Set here, never taken from the payload: Node-RED refuses the internal requesters selftest and
+          # calibration, and the strategy Self-test, from MQTT.
+          source: mqtt
 
   - id: hbc_arbiter_mqtt_result
     alias: "HBC+: strategy request result to MQTT"

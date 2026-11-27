@@ -150,11 +150,7 @@ template:
               Hold: {{ ns.l | join(', ') }}
             {%- endif -%}
 
-      # Clock for the dashboard's time badge (updates every minute).
-      - name: "HBC time"
-        unique_id: hbc_time
-        icon: mdi:clock-outline
-        state: "{{ now().strftime('%H:%M') }}"
+      # The clock for the time badge is sensor.hbc_time in hbc_control.yaml.
 
       # Who decides what the batteries do: HBC+, Batterijplan (Price + Live), HELIOS (External) or the Marstek firmware.
       - name: "HBC steered by"
@@ -188,6 +184,39 @@ template:
         unique_id: hbc_version_hbc_dashboard
         icon: mdi:tag-outline
         state: "1.3.0"
+
+script:
+  # A Controller or Control mode button on the Overview: select the option and leave Dashboard mode, so the
+  # settings that belong to the choice show right away. Only these two selects are accepted.
+  hbc_dashboard_select:
+    alias: "HBC+ dashboard: select and leave Dashboard mode"
+    icon: mdi:gesture-tap-button
+    mode: queued
+    fields:
+      entity_id:
+        description: input_select.marstek_master_battery_mode or input_select.hbc_control_mode
+        required: true
+        selector:
+          entity:
+            domain: input_select
+      option:
+        description: The option to select
+        required: true
+        selector:
+          text:
+    sequence:
+      - condition: template
+        value_template: >-
+          {{ entity_id in ['input_select.marstek_master_battery_mode', 'input_select.hbc_control_mode']
+             and option in state_attr(entity_id, 'options') }}
+      - action: input_select.select_option
+        target:
+          entity_id: "{{ entity_id }}"
+        data:
+          option: "{{ option }}"
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hbc_dashboard_mode
 
 automation:
   # Control mode or manual mode changed on the dashboard -> write the internal strategy.

@@ -117,7 +117,7 @@
                 "f1b2233b388a8b3e"
             ],
             [
-                "d85e544791f40067"
+                "hbcp13arbfit001"
             ],
             [
                 "f11484b198c5a6d1"
@@ -166,6 +166,26 @@
         "x": 1005,
         "y": 133,
         "wires": []
+    },
+    {
+        "id": "hbcp13arbfit001",
+        "type": "function",
+        "z": "230212c14defbe4a",
+        "name": "Fit state (255)",
+        "func": "// HBC+ v1.3: input_text.hbc_strategy_arbiter holds at most 255 characters (a Home Assistant limit). The state\n// is small, but several holds with long requester names can pass it; HA then refuses the write and the holds\n// would not survive a restart. This node shortens the copy that is saved, never the live state in Node-RED,\n// and keeps the format ({\"b\": base, \"h\": {requester: {s, a, x}}}) that 'Load state' and the dashboard read.\n// Dropped first: expired holds, then holds a manual choice overrides (a: false), then the lowest priority.\n// The base strategy is always kept. Every dropped hold stays active until a restart, with a warning.\nconst MAX = 255;\nconst PRIO = { guard: 100, selftest: 90, calibration: 40 };   // same as 'Arbitrate'\nconst prio = (n) => (Object.prototype.hasOwnProperty.call(PRIO, n) ? PRIO[n] : 50);\nconst log = global.get('logger') || (() => {});\nlet st;\ntry { st = JSON.parse(msg.arbiter_state_json); } catch (e) { return msg; }\nif (!st || typeof st !== 'object') return msg;\nlet json = JSON.stringify(st);\nif (json.length <= MAX) {\n    node.status({ fill: 'green', shape: 'dot', text: `${json.length}/${MAX}` });\n    return msg;\n}\nconst h = Object.assign({}, st.h || {});\nconst now = Date.now();\nconst rank = (n) => {\n    const x = h[n] || {};\n    const expired = x.x && x.x < now ? 0 : 1;\n    const inactive = x.a === false ? 0 : 1;\n    return [expired, inactive, prio(n)];\n};\nconst order = Object.keys(h).sort((a, b) => {\n    const ra = rank(a), rb = rank(b);\n    for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];\n    return a < b ? -1 : 1;\n});\nconst dropped = [];\nwhile (json.length > MAX && order.length) {\n    const n = order.shift();\n    delete h[n];\n    dropped.push(n);\n    json = JSON.stringify(Object.assign({}, st, { h }));\n}\nif (json.length > MAX) {\n    node.status({ fill: 'red', shape: 'ring', text: `state too long (${json.length}), not saved` });\n    log(this, `Arbiter state (${json.length} characters) does not fit input_text.hbc_strategy_arbiter (max ${MAX}); not saved`, 'warn');\n    return null;\n}\nnode.status({ fill: 'yellow', shape: 'dot', text: `${json.length}/${MAX}, not saved: ${dropped.join(', ')}`.slice(0, 80) });\nlog(this, `Arbiter state too long for input_text.hbc_strategy_arbiter (max ${MAX}): saved without the hold(s) of ${dropped.join(', ')}. They stay active until a restart.`, 'warn');\nmsg.arbiter_state_json = json;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 320,
+        "wires": [
+            [
+                "d85e544791f40067"
+            ]
+        ]
     },
     {
         "id": "d85e544791f40067",
@@ -287,7 +307,7 @@
         "y": 280,
         "wires": [
             [
-                "d85e544791f40067"
+                "hbcp13arbfit001"
             ],
             [
                 "f11484b198c5a6d1"
@@ -391,7 +411,7 @@
         "type": "debug",
         "z": "230212c14defbe4a",
         "name": "Arbiter errors",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -443,7 +463,7 @@
         "z": "230212c14defbe4a",
         "g": "hbcp13a000000001",
         "name": "From HA",
-        "func": "// HBC+ v1.3: a strategy request from Home Assistant (script.hbc_strategy_hold / _release, which\n// fire the HA event hbc_arbiter_request). Checked here, then handed to 'Strategy request' like any\n// flow of your own. Output 1 -> the arbiter, output 2 -> straight back to HA (rejected).\n// The server-events node puts the event data in msg.payload.event (msg.payload.data in older versions).\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : {};\nconst d = (p.event && typeof p.event === 'object') ? p.event : ((p.data && typeof p.data === 'object') ? p.data : p);\nconst RESERVED = ['guard', 'manual'];\nconst who = String(d.requester || '').trim();\nconst action = String(d.action || '').trim();\nconst reject = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: `${who || '?'}: ${why}`.slice(0, 80) });\n    node.warn(`HA request ${who || '?'}: ${why}`);\n    return [null, { payload: { requester: who, action, ok: false, result: 'rejected: ' + why } }];\n};\nif (!/^[a-z0-9_]{1,32}$/.test(who)) return reject('requester must be 1-32 characters a-z, 0-9 or _');\nif (RESERVED.includes(who)) return reject(`requester '${who}' is reserved`);\nif (!['hold', 'release'].includes(action)) return reject(`unknown action '${action}'`);\nlet tmo = Number(d.timeout_min);\nif (!Number.isFinite(tmo) || tmo <= 0) tmo = 120;\ntmo = Math.min(1440, Math.max(1, Math.round(tmo)));\nmsg.arbiter = { requester: who, action, reason: d.reason ? String(d.reason).slice(0, 80) : 'Home Assistant' };\nif (action === 'hold') {\n    msg.arbiter.strategy = String(d.strategy || '');\n    msg.arbiter.expires = Date.now() + tmo * 60000;   // the arbiter keeps it with the hold ('x')\n}\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nmsg.ha_reply = true;\nnode.status({ fill: 'blue', shape: 'dot', text: `${who}: ${action} ${msg.arbiter.strategy || ''}`.trim().slice(0, 80) });\ndelete msg.payload;\nreturn [msg, null];\n",
+        "func": "// HBC+ v1.3: a strategy request from Home Assistant (script.hbc_strategy_hold / _release, which\n// fire the HA event hbc_arbiter_request). Checked here, then handed to 'Strategy request' like any\n// flow of your own. Output 1 -> the arbiter, output 2 -> straight back to HA (rejected).\n// The server-events node puts the event data in msg.payload.event (msg.payload.data in older versions).\nconst p = (msg.payload && typeof msg.payload === 'object') ? msg.payload : {};\nconst d = (p.event && typeof p.event === 'object') ? p.event : ((p.data && typeof p.data === 'object') ? p.data : p);\nconst RESERVED = ['guard', 'manual'];\nconst who = String(d.requester || '').trim();\nconst action = String(d.action || '').trim();\nconst reject = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: `${who || '?'}: ${why}`.slice(0, 80) });\n    node.warn(`HA request ${who || '?'}: ${why}`);\n    return [null, { payload: { requester: who, action, ok: false, result: 'rejected: ' + why } }];\n};\nif (!/^[a-z0-9_]{1,32}$/.test(who)) return reject('requester must be 1-32 characters a-z, 0-9 or _');\nif (RESERVED.includes(who)) return reject(`requester '${who}' is reserved`);\nif (!['hold', 'release'].includes(action)) return reject(`unknown action '${action}'`);\n// HBC+ v1.3: over MQTT (source set by the HA automation, never by the payload) the internal requesters of the\n// self-test and the battery calibration are reserved too, so a client cannot take their priority or release\n// their hold, and the strategy Self-test (it stops every battery) is only for the self-test.\nconst viaMqtt = d.source === 'mqtt';\nif (viaMqtt && ['selftest', 'calibration'].includes(who)) return reject(`requester '${who}' is reserved over MQTT`);\nif (viaMqtt && action === 'hold' && String(d.strategy || '') === 'Self-test') return reject(`strategy 'Self-test' is only for the setup self-test`);\nlet tmo = Number(d.timeout_min);\nif (!Number.isFinite(tmo) || tmo <= 0) tmo = 120;\ntmo = Math.min(1440, Math.max(1, Math.round(tmo)));\nmsg.arbiter = { requester: who, action, reason: (viaMqtt ? 'MQTT: ' : '') + (d.reason ? String(d.reason).slice(0, 72) : (viaMqtt ? 'request' : 'Home Assistant')) };\nif (action === 'hold') {\n    msg.arbiter.strategy = String(d.strategy || '');\n    msg.arbiter.expires = Date.now() + tmo * 60000;   // the arbiter keeps it with the hold ('x')\n}\nmsg.target = 'Strategy request';   // link call (dynamic) finds the link-in by name\nmsg.ha_reply = true;\nnode.status({ fill: 'blue', shape: 'dot', text: `${who}: ${action} ${msg.arbiter.strategy || ''}`.trim().slice(0, 80) });\ndelete msg.payload;\nreturn [msg, null];\n",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,

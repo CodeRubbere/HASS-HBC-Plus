@@ -131,6 +131,19 @@ Includes everything in 1.2.1 and 1.2.2.
   - **Security** — *Marstek* and *Marstek M.* (handing the batteries to their firmware) ask for confirmation, and the
     installation steps tell you to make the dashboard *Admin only*. The GitHub stars badge is a plain link: no image
     is loaded from a third party.
+- **Hardening** — `sensor.hbc_package_version` reads a fixed list of package files instead of looping over every
+  sensor (that loop re-rendered it on every sensor change, P1 included, up to once a second); `tools/set-version.py`
+  keeps the list in step and `tools/check-versions.py` checks it. The *Master Switch* and *PID presets* tabs have a
+  catch node, so their errors reach `sensor.hbc_health` like every other tab's. Debug nodes that wrote to the
+  sidebar are off by default (the status counters under the nodes still work). `sensor.hbc_time` was defined twice.
+- **Strategy arbiter** — a new *Fit state (255)* node keeps the saved state within the 255 characters of
+  `input_text.hbc_strategy_arbiter`: when too many holds are active it drops expired holds first, then inactive ones,
+  then the lowest priority, and logs a warning (before, Home Assistant rejected the whole state). Over MQTT the
+  requesters `selftest` and `calibration` and the strategy *Self-test* are refused; the MQTT automation adds a fixed
+  `source: mqtt`, and the reason shown starts with *MQTT:*. The guides' Mosquitto ACL example gives a client write
+  access to `hbc/arbiter/request` only.
+- Dashboard, *Now*: the graph shows one row per configured battery (M1 to the value of `input_number.house_battery_count`)
+  instead of six rows with empty ones.
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
   stops every battery). Strategy arbiter: requester `selftest` has priority 90.
 - Dashboard: *Self-test* is not offered as a choice.

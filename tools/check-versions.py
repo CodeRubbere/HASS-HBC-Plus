@@ -52,6 +52,13 @@ def check(root, tag=None):
             errors.append(f'node-red: {k} = {x}, packages/ has {package_names(root)}')
     if not exp:
         errors.append("node-red: no EXPECTED_PACKAGES in 'HBC+ health'")
+    # the fixed package list in sensor.hbc_package_version (hbc_control.yaml)
+    lists = v.get('package_lists') or []
+    if not lists:
+        errors.append('packages/hbc_control.yaml: no hbc_packages list in sensor.hbc_package_version')
+    for x in lists:
+        if x != package_names(root):
+            errors.append(f'packages/hbc_control.yaml: hbc_packages = {x}, packages/ has {package_names(root)}')
     # dashboard: one part
     d = v['dashboard']
     dash = sorted({x for k, x in d.items() if k.startswith('dash')})

@@ -962,9 +962,9 @@ After installing card-mod, apexcharts-card and fold-entity-row, reload the brows
     requester: hpvc
 ```
 
-The scripts fire the HA event `hbc_arbiter_request`; the group *Requests from Home Assistant* in the Strategy arbiter tab checks it and answers with `hbc_arbiter_result`, which the script returns (`ok`, `result`). Rules: `requester` is 1–32 characters a–z, 0–9 or _ (`guard` and `manual` are reserved); `strategy` must be an option of the strategy selection; every hold expires after `timeout_min` (default 120, maximum 1440), so a crashed automation never keeps a strategy forever. Requests from HA get priority 50. While HBC+ is not running (`binary_sensor.hbc_heartbeat_stale` on) the script stops with an error instead of failing silently.
+The scripts fire the HA event `hbc_arbiter_request`; the group *Requests from Home Assistant* in the Strategy arbiter tab checks it and answers with `hbc_arbiter_result`, which the script returns (`ok`, `result`). Rules: `requester` is 1–32 characters a–z, 0–9 or _ (`guard` and `manual` are reserved; over MQTT also `selftest` and `calibration`, and the strategy *Self-test* is refused); `strategy` must be an option of the strategy selection; every hold expires after `timeout_min` (default 120, maximum 1440), so a crashed automation never keeps a strategy forever. Requests from HA get priority 50. While HBC+ is not running (`binary_sensor.hbc_heartbeat_stale` on) the script stops with an error instead of failing silently.
 
-**Via MQTT.** Publish the same request as JSON on `hbc/arbiter/request` (not retained), for example `{"requester": "hpvc", "action": "hold", "strategy": "Charge PV", "reason": "Negative export price", "timeout_min": 60}`. Every answer of the arbiter is published on `hbc/arbiter/result`. Restrict who may publish on `hbc/#` in your broker (see *Securing your setup*).
+**Via MQTT.** Publish the same request as JSON on `hbc/arbiter/request` (not retained), for example `{"requester": "hpvc", "action": "hold", "strategy": "Charge PV", "reason": "Negative export price", "timeout_min": 60}`. Every answer of the arbiter is published on `hbc/arbiter/result`. The client needs write access to `hbc/arbiter/request`, and whoever has it can steer the batteries: give it only to a client you trust (see *Securing your setup* for an ACL example).
 
 **Which holds are active.** `sensor.hbc_strategy_holds` counts the active holds; its attributes show your own choice (`base`) and every hold with requester, strategy, active and expiry time. While a hold is active, the Overview shows *Held by* under the strategy choice.
 
@@ -1024,9 +1024,14 @@ user zigbee2mqtt
 topic readwrite zigbee2mqtt/#
 topic readwrite homeassistant/#
 topic read hbc/#
+
+# only a client you trust to request strategies (for example a PV limiter) may write the request topic
+user pvlimiter
+topic read hbc/#
+topic write hbc/arbiter/request
 ```
 
-An ACL file applies to **every** MQTT user: give each user that logs in (Zigbee2MQTT, Tasmota devices, other add-ons) its own lines, or it loses access. Restart the add-on and check that your devices still report.
+An ACL file applies to **every** MQTT user: give each user that logs in (Zigbee2MQTT, Tasmota devices, other add-ons) its own lines, or it loses access. Restart the add-on and check that your devices still report. A user with `topic write hbc/arbiter/request` can hold any strategy (*Sell*, *Full stop*) for up to 24 hours; HBC+ only refuses the internal requesters `guard`, `manual`, `selftest` and `calibration`, and the strategy *Self-test*, from MQTT.
 
 **Home Assistant users.** Home Assistant has no permissions per entity: every user, also a non-admin, can change the phase guard mode, the fuse limits and the phase map. Turn on *Admin only* for the HBC+ dashboard (*Settings* → *Dashboards* → the HBC+ dashboard). That hides it from non-admins but does not protect the helpers. What does make every change visible is the automation *HBC+: notify when a phase guard safety setting changes* (S2), which names who made the change.
 
@@ -1259,7 +1264,7 @@ The *Home Battery Control Plus* dashboard has seven views: the Overview for ever
 | Settings | The *Setup* checklist, the *Versions* list (the HBC+ release, then the dashboard, each Node-RED tab, each package file, each Marketplace item and each app with its version, grouped under *Node-RED flows*, *Package files*, *Marketplace* and *Apps*; a part of another release or missing in red, a newer Marketplace version in orange), the phase guard and price guard settings, *Notify targets* with a test button, and the EV stop trigger |
 | Logging (spider icon) | *Flow trace* and *Insights*: the route the last tick took and the explanations of each node; press the *Live* badge (*Insights mode*, off again after 5 min) |
 
-**Dashboard mode** (`input_boolean.hbc_dashboard_mode`) is on after every restart of Home Assistant: the Overview then shows only *Status & control*, *Now* and *Batteries*. Switch it off with its badge to reach every setting: *Now* then makes room for the settings of your control mode, and the fourth column starts on *Batteries*. Changing a setting yourself brings back *Strategies*.
+**Dashboard mode** (`input_boolean.hbc_dashboard_mode`) is on after every restart of Home Assistant: the Overview then shows only *Status & control*, *Now* and *Batteries*. Switch it off with its badge to reach every setting; pressing a *Controller* or *Control mode* button switches it off too (`script.hbc_dashboard_select`), so the settings of your choice show right away: *Now* then makes room for the settings of your control mode, and the fourth column starts on *Batteries*. Changing a setting yourself brings back *Strategies*.
 
 On the Overview, alerts appear only when something needs attention, each as one line. Tap it to show or hide the details (the full text and, for known problems, a *Fix* line):
 
@@ -1334,7 +1339,7 @@ Two gauges per phase follow the phase guard settings by themselves, in % of the 
 | The batteries are empty before the end of the expensive hours | Forecast too low (new appliance, cold snap) or normal strategy Self-consumption | Raise *Margin*, or *Forget the learned profile* after a big change |
 | No *HBC+ vX.Y.Z is available* notice, although a newer release exists | Home Assistant asks GitHub only at start and every 6 hours, and needs internet for it | Wait for the next check or restart HA; `sensor.hbc_latest_version` shows what GitHub answered (`unknown`: no answer) |
 | *Marketplace item not found* on the Settings view, although the item is installed | HBC+ finds each item through the update entity the Marketplace makes for it. An item installed by hand has none, and a disabled update entity is not seen | Download the item through the Marketplace, or enable its update entity (*Settings* → *Devices & services* → *Entities*, search for the item's name); the check follows within seconds |
-| *Required app not working* on the Settings view | *Apps* says what: MQTT *not set up* (no MQTT integration), MQTT *not connected* (broker stopped or unreachable), or Node-RED *not running* (no report from *HBC+ health* for 11 minutes) | Set up the MQTT integration, or start the broker; start Node-RED and check that the HBC+ tabs are deployed. *Not an app here* or *standalone* is not a problem: your broker or Node-RED runs outside Home Assistant |
+| *Required app not working* on the Settings view | *Apps* says what: MQTT *not set up* (no MQTT integration), MQTT *not connected* (broker stopped or unreachable), or Node-RED *not running* (no HBC+ heartbeat for 11 minutes) | Set up the MQTT integration, or start the broker; start Node-RED and check that the HBC+ tabs are deployed. *Not an app here* or *standalone* is not a problem: your broker or Node-RED runs outside Home Assistant |
 | Configuration warning *Setup of package 'hbc_…' failed: integration 'recorder' has duplicate key 'exclude'*; that package does not load | Home Assistant allows `recorder: exclude:` in one place only. HBC+ keeps all its exclusions in `hbc_control.yaml`, so a second one comes from an older HBC+ package file or from your own `configuration.yaml` | Copy all HBC+ packages of the same release again. Have your own `recorder: exclude:` in `configuration.yaml`? Move the HBC+ list from `hbc_control.yaml` into it and delete the `recorder:` section from `hbc_control.yaml`; do that again after each update |
 | *Not every part of HBC+ vX.Y.Z is installed* | Not every file of a (patch) release was copied, or the dashboard was not pasted again | Copy the parts the alert lists (the *Versions* list on the Settings view shows each) and restart HA; for the dashboard paste `dashboards/hbc_plus.yaml` again |
 | *Send a test notification* sends nothing | A wrong name in *Notify targets*, or `hbc_notify.yaml` missing | Use the name of a notify action as in *Developer tools* → *Actions* (for example `notify.mobile_app_<phone>`), comma-separated; copy `hbc_notify.yaml` and restart HA. The self-test checks the targets too |

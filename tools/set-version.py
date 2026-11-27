@@ -27,7 +27,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hbc_versions import (CARD_NUM_RE, CARD_RANGE_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, collect,  # noqa: E402
+from hbc_versions import (CARD_NUM_RE, CARD_RANGE_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, PKG_LIST_RE, collect,  # noqa: E402
                           dump_flows, flow_files, full_num, load_flows, manifest_text, mm, num, package_names,
                           package_re, read, strings, tab_labels, write)
 
@@ -62,6 +62,13 @@ def main():
                 sys.exit(f'{p}: no (or more than one) sensor hbc_version_{name}')
             write(p, s)
             changed.append(f'packages/{name}.yaml')
+    # the package list in sensor.hbc_package_version follows packages/ on every run
+    p = os.path.join(root, 'packages', 'hbc_control.yaml')
+    s0 = read(p)
+    s1 = PKG_LIST_RE.sub(lambda m: m.group(1) + json.dumps(pk) + m.group(3), s0)
+    if s1 != s0:
+        write(p, s1)
+        changed.append('packages/hbc_control.yaml (package list)')
     # flows (one part)
     if 'flows' in parts:
         old_mm = mm([x for k, x in cur['flows'].items() if 'VERSION' in k][0])

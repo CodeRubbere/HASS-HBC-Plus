@@ -74,7 +74,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | `node-red/*.json` | The same tabs as separate files |
 | `node-red/README.md` | Per-tab overview of what HBC+ changes |
 | `node-red/examples/` | Example tab for the shared price fetch |
-| `tools/` | For maintainers: `set-version.py` sets the version of a release and writes `versions.json`; `check-versions.py` (versions, identical flow files, `versions.json`), `check-docs.py` (English and Dutch guide in step, CHANGELOG entry) and `release-files.py` (what changed since the last tag, and that every changed part has a new version). `hooks/pre-commit` runs the first two before each commit (`git config core.hooksPath tools/hooks`). The GitHub Action in `.github/workflows/` runs them on every push and makes a draft release with the zip on a tag |
+| `tools/` | For maintainers: `set-version.py` sets the version of a release and writes `versions.json`; `check-versions.py` (versions, identical flow files, the package lists, `versions.json`), `check-docs.py` (English and Dutch guide in step, CHANGELOG entry) and `release-files.py` (what changed since the last tag, and that every changed part has a new version). `hooks/pre-commit` runs the first two before each commit (`git config core.hooksPath tools/hooks`). The GitHub Action in `.github/workflows/` runs them on every push and makes a draft release with the zip on a tag |
 | `versions.json` | The release manifest: every part and its version. Home Assistant reads it at the release tag to say which parts are older than the release |
 | `docs/` | User guide in English and Dutch, and the release notes per version (English and Dutch) |
 

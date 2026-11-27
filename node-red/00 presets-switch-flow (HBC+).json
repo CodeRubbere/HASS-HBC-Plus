@@ -328,5 +328,38 @@
         "modules": {
             "node-red-contrib-home-assistant-websocket": "0.83.0"
         }
+    },
+    {
+        "id": "hbcp13pidscat1",
+        "type": "catch",
+        "z": "a1a9363231783de9",
+        "name": "Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 487,
+        "wires": [
+            [
+                "hbcp13pidslog1"
+            ]
+        ]
+    },
+    {
+        "id": "hbcp13pidslog1",
+        "type": "function",
+        "z": "a1a9363231783de9",
+        "name": "Log error (HBC+ logger)",
+        "func": "// HBC+ v1.3: a Catch node keeps the errors it catches out of the Node-RED log.\n// Hand them to the HBC+ logger: Node-RED log (max once a minute per message) and hbc/health.\nconst handle = global.get('unhandledException');\nif (typeof handle === 'function') handle(this);\nelse node.error(`${(msg.error && msg.error.message) || 'unknown error'}`);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 487,
+        "wires": [
+            []
+        ]
     }
 ]

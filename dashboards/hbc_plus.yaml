@@ -11,11 +11,15 @@ views:
         show_icon: true
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -30,6 +34,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -44,6 +61,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -59,6 +89,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -74,6 +117,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -89,6 +145,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -97,6 +166,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -104,6 +186,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: input_boolean.hbc_show_batteries
         name: Show Batteries
@@ -340,17 +435,15 @@ views:
                 vertical: false
                 tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Full control
                 icon_tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Full control
                 features_position: bottom
                 card_mod:
@@ -372,19 +465,17 @@ views:
                 vertical: false
                 tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Marstek control
                   confirmation:
                     text: Hand the batteries back to the Marstek firmware (Marstek control)? HBC+ stops steering them.
                 icon_tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Marstek control
                   confirmation:
                     text: Hand the batteries back to the Marstek firmware (Marstek control)? HBC+ stops steering them.
@@ -408,19 +499,17 @@ views:
                 vertical: false
                 tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Manual control
                   confirmation:
                     text: Hand the batteries back to the Marstek firmware (Manual control)? HBC+ stops steering them.
                 icon_tap_action:
                   action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.marstek_master_battery_mode
+                  perform_action: script.hbc_dashboard_select
                   data:
+                    entity_id: input_select.marstek_master_battery_mode
                     option: Manual control
                   confirmation:
                     text: Hand the batteries back to the Marstek firmware (Manual control)? HBC+ stops steering them.
@@ -455,17 +544,15 @@ views:
               rows: auto
             icon_tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Manual
             tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Manual
             card_mod:
               style:
@@ -504,17 +591,15 @@ views:
               rows: auto
             icon_tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Schedule
             tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Schedule
             card_mod:
               style:
@@ -553,17 +638,15 @@ views:
               rows: auto
             icon_tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Price
             tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: Price
             card_mod:
               style:
@@ -602,17 +685,15 @@ views:
             vertical: true
             tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: External
             icon_tap_action:
               action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.hbc_control_mode
+              perform_action: script.hbc_dashboard_select
               data:
+                entity_id: input_select.hbc_control_mode
                 option: External
             features_position: bottom
             card_mod:
@@ -2599,6 +2680,126 @@ views:
                   border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
                 }
           - type: history-graph
+            # one graph per number of batteries (1), so no empty rows; only the matching one shows
+            entities:
+              - entity: input_number.house_battery_control_pid_output
+                name: PID control
+              - entity: sensor.p1_meter_power
+                name: Grid power
+              - entity: select.marstek_m1_forcible_charge_discharge
+                name: M1
+            hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                below: 1.5
+            card_mod:
+              style: |
+                ha-card {
+                  border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
+                }
+          - type: history-graph
+            # one graph per number of batteries (2), so no empty rows; only the matching one shows
+            entities:
+              - entity: input_number.house_battery_control_pid_output
+                name: PID control
+              - entity: sensor.p1_meter_power
+                name: Grid power
+              - entity: select.marstek_m1_forcible_charge_discharge
+                name: M1
+              - entity: select.marstek_m2_forcible_charge_discharge
+                name: M2
+            hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                above: 1.5
+                below: 2.5
+            card_mod:
+              style: |
+                ha-card {
+                  border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
+                }
+          - type: history-graph
+            # one graph per number of batteries (3), so no empty rows; only the matching one shows
+            entities:
+              - entity: input_number.house_battery_control_pid_output
+                name: PID control
+              - entity: sensor.p1_meter_power
+                name: Grid power
+              - entity: select.marstek_m1_forcible_charge_discharge
+                name: M1
+              - entity: select.marstek_m2_forcible_charge_discharge
+                name: M2
+              - entity: select.marstek_m3_forcible_charge_discharge
+                name: M3
+            hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                above: 2.5
+                below: 3.5
+            card_mod:
+              style: |
+                ha-card {
+                  border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
+                }
+          - type: history-graph
+            # one graph per number of batteries (4), so no empty rows; only the matching one shows
+            entities:
+              - entity: input_number.house_battery_control_pid_output
+                name: PID control
+              - entity: sensor.p1_meter_power
+                name: Grid power
+              - entity: select.marstek_m1_forcible_charge_discharge
+                name: M1
+              - entity: select.marstek_m2_forcible_charge_discharge
+                name: M2
+              - entity: select.marstek_m3_forcible_charge_discharge
+                name: M3
+              - entity: select.marstek_m4_forcible_charge_discharge
+                name: M4
+            hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                above: 3.5
+                below: 4.5
+            card_mod:
+              style: |
+                ha-card {
+                  border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
+                }
+          - type: history-graph
+            # one graph per number of batteries (5), so no empty rows; only the matching one shows
+            entities:
+              - entity: input_number.house_battery_control_pid_output
+                name: PID control
+              - entity: sensor.p1_meter_power
+                name: Grid power
+              - entity: select.marstek_m1_forcible_charge_discharge
+                name: M1
+              - entity: select.marstek_m2_forcible_charge_discharge
+                name: M2
+              - entity: select.marstek_m3_forcible_charge_discharge
+                name: M3
+              - entity: select.marstek_m4_forcible_charge_discharge
+                name: M4
+              - entity: select.marstek_m5_forcible_charge_discharge
+                name: M5
+            hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                above: 4.5
+                below: 5.5
+            card_mod:
+              style: |
+                ha-card {
+                  border: 2px solid rgba(var(--rgb-primary-text-color), 0.22) !important;
+                }
+          - type: history-graph
+            # one graph per number of batteries (6), so no empty rows; only the matching one shows
             entities:
               - entity: input_number.house_battery_control_pid_output
                 name: PID control
@@ -2617,6 +2818,10 @@ views:
               - entity: select.marstek_m6_forcible_charge_discharge
                 name: M6
             hours_to_show: 0.1
+            visibility:
+              - condition: numeric_state
+                entity: input_number.house_battery_count
+                above: 5.5
             card_mod:
               style: |
                 ha-card {
@@ -3765,11 +3970,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -3784,6 +3993,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -3798,6 +4020,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -3813,6 +4048,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -3828,6 +4076,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -3843,6 +4104,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -3851,6 +4125,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -3858,6 +4145,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5212,11 +5512,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5231,6 +5535,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5245,6 +5562,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5260,6 +5590,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5275,6 +5618,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5290,6 +5646,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5298,6 +5667,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5305,6 +5687,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5346,11 +5741,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5365,6 +5764,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5379,6 +5791,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5394,6 +5819,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5409,6 +5847,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -5424,6 +5875,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5432,6 +5896,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -5439,6 +5916,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6746,11 +7236,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6765,6 +7259,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6779,6 +7286,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6794,6 +7314,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6809,6 +7342,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6824,6 +7370,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6832,6 +7391,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6839,6 +7411,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6883,11 +7468,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6902,6 +7491,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6916,6 +7518,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6931,6 +7546,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6946,6 +7574,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -6961,6 +7602,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6969,6 +7623,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -6976,6 +7643,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -7577,7 +8257,7 @@ views:
               - **Apps**
 
               {%- for i in apps %}
-                - {% if i.status in ['not set up', 'not connected', 'not running'] %}<font color=red>{{ i.name }} · {{ i.status }}{{ (' (no report for ' ~ i.minutes ~ ' min)') if i.status == 'not running' and i.minutes is not none else '' }}</font>{% elif i.status in ['not an app', 'standalone', 'unknown'] %}{{ i.name }} · <font color=grey>{{ {'not an app': 'not an app here (external broker)', 'standalone': 'running (standalone)', 'unknown': 'unknown (needs MQTT)'}[i.status] }}</font>{% elif i.status == 'update' %}{{ i.name }} · {{ i.installed }} → <font color=orange>{{ i.latest }}</font>{{ ' · running' if i.name == 'Node-RED' else '' }}{% elif i.type == 'Integration' %}{{ i.name }} · connected{% else %}{{ i.name }} · {{ i.installed }}{{ ' · running' if i.name == 'Node-RED' else '' }}{% endif %}
+                - {% if i.status in ['not set up', 'not connected', 'not running'] %}<font color=red>{{ i.name }} · {{ i.status }}{{ (' (no report for ' ~ i.minutes ~ ' min)') if i.status == 'not running' and i.minutes is not none else '' }}</font>{% elif i.status in ['not an app', 'standalone', 'unknown'] %}{{ i.name }} · <font color=grey>{{ {'not an app': 'not an app here (external broker)', 'standalone': 'running (standalone)', 'unknown': 'unknown (needs MQTT)'}[i.status] }}</font>{% elif i.status == 'update' %}{{ i.name }} · {{ i.installed }} → <font color=orange>{{ i.latest }}</font>{{ ' · running' if i.name == 'Node-RED' else '' }}{% elif i.type == 'Integration' %}{{ i.name }} · connected{{ (' · built into HA ' ~ i.installed) if i.installed else '' }}{% else %}{{ i.name }} · {{ i.installed }}{{ ' · running' if i.name == 'Node-RED' else '' }}{% endif %}
               {%- endfor %}
 
               {%- if not apps %}
@@ -8005,11 +8685,15 @@ views:
         show_entity_picture: false
         card_mod:
           style:
-            ha-badge:
-              $: |
-                .badge {
-                  border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
-                }
+            .: |
+              ha-badge {
+                --ha-card-border-color: {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }};
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                border: 2px solid {{ 'var(--success-color)' if is_state('sensor.hbc_health', 'ok') else 'var(--error-color)' }} !important;
+              }
       - type: entity
         show_name: true
         show_state: false
@@ -8032,6 +8716,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HBC+
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -8046,6 +8743,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Marstek
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -8061,6 +8771,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: Batterijplan
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -8076,6 +8799,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         entity: sensor.hbc_steered_by
         name: Controller
@@ -8091,6 +8827,19 @@ views:
           - condition: state
             entity: sensor.hbc_steered_by
             state: HELIOS offline
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -8099,6 +8848,19 @@ views:
         name: Control mode
         tap_action:
           action: more-info
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
@@ -8106,6 +8868,19 @@ views:
         entity: sensor.hbc_control_state
         show_entity_picture: false
         name: Strategy
+        card_mod:
+          style:
+            .: |
+              ha-badge {
+                --ha-card-background: rgba(var(--rgb-primary-color), 0.15);
+                --ha-card-border-color: var(--primary-color);
+                --ha-card-border-width: 2px;
+              }
+            ha-badge$: |
+              .badge {
+                background: rgba(var(--rgb-primary-color), 0.15) !important;
+                border: 2px solid var(--primary-color) !important;
+              }
       - type: entity
         show_name: true
         show_state: true
