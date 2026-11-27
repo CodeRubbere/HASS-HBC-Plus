@@ -8,22 +8,6 @@
         "env": []
     },
     {
-        "id": "fb75e83f30c1a43c",
-        "type": "function",
-        "z": "c6efb67773d1041c",
-        "name": "HBC+ version",
-        "func": "// No input: see On Start / On Stop.\nreturn null;",
-        "outputs": 0,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
-        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
-        "libs": [],
-        "x": 160,
-        "y": 480,
-        "wires": []
-    },
-    {
         "id": "409969cc5795bdca",
         "type": "group",
         "z": "c6efb67773d1041c",
@@ -37,7 +21,7 @@
             "5efa6fae7b9f95a3"
         ],
         "x": 14,
-        "y": 125,
+        "y": 173,
         "w": 192,
         "h": 196
     },
@@ -54,7 +38,7 @@
             "749358f4c2111e64"
         ],
         "x": 464,
-        "y": 179,
+        "y": 227,
         "w": 192,
         "h": 142
     },
@@ -74,9 +58,25 @@
             "b13cec6e5bd54a72"
         ],
         "x": 14,
-        "y": 359,
+        "y": 407,
         "w": 182,
         "h": 82
+    },
+    {
+        "id": "fb75e83f30c1a43c",
+        "type": "function",
+        "z": "c6efb67773d1041c",
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 100,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "a056dc2f2511e2d7",
@@ -86,7 +86,7 @@
         "name": "Full stop",
         "links": [],
         "x": 100,
-        "y": 220,
+        "y": 268,
         "wires": [
             [
                 "5efa6fae7b9f95a3"
@@ -103,7 +103,7 @@
         "mode": "return",
         "links": [],
         "x": 505,
-        "y": 280,
+        "y": 328,
         "wires": []
     },
     {
@@ -119,7 +119,7 @@
         "finalize": "",
         "libs": [],
         "x": 330,
-        "y": 280,
+        "y": 328,
         "wires": [
             [
                 "0df52860d68f5567"
@@ -133,7 +133,7 @@
         "name": "Home Battery Strategy",
         "info": "The `Home Battery Start` flow will call this strategy flow\nby matching the strategy name with the Link In name.\n\nConfigure the Link In node in the Start group.\n\nDon't modify other parts of the Start and End groups.\nThey handle the calling and returning for you.",
         "x": 120,
-        "y": 86,
+        "y": 134,
         "wires": []
     },
     {
@@ -144,7 +144,7 @@
         "name": "End (readme)",
         "info": "Should return a solution_array of battery objects\n\n## battery object format\n`{{id: string|number, mode: string, power: number}} battery solution`\n- id is an arbitrary battery ID\n- mode is \"stop\", \"charge\", \"discharge\" for Marstek\n- power in Watts\n\n### example array\nreturn this type of solution_array via msg.solutions\n` \nlet solution_array = [];\nsolution_array.push({id:\"M1\", mode: \"charge\", power: 100}); // per battery\nreturn {solutions: solution_array};\n` ",
         "x": 560,
-        "y": 220,
+        "y": 268,
         "wires": []
     },
     {
@@ -155,7 +155,7 @@
         "name": "Start (readme)",
         "info": "# Setting up your battery strategy flow\n\n## Setup\nName the `Link In node` in this start group exactly after the <select> option configured in your\nselect_input.house_battery_strategy\n\nconfigure select options in:\nhbc_control.yaml\n\n### example\n`house_battery_strategy:\n  name: House Battery Strategy\n  options:\n    - AcmE example`\n\nThe above creates a select option, allowing user to select 'AcmE example'\n\nWhen selected, battery control will search for a flow containing a Link In node\ncalled 'AcmE example' (case sensitive).",
         "x": 110,
-        "y": 166,
+        "y": 214,
         "wires": []
     },
     {
@@ -172,7 +172,7 @@
         "finalize": "",
         "libs": [],
         "x": 110,
-        "y": 280,
+        "y": 328,
         "wires": [
             [
                 "fe67ca79a3276609"
@@ -188,7 +188,7 @@
         "scope": null,
         "uncaught": false,
         "x": 55,
-        "y": 400,
+        "y": 448,
         "wires": [
             [
                 "e24d028999f42d0e"
@@ -210,7 +210,7 @@
         "finalize": "",
         "libs": [],
         "x": 105,
-        "y": 400,
+        "y": 448,
         "wires": [
             [
                 "b13cec6e5bd54a72"
@@ -227,7 +227,7 @@
         "mode": "return",
         "links": [],
         "x": 155,
-        "y": 400,
+        "y": 448,
         "wires": []
     },
     {

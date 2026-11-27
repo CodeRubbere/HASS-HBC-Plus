@@ -225,10 +225,5 @@ template:
           {%- endfor -%}
           {{ ns.e | round(2) }}
 
-recorder:
-  exclude:
-    entities:
-      # Large attributes (2 x 96 values), and the forecast re-renders every minute (now()).
-      - sensor.hbc_load_profile
-      - sensor.hbc_load_forecast
-      - sensor.hbc_load_forecast_expensive
+# Recorder exclusions for this package are in hbc_control.yaml: Home Assistant allows `recorder: exclude:` in one
+# package only (a second one makes that package fail to load).

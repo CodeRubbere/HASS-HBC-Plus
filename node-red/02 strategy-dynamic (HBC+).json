@@ -8,22 +8,6 @@
         "env": []
     },
     {
-        "id": "5e1acfdc8230c005",
-        "type": "function",
-        "z": "9006458c06964b58",
-        "name": "HBC+ version",
-        "func": "// No input: see On Start / On Stop.\nreturn null;",
-        "outputs": 0,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
-        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
-        "libs": [],
-        "x": 160,
-        "y": 1680,
-        "wires": []
-    },
-    {
         "id": "54e450e685535462",
         "type": "group",
         "z": "9006458c06964b58",
@@ -35,8 +19,8 @@
             "96e5346b78b78aa7",
             "85dd0fa913c7edf4"
         ],
-        "x": 1044,
-        "y": 159,
+        "x": 1014,
+        "y": 177,
         "w": 192,
         "h": 142
     },
@@ -55,7 +39,7 @@
             "4f6371e6b5603c70"
         ],
         "x": 14,
-        "y": 119,
+        "y": 177,
         "w": 192,
         "h": 262
     },
@@ -69,7 +53,6 @@
         },
         "nodes": [
             "f72ca52108a50b6b",
-            "44170a2d13f781ab",
             "39a3c6bc7f83202f",
             "133f621c505e560c",
             "8b2f0fb4b7e1d8f2",
@@ -77,8 +60,8 @@
             "d1bfaebe9c7c874b"
         ],
         "x": 228,
-        "y": 313,
-        "w": 1464,
+        "y": 371,
+        "w": 1564,
         "h": 968
     },
     {
@@ -97,7 +80,7 @@
             "89951fb788a3d2f9"
         ],
         "x": 234,
-        "y": 159,
+        "y": 217,
         "w": 732,
         "h": 142
     },
@@ -117,9 +100,40 @@
             "b32a87305f7067ba"
         ],
         "x": 24,
-        "y": 419,
+        "y": 477,
         "w": 182,
         "h": 82
+    },
+    {
+        "id": "hbcp12b000000006",
+        "type": "group",
+        "z": "9006458c06964b58",
+        "name": "Grid Clock suppliers (HBC+ v1.3)",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp12b000000012",
+            "hbcp12b000000007",
+            "hbcp12b000000008",
+            "hbcp12b000000009",
+            "hbcp12b00000000a",
+            "hbcp12b00000000b",
+            "hbcp12b00000000c",
+            "hbcp12b00000000d",
+            "hbcp12b00000000e",
+            "hbcp12b00000000f",
+            "hbcp12b000000010",
+            "hbcp12b000000011",
+            "hbcp12b000000013",
+            "hbcp12b000000014",
+            "hbcp12b000000015",
+            "hbcp12b000000016"
+        ],
+        "x": 234,
+        "y": 1359,
+        "w": 1262,
+        "h": 364
     },
     {
         "id": "8b2f0fb4b7e1d8f2",
@@ -149,11 +163,12 @@
             "hbcp12b000000002",
             "hbcp12b000000003",
             "hbcp12b000000004",
-            "hbcp12b000000005"
+            "hbcp12b000000005",
+            "44170a2d13f781ab"
         ],
         "x": 254,
-        "y": 713,
-        "w": 1262,
+        "y": 771,
+        "w": 1512,
         "h": 282
     },
     {
@@ -175,7 +190,6 @@
             "040ae7e8c4478ab3",
             "da2a043be0f868d7",
             "f8e310f9a94bf0e5",
-            "d5dffc4290abef2a",
             "76d8136388bd4213",
             "58c597f42306bba1",
             "4644d9d7e13b856c",
@@ -187,9 +201,9 @@
             "hbcp0dyn0debnc01"
         ],
         "x": 254,
-        "y": 339,
+        "y": 397,
         "w": 1412,
-        "h": 302
+        "h": 344
     },
     {
         "id": "d1bfaebe9c7c874b",
@@ -214,22 +228,25 @@
             "cf8684a92c0a1711"
         ],
         "x": 254,
-        "y": 1009,
+        "y": 1067,
         "w": 1132,
         "h": 246
     },
     {
-        "id": "d5dffc4290abef2a",
-        "type": "junction",
+        "id": "5e1acfdc8230c005",
+        "type": "function",
         "z": "9006458c06964b58",
-        "g": "4e9e421a14894150",
-        "x": 680,
-        "y": 417,
-        "wires": [
-            [
-                "2e82e6f9a6c1f0d8"
-            ]
-        ]
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 100,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "2a3651d3156e3d5d",
@@ -239,7 +256,7 @@
         "name": "Dynamic 2",
         "links": [],
         "x": 100,
-        "y": 220,
+        "y": 278,
         "wires": [
             [
                 "e3a8a2bafd0af3c8"
@@ -255,7 +272,7 @@
         "name": "Home Battery Strategy",
         "info": "The `Home Battery Start` flow will call this strategy flow\nby matching the strategy name with the Link In name.\n\nConfigure the Link In node in the Start group.\n\nDon't modify other parts of the Start and End groups.\nThey handle the calling and returning for you.",
         "x": 120,
-        "y": 80,
+        "y": 138,
         "wires": []
     },
     {
@@ -266,7 +283,7 @@
         "name": "Start (readme)",
         "info": "# Setting up your battery strategy flow\n\n## Setup\nName the `Link In node` in this start group exactly after the <select> option configured in your\nselect_input.house_battery_strategy\n\nconfigure select options in:\nhbc_control.yaml\n\n### example\n`house_battery_strategy:\n  name: House Battery Strategy\n  options:\n    - AcmE example`\n\nThe above creates a select option, allowing user to select 'AcmE example'\n\nWhen selected, battery control will search for a flow containing a Link In node\ncalled 'AcmE example' (case sensitive).",
         "x": 110,
-        "y": 160,
+        "y": 218,
         "wires": []
     },
     {
@@ -277,8 +294,8 @@
         "name": "Return",
         "mode": "return",
         "links": [],
-        "x": 1085,
-        "y": 260,
+        "x": 1055,
+        "y": 278,
         "wires": []
     },
     {
@@ -288,8 +305,8 @@
         "g": "54e450e685535462",
         "name": "End (readme)",
         "info": "Should return a solution_array of battery objects\n\n## battery object format\n`{{id: string|number, mode: string, power: number}} battery solution`\n- id is an arbitrary battery ID\n- mode is \"stop\", \"charge\", \"discharge\" for Marstek\n- power in Watts\n\n### example array\nreturn this type of solution_array via msg.solutions\n` \nlet solution_array = [];\nsolution_array.push({id:\"M1\", mode: \"charge\", power: 100}); // per battery\nreturn {solutions: solution_array};\n` ",
-        "x": 1140,
-        "y": 200,
+        "x": 1110,
+        "y": 218,
         "wires": []
     },
     {
@@ -299,7 +316,7 @@
         "name": "📖 How this flow works - HBC+ v1.3 (open the Info sidebar)",
         "info": "# HBC+ Strategy Dynamic v1.3 - how this flow works\n\nThe Start flow calls this tab on **every P1 update** (link in `Dynamic` / `Dynamic 2`).\nThat fast path does **not** read the period selectors: it runs whatever strategy is cached\nin `flow.dynamic_strategy` (via *Has strategy* -> *Set strategy* -> *Sub-strategy*).\nAn empty cache means **Full stop** (*Set Full stop*).\n\n`flow.dynamic_strategy` is recalculated only by the **Update when** group:\n\n| Trigger | When |\n|---|---|\n| *Update strat* | every 15 min (and once, 3 s after deploy) |\n| *Clear cache* / *Midnight* | 00:01, 13:15 and 15:00 - also re-fetches the prices |\n| *User input* | any change of the entities below |\n\n*User input* watches:\n\n- `input_select.house_battery_strategy` (master strategy)\n- `input_select.house_battery_strategy_dynamic_data_source`\n- `input_number.house_battery_strategy_dynamic_threshold_delta`\n- `input_number.house_battery_strategy_dynamic_cheapest_hrs`\n- `input_number.house_battery_strategy_dynamic_expensive_hrs`\n- `input_select.house_battery_strategy_dynamic_default` - **Baseline / regular period** *(local)*\n- `input_select.house_battery_strategy_dynamic_cheapest` - **cheapest period** *(local)*\n- `input_select.house_battery_strategy_dynamic_expensive` - **expensive period** *(local)*\n\n## Period selectors in *User input* (HBC+)\n\nThe three period selectors marked *(local)* are part of *User input*, so a change to the\nregular, cheapest or expensive period recalculates the strategy within a second or two\n(prices come from the cache, so no extra API call). Without this, such a change would only take\neffect at the next quarter-hour tick.\n## Still forces Full stop\n\n`flow.dynamic_strategy` is empty - and the batteries go to **Full stop** whatever the\nselectors say - when:\n\n- the tariff data source is *None* (*Set dynamic strategy to null*),\n- Node-RED just restarted and no recalculation has run yet.\n\nNo price data is **not** a reason for Full stop: *Determine dynamic strategy* then runs the baseline\nstrategy and shows *No price data* (see *When the price source fails*).\n\n## API call to Data Source = link-call section (HBC+ v1.0, 2026-11-14)\n\n*API call to Data Source* is a subroutine. *Cache check* calls it on a cache miss with the\n**link call** node *Fetch from Data Source* (static, timeout 30 s). The section fetches and\nconverts the prices, caches them (*Cache data source*) and ends in **Return to caller**\n(link out, mode *return*). The link call then passes the msg, with `msg.dynamic` filled, to\n*to Determine Strategy*, exactly like a cache hit.\n\nReplaces the earlier hand-off by plain link out and the *Called via Link Call?* switch\n(`msg._linkSource`) with *link out 12*. Other tabs can call the section the same way\n(see below). A failed fetch, or an error inside the section, still ends in *Return to caller*\n(see *When the price source fails*), so the link call does not wait for its timeout.\n\n### Calling it from another flow\n\nAdd a **link call** node with a timeout >= 30 s, in one of two ways:\n\n- *static*: pick *Dynamic Fetch from Data Source*; pick it again after a re-import of this tab with new node ids;\n- *dynamic*: set `msg.target = \"Dynamic Fetch from Data Source\"`; keeps working after a re-import. Not on a msg\n  HBC+ uses for control (inside a strategy tab), because there `msg.target` names the strategy.\n\nThe tab *HBC+ Example: price fetch* (`node-red/examples/price-fetch-example.json`) shows the dynamic way.\n\n*Prepare request* (first node of the section) fills in what the caller leaves out:\n\n| msg property | In / out | Meaning |\n|---|---|---|\n| `dynamic.data_source` | in, optional | price source; default = `input_select.house_battery_strategy_dynamic_data_source` (read from global HA states) |\n| `dynamic_use_cache` | in, optional | `true` = return this tab's cached prices if still valid (same rule as *Cache check*), else fetch |\n| `dynamic` | out | `{data_source, data_all: {list, list_marked, average, min, max, start, ...}, no_data?}` |\n| `dynamic_from_cache` | out | `true` when the cache answered |\n| `dynamic.stale` | out | `true` when the source failed and the last valid prices of that source came back |\n| `target` | in, optional | only for a dynamic link call: `\"Dynamic Fetch from Data Source\"` |\n\nSource *None* or unreadable returns at once with `dynamic.no_data = true` and an empty list,\nso the caller never waits for the timeout. A successful fetch also refreshes this tab's cache.\nThe rest of the caller's msg comes back unchanged (`msg.template` is used and removed).\n\n### When the price source fails (HBC+ v1.0)\n\n- **Last valid prices kept.** *Cache data source* keeps the cached list when a fetch fails, as long as\n  it is from the same source and still covers the current interval; it goes on with `dynamic.stale = true`\n  and the next run tries the source again.\n- **Errors caught.** An error inside *API call to Data Source* (for example the template render while\n  HA is disconnected, or a macro error) goes through *Catch fetch errors* and *Fetch error* to *Cache data source*\n  and is handled like a fetch without prices. *Fetch error* logs it as a warning and shows it in its status; an\n  error inside *Cache data source* itself goes straight back to the caller.\n- **Fallback.** With no valid prices at all, *Determine dynamic strategy* runs the baseline strategy\n  (*Default to*) instead of the last one, and publishes `status: no_data`.\n- **Alert.** `sensor.hbc_energy_prices_data` carries `status` (ok / stale / no_data);\n  `binary_sensor.hbc_price_data_missing` turns on, the dashboard shows a warning, and after 30 min\n  HA sends a notification (`hbc_control.yaml`).\n- **Pinned sensor.** `input_text.house_battery_strategy_dynamic_price_sensor` names the price sensor for\n  sources that otherwise rely on auto-detection; *Data source settings* shows in its status which sensor is used.\n\n## HBC+ v1.2 - Grid Clock feed, buy and sell prices, price guard\n\n- **Grid Clock** (tariff source, the Grid Clock feed). *Data source settings* sends it to its second output, past the Cheapest Energy Hours macro: *Grid Clock feed request* builds `v1/hbc/{zone}/{slug}/latest.json` from `input_select.house_battery_gridclock_zone` and `input_text.house_battery_gridclock_provider_slug` (`market` without a supplier) -> *Grid Clock feed* (http request, `If-None-Match`, a `304` reuses the cached file) -> *Grid Clock feed parse*. The parse builds `data_all.list` (buy) and `data_all.sell` in the format the macro path delivers, adds the chosen BE grid operator's ct/kWh to the buy price (and to the sell price only where sell = buy), and fires `hbc_gridclock_status` -> `sensor.hbc_grid_clock_feed`. A failed fetch keeps the last valid prices, as with every source. The tab environment variable `GRIDCLOCK_FEED_URL` points to the feed (default `https://cdn.gridclock.eu/v1/hbc`). *Grid Clock* no longer uses the Grid Clock integration.\n- **Group *Grid Clock suppliers*.** Loads `v1/hbc/{zone}/index.json` at start, daily at 00:10, when the zone changes and after every (re)connect to Home Assistant (*HA (re)started*), and fills the supplier and grid-operator selects. The choice is kept in `input_text.house_battery_gridclock_provider_slug` and `..._grid_operator_name`, because HA forgets runtime select options after a restart. *Index request* waits for HA's states and never guesses a zone; *Index apply* ignores an index of a zone that is no longer selected.\n- **Price split** (before *Cache data source*, so the cache and every link-call caller get it): every source gets a sell list; without the feed sell = buy.\n- **Determine dynamic strategy.** Every mark carries `sell` and `neg` (`import` / `export` / null). The HIGH side of a pair is valued at the sell price when *Strategy during expensive period* is *Sell*, otherwise at the buy price, which runs the v1.1 code unchanged. With separate sell prices the pairing uses two lists (lows by buy, highs by sell), each quarter once, and stops when the best remaining pair no longer clears *Minimum spread*.\n- **Selected** applies the price guard (see the Start tab) to the strategy before *Sub-strategy* runs it.\n\n## HBC+ v1.3 - load forecast (F9)\n\n*Determine dynamic strategy* has a new step **3b**, after the pairing. It only acts when `input_boolean.house_battery_dynamic_use_load_forecast` is on, the cheap strategy is *Charge*, the expensive strategy is not *Sell*, and `sensor.hbc_load_profile` (package `hbc_load_forecast.yaml`) has learned at least 7 working days and 4 weekend days. Otherwise every mark stays exactly as before (regression: 120/120 identical with the switch off).\n\nIt walks the coming intervals in time order with an energy pool that starts at what is stored now (`input_number.house_battery_total_available_energy`). At every HIGH interval the pool must cover the expected house demand of that interval (from the profile, working day or weekend, plus *Load forecast margin*); when it falls short, the cheapest LOW interval before it that is not used yet is kept and adds one interval at *Max. charge power*. LOW marks that no HIGH interval needs go back to the normal strategy. The result is in `dynamic.data_all.load_forecast` (`used`, `need_kwh`, `stored_kwh`, `per_low_kwh`, `low_kept`, `low_dropped`, or `reason` when it is skipped) and in the node status (`load: −N cheap`). Like the efficiency switch, a change takes effect at the next Dynamic run (every quarter).",
         "x": 230,
-        "y": 30,
+        "y": 40,
         "wires": []
     },
     {
@@ -317,7 +334,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 1170,
-        "y": 1154,
+        "y": 1212,
         "wires": []
     },
     {
@@ -326,7 +343,7 @@
         "z": "9006458c06964b58",
         "g": "d1bfaebe9c7c874b",
         "name": "Determine dynamic strategy",
-        "func": "// logger, usage: log(this, \"\");\nconst log = (global.get('logger') || (() => {}));\n\n// 1.  Input\nconst minDeltaCents = parseInt(RED.util.getMessageProperty(msg, \"dynamic.min_delta_cents\")) || 0;\n// Per-day caps on the number of LOW / HIGH marks, expressed in hours.\n// 0 (or missing/invalid/negative) means no limit.\nconst cheapestHrs = parseFloat(RED.util.getMessageProperty(msg, \"dynamic.cheapest_hrs\")) || 0;\nconst expensiveHrs = parseFloat(RED.util.getMessageProperty(msg, \"dynamic.expensive_hrs\")) || 0;\nconst dataAll = RED.util.getMessageProperty(msg, \"dynamic.data_all\");\n// HBC+ v1.3: optional - pair on what a kWh bought really earns after the battery's round-trip\n// losses: eta x high - low >= minimum spread, with the efficiency measured by HA\n// (sensor.hbc_round_trip_efficiency, hbc_savings.yaml). Only when the switch\n// input_boolean.house_battery_dynamic_use_efficiency is on AND the efficiency is known (50-100 %);\n// otherwise eta stays null and the pairing below is exactly that of v1.2.\nconst eta = (() => {\n    const haAll = global.get('homeassistant');\n    const srv = (haAll && typeof haAll === 'object')\n        ? Object.values(haAll).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const st = (id) => { const e = srv && srv.states[id]; return e ? String(e.state) : ''; };\n    if (st('input_boolean.house_battery_dynamic_use_efficiency') !== 'on') return null;\n    const v = parseFloat(st('sensor.hbc_round_trip_efficiency'));\n    return (Number.isFinite(v) && v >= 50 && v <= 100) ? v / 100 : null;\n})();\n// What one kWh bought at 'low' earns when discharged at 'high'.\nconst pairValue = (high, low) => (eta === null ? high - low : eta * high - low);\n\nconst STRATEGY = {\n    HIGH: RED.util.getMessageProperty(msg, \"dynamic.strategy_expensive\") || \"Self-consumption\",\n    LOW: RED.util.getMessageProperty(msg, \"dynamic.strategy_cheapest\") || \"Charge\",\n    NEUTRAL: RED.util.getMessageProperty(msg, \"dynamic.strategy_default\") || \"Charge PV\",\n};\n\nif (!dataAll || !Array.isArray(dataAll.list) || dataAll.list.length === 0) {\n    // No prices (HBC+ v1.0): publish the empty set with status 'no_data', so the Price\n    // intervals chart shows 'No Data Available' and HA raises binary_sensor.hbc_price_data_missing.\n    // Without prices there is no basis for 'cheap' or 'expensive', so Dynamic falls back to the\n    // baseline strategy instead of staying on the last one (which could be grid charging).\n    log(this, `Price list missing or empty - falling back to the baseline strategy **${STRATEGY.NEUTRAL}**`, \"warn\");\n    node.status({ fill: \"red\", shape: \"ring\", text: `No price data -> ${STRATEGY.NEUTRAL}` });\n    RED.util.setMessageProperty(msg, \"dynamic.data_all\", { list: [], list_marked: [], average: 0, mark_now: 'No data', start: 'Unknown', datapoints_per_hour: 0, net_spread_avg: 0, gross_spread_avg: 0, status: 'no_data' }, true);\n    RED.util.setMessageProperty(msg, \"dynamic.strategy\", STRATEGY.NEUTRAL);\n    flow.set(\"dynamic_strategy\", STRATEGY.NEUTRAL);\n    return msg;\n}\nconst priceStatus = msg.dynamic.stale ? 'stale' : 'ok';\n\n// 2.  Build interval timestamps\n// Each datapoint covers (hours / datapoints) hours.\nconst prices = dataAll.list; // cents/kWh — already converted by \"Convert price\" node\nconst n = prices.length;\n// HBC+ v1.2: the sell price per interval (Price split guarantees one; sell = buy for sources\n// without a separate export price). The HIGH side of a pair is valued at the sell price only\n// when the expensive strategy is Sell; otherwise at the buy price it avoids.\nconst sells = (Array.isArray(dataAll.sell) && dataAll.sell.length === n) ? dataAll.sell : prices;\nconst highVals = STRATEGY.HIGH === 'Sell' ? sells : prices;\nconst sellSplit = highVals !== prices && sells.some((v, i) => v !== prices[i]);\nconst startTime = new Date(dataAll.start);\nconst intervalMs = (dataAll.hours / dataAll.datapoints) * 3_600_000;\n\n// 3.  Mark intervals: pair extremes inward — independently per calendar day\n//\n// Pairing runs separately within each local calendar day, so today's marks\n// don't shift when tomorrow's prices arrive. Pair detection is one-to-one\n// (each candidate HIGH is matched against one candidate LOW), but the\n// per-day cheapest_hrs / expensive_hrs caps may suppress one side of a\n// detected pair — so the final marks can be asymmetric (e.g. 2 LOW + 1 HIGH\n// in a day if expensive_hrs caps HIGH at 1). The minDelta threshold\n// accounts for round-trip efficiency and other losses, so a pair is only\n// considered viable when its spread covers the loss. HBC+ v1.3: with the\n// efficiency switch on, the losses are taken out first (eta x high - low)\n// and minDelta is the profit wanted per kWh on top of that. Both sides stay\n// monotonic while walking inward, so the stop rule below still holds.\n//\n// Method (Extreme-Pair Matching, O(n log n)):\n//   1. Sort intervals by price, keep original time-index for re-mapping.\n//   2. Two pointers walk inward from the extremes — `lo` from the cheapest\n//      unmatched, `hi` from the most-expensive unmatched.\n//   3. If the spread between them clears minDelta: mark them, advance both.\n//   4. If it does not clear minDelta: the cheapest unmatched LOW paired\n//      with the most-expensive unmatched HIGH yields the largest spread\n//      still achievable. If even that fails, no remaining pair can satisfy\n//      the threshold, so we stop.\n//\n// This algorithm prefers to mark the truly extreme\n// hours (highest-priced as HIGH, lowest-priced as LOW). On well-behaved\n// daily curves this produces the same number of pairs as \n// other algorithm variants; but in tight cases it can produce one or two fewer\n// pairs. Why choose this version? It marks the price peaks/troughs the user\n// would intuitively expect, which is good for user confidence and acceptance of the strategy. It is also efficient and straightforward to implement, without needing complex data structures or backtracking. \n// The main goal is to identify a set of HIGH and LOW intervals that are economically justified by their price spread, while keeping the logic transparent and explainable to the user.\n\n// Note:\n// It is up to the user to set minDelta appropriately for their system's efficiency and other costs, to ensure that marked cycles are truly beneficial.\n// Also the user can pick strategies that reflect their preferences for what to do during LOW and HIGH intervals, e.g. prioritising self-consumption during HIGH intervals, or selling back to the grid if allowed and profitable.\n// This makes optimisation flexible and user-configurable, while still being based on a clear economic rationale.\n// However, the algorithm does not attempt to find the optimal global pairing (which would be more complex), but rather a good local pairing that is computationally efficient and easy to understand.\n\n/**\n * @typedef {{ start: Date, end: Date, price: number, mark: 'high'|'low'|null, is_now: boolean }} Interval\n * @type {Interval[]}\n */\nconst intervals = new Array(n);\nfor (let i = 0; i < n; i++) {\n    const iStart = new Date(startTime.getTime() + i * intervalMs);\n    const iEnd = new Date(iStart.getTime() + intervalMs);\n    // neg (HBC+ v1.2): 'import' = paid to take power, 'export' = feeding in costs money.\n    const neg = prices[i] < 0 ? 'import' : (sells[i] < 0 ? 'export' : null);\n    intervals[i] = { start: iStart, end: iEnd, price: prices[i], sell: sells[i], neg, mark: null, is_now: false };\n}\n\n// Group interval indices by local calendar day (key = Y-M-D in local TZ).\nconst dayBuckets = new Map();\nfor (let i = 0; i < n; i++) {\n    const d = intervals[i].start;\n    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;\n    let bucket = dayBuckets.get(key);\n    if (!bucket) { bucket = []; dayBuckets.set(key, bucket); }\n    bucket.push(i);\n}\n\n// Convert per-day hour caps to per-day interval counts.\n// intervalsPerHour = datapoints / hours (e.g. 4 for 15-min intervals).\n// 0 hrs => Infinity (no cap). Negatives are treated as 0 (no cap).\nconst intervalsPerHour = dataAll.datapoints / dataAll.hours;\nconst maxLowPerDay = cheapestHrs > 0 ? Math.round(cheapestHrs * intervalsPerHour) : Infinity;\nconst maxHighPerDay = expensiveHrs > 0 ? Math.round(expensiveHrs * intervalsPerHour) : Infinity;\n\n// Per dag de markeringen zetten.\nlet fullPairCount = 0;   // pairs where BOTH sides were marked (a complete cycle)\nlet lowMarkCount = 0;    // total LOW marks across all days\nlet highMarkCount = 0;   // total HIGH marks across all days\nfor (const dayIndices of dayBuckets.values()) {\n    if (sellSplit) {\n        // HBC+ v1.2, Sell with a separate sell price: lows ranked by buy price, highs by sell\n        // price, each interval used once. Same extreme-pair idea and the same per-day caps;\n        // stops when the best remaining pair no longer clears the minimum spread.\n        const lows = [...dayIndices].sort((a, b) => prices[a] - prices[b]);\n        const highs = [...dayIndices].sort((a, b) => highVals[b] - highVals[a]);\n        const used = new Set();\n        let li = 0, hj = 0, lowMarkedToday = 0, highMarkedToday = 0;\n        while (true) {\n            while (li < lows.length && used.has(lows[li])) li++;\n            while (hj < highs.length && used.has(highs[hj])) hj++;\n            if (li >= lows.length || hj >= highs.length) break;\n            const loIdx = lows[li];\n            const hiIdx = highs[hj];\n            if (loIdx === hiIdx) { hj++; continue; }   // one interval cannot be both\n            if (pairValue(highVals[hiIdx], prices[loIdx]) < minDeltaCents) break;\n            const markLow = lowMarkedToday < maxLowPerDay;\n            const markHigh = highMarkedToday < maxHighPerDay;\n            if (!markLow && !markHigh) break;\n            if (markLow) { intervals[loIdx].mark = 'low'; lowMarkedToday++; lowMarkCount++; }\n            if (markHigh) { intervals[hiIdx].mark = 'high'; highMarkedToday++; highMarkCount++; }\n            if (markLow && markHigh) fullPairCount++;\n            used.add(loIdx); used.add(hiIdx);\n            li++; hj++;\n        }\n        continue;\n    }\n    // This day's indices sorted ascending by price (stable on ties).\n    const sortedIdx = [...dayIndices].sort((a, b) => prices[a] - prices[b]);\n    let lo = 0;\n    let hi = sortedIdx.length - 1;\n    let lowMarkedToday = 0;\n    let highMarkedToday = 0;\n    while (lo < hi) {\n        const loIdx = sortedIdx[lo];\n        const hiIdx = sortedIdx[hi];\n        if (pairValue(prices[hiIdx], prices[loIdx]) >= minDeltaCents) {\n            const markLow = lowMarkedToday < maxLowPerDay;\n            const markHigh = highMarkedToday < maxHighPerDay;\n            // Both caps reached on this day — no more useful work here.\n            if (!markLow && !markHigh) break;\n            if (markLow) {\n                intervals[loIdx].mark = 'low';\n                lowMarkedToday++;\n                lowMarkCount++;\n            }\n            if (markHigh) {\n                intervals[hiIdx].mark = 'high';\n                highMarkedToday++;\n                highMarkCount++;\n            }\n            if (markLow && markHigh) fullPairCount++;\n            lo++; hi--;\n        } else {\n            // sortedIdx[lo] is the cheapest unmatched within this day,\n            // sortedIdx[hi] the most-expensive. Their spread is the largest\n            // still possible today — if it falls below minDelta, no further\n            // pair on this day can satisfy the threshold.\n            break;\n        }\n    }\n}\n\n// 3b. HBC+ v1.3 (F9): optional - charge only what the expensive quarters need.\n// With input_boolean.house_battery_dynamic_use_load_forecast on, a learned load profile\n// (sensor.hbc_load_profile, hbc_load_forecast.yaml: at least 7 working days and 4 weekend days),\n// the cheap strategy Charge and an expensive strategy other than Sell, Dynamic keeps only as many\n// of the coming LOW marks as it takes to charge the expected house demand of the coming HIGH marks\n// (plus the margin, minus the energy already stored), each from the cheapest LOW marks before it.\n// The other LOW marks go back to the normal strategy. Charge power: Max. charge power\n// (input_number.house_battery_total_max_charge_power). Switch off, or any condition not met: lf stays\n// null or skipped and every mark is exactly as above (v1.3).\nconst lf = (() => {\n    const haAll = global.get('homeassistant');\n    const srv = (haAll && typeof haAll === 'object')\n        ? Object.values(haAll).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const ent = (id) => (srv && srv.states[id]) || null;\n    const st = (id) => { const e = ent(id); return e ? String(e.state) : ''; };\n    const num = (id, def) => { const v = parseFloat(st(id)); return Number.isFinite(v) ? v : def; };\n    if (st('input_boolean.house_battery_dynamic_use_load_forecast') !== 'on') return null;\n    if (STRATEGY.LOW !== 'Charge') return { skip: `cheap strategy is ${STRATEGY.LOW}, not Charge` };\n    if (STRATEGY.HIGH === 'Sell') return { skip: 'expensive strategy is Sell' };\n    const prof = ent('sensor.hbc_load_profile');\n    const a = (prof && prof.attributes) || {};\n    if (!Array.isArray(a.wd) || a.wd.length !== 96 || !Array.isArray(a.we) || a.we.length !== 96) return { skip: 'no load profile' };\n    if ((Number(a.n_wd) || 0) < 7 * 96 || (Number(a.n_we) || 0) < 4 * 96) return { skip: 'load profile still learning' };\n    const pmax = num('input_number.house_battery_total_max_charge_power', 0);\n    if (pmax <= 0) return { skip: 'Max. charge power unknown' };\n    return {\n        wd: a.wd, we: a.we, pmax,\n        margin: Math.min(50, Math.max(0, num('input_number.house_battery_load_forecast_margin', 15))) / 100,\n        stored: Math.max(0, num('input_number.house_battery_total_available_energy', 0)),\n        holidayToday: st('binary_sensor.workday_sensor') === 'off',\n    };\n})();\nlet lfCapped = 0;\nconst lfDays = [];\nif (lf && !lf.skip) {\n    const nowMs = Date.now();\n    const today = new Date();\n    const sameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();\n    const watt = (d) => {\n        const q = d.getHours() * 4 + Math.floor(d.getMinutes() / 15);\n        const weekend = d.getDay() === 0 || d.getDay() === 6 || (sameDay(d) && lf.holidayToday);\n        const v1 = (weekend ? lf.we : lf.wd)[q], v2 = (weekend ? lf.wd : lf.we)[q];\n        return Number.isFinite(v1) ? v1 : (Number.isFinite(v2) ? v2 : 0);\n    };\n    // expected demand (kWh) of the part of an interval that is still to come, quarter by quarter\n    const demand = (iv) => {\n        let e = 0;\n        for (let t = Math.max(iv.start.getTime(), nowMs); t < iv.end.getTime(); t += 900000) {\n            const step = Math.min(900000, iv.end.getTime() - t);\n            e += watt(new Date(t)) * step / 3_600_000_000;\n        }\n        return e;\n    };\n    const perLow = lf.pmax * (intervalMs / 3_600_000) / 1000;   // kWh one LOW interval can charge\n    // Walk the coming intervals in time order with an energy pool (what is stored now). At each HIGH\n    // interval the pool must cover its expected demand (+ margin); when it falls short, the cheapest\n    // LOW interval BEFORE it that is not used yet is kept and adds one interval of charging.\n    // LOW marks that no HIGH needs go back to the normal strategy.\n    const coming = intervals.map((iv, i) => i).filter(i => intervals[i].end.getTime() > nowMs);\n    const lowsComing = coming.filter(i => intervals[i].mark === 'low');\n    const cand = [];\n    const kept = new Set();\n    let pool = lf.stored, needTotal = 0;\n    for (const i of coming) {\n        const iv = intervals[i];\n        if (iv.mark === 'low') { cand.push(i); continue; }\n        if (iv.mark !== 'high') continue;\n        const e = demand(iv) * (1 + lf.margin);\n        needTotal += e;\n        while (pool < e && cand.length) {\n            cand.sort((x, y) => prices[x] - prices[y] || x - y);\n            kept.add(cand.shift());\n            pool += perLow;\n        }\n        pool = Math.max(0, pool - e);\n    }\n    for (const i of lowsComing) if (!kept.has(i)) { intervals[i].mark = null; lfCapped++; }\n    lowMarkCount -= lfCapped;\n    lfDays.push({ need_kwh: Math.round(needTotal * 100) / 100, stored_kwh: Math.round(lf.stored * 100) / 100,\n                  per_low_kwh: Math.round(perLow * 100) / 100, low_kept: kept.size, low_dropped: lfCapped });\n}\nRED.util.setMessageProperty(msg, \"dynamic.data_all.load_forecast\",\n    lf === null ? { used: false } : (lf.skip ? { used: false, reason: lf.skip } : Object.assign({ used: true }, lfDays[0] || {})), true);\n\nif (lfCapped > 0) fullPairCount = Math.min(fullPairCount, intervals.filter(iv => iv.mark === 'low').length);\nconst lfNote = lf === null ? '' : (lf.skip ? ' | load forecast: off' : ` | load: −${lfCapped} cheap`);\n\n// 4.  Determine current strategy\nconst now = new Date();\nconst currentInterval = intervals.find(iv => now >= iv.start && now < iv.end);\nif (currentInterval) currentInterval.is_now = true;\nconst currentMark = currentInterval ? currentInterval.mark : null;\n\nconst strategy =\n    currentMark === 'high' ? STRATEGY.HIGH :\n        currentMark === 'low' ? STRATEGY.LOW :\n            STRATEGY.NEUTRAL;\n\nconst strategyMark = \n    currentMark === 'high' ? 'Expensive' :\n        currentMark === 'low' ? 'Cheap' :\n            'Regular';\n\n\n// 5.  Store results\nRED.util.setMessageProperty(msg,\"dynamic.data_all.list_marked\",intervals,true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.mark_now\", strategyMark, true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.status\", priceStatus, true); // ok | stale (fetch failed, last valid prices in use)\nRED.util.setMessageProperty(msg,\"dynamic.strategy\",strategy);\nflow.set(\"dynamic_strategy\", strategy); // this is the strategy executed when dynamic strategy is active, see the 'Execute' section of this flow.\n\n// 6.  Explain\n// Extract and sort marked intervals to pair them correctly for profit analysis\nconst lowPrices = intervals\n    .filter(iv => iv.mark === 'low')\n    .map(iv => iv.price)\n    .sort((a, b) => a - b); // Cheapest first\nconst highPrices = intervals\n    .filter(iv => iv.mark === 'high')\n    .map(iv => (sellSplit ? iv.sell : iv.price))\n    .sort((a, b) => b - a); // Most expensive first\n\n// Only calculate spread over actual completed cycles (pairs)\nlet grossSpread = 0;\nfor (let i = 0; i < fullPairCount; i++) {\n    grossSpread += pairValue(highPrices[i], lowPrices[i]);   // after losses when eta is used\n}\nconst netSpread = grossSpread - (fullPairCount * minDeltaCents);\nconst markedCount = lowMarkCount + highMarkCount;\n\n// 6a. Average spread per full cycle (pair) today\nconst avgGrossSpread = fullPairCount > 0 ? Math.round(grossSpread / fullPairCount) : 0;\nconst avgNetSpread = fullPairCount > 0 ? Math.round(netSpread / fullPairCount) : 0;\nRED.util.setMessageProperty(msg, \"dynamic.data_all.gross_spread_avg\", avgGrossSpread, true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.net_spread_avg\", avgNetSpread, true);\n\n// 6b.\nnode.status({\n    fill: priceStatus === 'stale' ? \"yellow\" : \"blue\", shape: \"dot\",\n    text: `${priceStatus === 'stale' ? '(last prices) ' : ''}${strategy} | ${fullPairCount} cycle${fullPairCount === 1 ? '' : 's'} | net Σ${avgNetSpread}¢${eta === null ? '' : ` | η ${Math.round(eta * 100)}%`}${lfNote}`\n});\nlog(this, `Strategy: **${strategy}** | cycles=${fullPairCount} low=${lowMarkCount} high=${highMarkCount} unmarked=${n - markedCount} | gross=${grossSpread}¢ net=${avgNetSpread}¢ minDelta=${minDeltaCents}¢ caps=L${cheapestHrs}h/H${expensiveHrs}h${eta === null ? '' : ` eta=${eta}`}${lfNote}`);\n\nreturn msg;",
+        "func": "// logger, usage: log(this, \"\");\nconst log = (global.get('logger') || (() => {}));\n\n// 1.  Input\nconst minDeltaCents = parseInt(RED.util.getMessageProperty(msg, \"dynamic.min_delta_cents\")) || 0;\n// Per-day caps on the number of LOW / HIGH marks, expressed in hours.\n// 0 (or missing/invalid/negative) means no limit.\nconst cheapestHrs = parseFloat(RED.util.getMessageProperty(msg, \"dynamic.cheapest_hrs\")) || 0;\nconst expensiveHrs = parseFloat(RED.util.getMessageProperty(msg, \"dynamic.expensive_hrs\")) || 0;\nconst dataAll = RED.util.getMessageProperty(msg, \"dynamic.data_all\");\n// HBC+ v1.3: optional - pair on what a kWh bought really earns after the battery's round-trip\n// losses: eta x high - low >= minimum spread, with the efficiency measured by HA\n// (sensor.hbc_round_trip_efficiency, hbc_savings.yaml). Only when the switch\n// input_boolean.house_battery_dynamic_use_efficiency is on AND the efficiency is known (50-100 %);\n// otherwise eta stays null and the pairing below is exactly that of v1.2.\nconst eta = (() => {\n    const haAll = global.get('homeassistant');\n    const srv = (haAll && typeof haAll === 'object')\n        ? Object.values(haAll).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const st = (id) => { const e = srv && srv.states[id]; return e ? String(e.state) : ''; };\n    if (st('input_boolean.house_battery_dynamic_use_efficiency') !== 'on') return null;\n    const v = parseFloat(st('sensor.hbc_round_trip_efficiency'));\n    return (Number.isFinite(v) && v >= 50 && v <= 100) ? v / 100 : null;\n})();\n// What one kWh bought at 'low' earns when discharged at 'high'.\nconst pairValue = (high, low) => (eta === null ? high - low : eta * high - low);\n\nconst STRATEGY = {\n    HIGH: RED.util.getMessageProperty(msg, \"dynamic.strategy_expensive\") || \"Self-consumption\",\n    LOW: RED.util.getMessageProperty(msg, \"dynamic.strategy_cheapest\") || \"Charge\",\n    NEUTRAL: RED.util.getMessageProperty(msg, \"dynamic.strategy_default\") || \"Charge PV\",\n};\n\nif (!dataAll || !Array.isArray(dataAll.list) || dataAll.list.length === 0) {\n    // No prices (HBC+ v1.0): publish the empty set with status 'no_data', so the Price\n    // intervals chart shows 'No Data Available' and HA raises binary_sensor.hbc_price_data_missing.\n    // Without prices there is no basis for 'cheap' or 'expensive', so Dynamic falls back to the\n    // baseline strategy instead of staying on the last one (which could be grid charging).\n    log(this, `Price list missing or empty - falling back to the baseline strategy **${STRATEGY.NEUTRAL}**`, \"warn\");\n    node.status({ fill: \"red\", shape: \"ring\", text: `No price data -> ${STRATEGY.NEUTRAL}` });\n    RED.util.setMessageProperty(msg, \"dynamic.data_all\", { list: [], list_marked: [], average: 0, mark_now: 'No data', start: 'Unknown', datapoints_per_hour: 0, net_spread_avg: 0, gross_spread_avg: 0, status: 'no_data' }, true);\n    RED.util.setMessageProperty(msg, \"dynamic.strategy\", STRATEGY.NEUTRAL);\n    flow.set(\"dynamic_strategy\", STRATEGY.NEUTRAL);\n    return msg;\n}\nconst priceStatus = msg.dynamic.stale ? 'stale' : 'ok';\n\n// 2.  Build interval timestamps\n// Each datapoint covers (hours / datapoints) hours.\nconst prices = dataAll.list; // cents/kWh — already converted by \"Convert price\" node\nconst n = prices.length;\n// HBC+ v1.2: the sell price per interval (Price split guarantees one; sell = buy for sources\n// without a separate export price). The HIGH side of a pair is valued at the sell price only\n// when the expensive strategy is Sell; otherwise at the buy price it avoids.\nconst sells = (Array.isArray(dataAll.sell) && dataAll.sell.length === n) ? dataAll.sell : prices;\n// HBC+ v1.3: the bare market price per interval (Grid Clock 'spot'), null for other sources. Display and\n// other flows (e.g. HELIOS) only: Dynamic does not use it for its marks.\nconst markets = (Array.isArray(dataAll.market) && dataAll.market.length === n) ? dataAll.market : null;\nconst highVals = STRATEGY.HIGH === 'Sell' ? sells : prices;\nconst sellSplit = highVals !== prices && sells.some((v, i) => v !== prices[i]);\nconst startTime = new Date(dataAll.start);\nconst intervalMs = (dataAll.hours / dataAll.datapoints) * 3_600_000;\n\n// 3.  Mark intervals: pair extremes inward — independently per calendar day\n//\n// Pairing runs separately within each local calendar day, so today's marks\n// don't shift when tomorrow's prices arrive. Pair detection is one-to-one\n// (each candidate HIGH is matched against one candidate LOW), but the\n// per-day cheapest_hrs / expensive_hrs caps may suppress one side of a\n// detected pair — so the final marks can be asymmetric (e.g. 2 LOW + 1 HIGH\n// in a day if expensive_hrs caps HIGH at 1). The minDelta threshold\n// accounts for round-trip efficiency and other losses, so a pair is only\n// considered viable when its spread covers the loss. HBC+ v1.3: with the\n// efficiency switch on, the losses are taken out first (eta x high - low)\n// and minDelta is the profit wanted per kWh on top of that. Both sides stay\n// monotonic while walking inward, so the stop rule below still holds.\n//\n// Method (Extreme-Pair Matching, O(n log n)):\n//   1. Sort intervals by price, keep original time-index for re-mapping.\n//   2. Two pointers walk inward from the extremes — `lo` from the cheapest\n//      unmatched, `hi` from the most-expensive unmatched.\n//   3. If the spread between them clears minDelta: mark them, advance both.\n//   4. If it does not clear minDelta: the cheapest unmatched LOW paired\n//      with the most-expensive unmatched HIGH yields the largest spread\n//      still achievable. If even that fails, no remaining pair can satisfy\n//      the threshold, so we stop.\n//\n// This algorithm prefers to mark the truly extreme\n// hours (highest-priced as HIGH, lowest-priced as LOW). On well-behaved\n// daily curves this produces the same number of pairs as \n// other algorithm variants; but in tight cases it can produce one or two fewer\n// pairs. Why choose this version? It marks the price peaks/troughs the user\n// would intuitively expect, which is good for user confidence and acceptance of the strategy. It is also efficient and straightforward to implement, without needing complex data structures or backtracking. \n// The main goal is to identify a set of HIGH and LOW intervals that are economically justified by their price spread, while keeping the logic transparent and explainable to the user.\n\n// Note:\n// It is up to the user to set minDelta appropriately for their system's efficiency and other costs, to ensure that marked cycles are truly beneficial.\n// Also the user can pick strategies that reflect their preferences for what to do during LOW and HIGH intervals, e.g. prioritising self-consumption during HIGH intervals, or selling back to the grid if allowed and profitable.\n// This makes optimisation flexible and user-configurable, while still being based on a clear economic rationale.\n// However, the algorithm does not attempt to find the optimal global pairing (which would be more complex), but rather a good local pairing that is computationally efficient and easy to understand.\n\n/**\n * @typedef {{ start: Date, end: Date, price: number, mark: 'high'|'low'|null, is_now: boolean }} Interval\n * @type {Interval[]}\n */\nconst intervals = new Array(n);\nfor (let i = 0; i < n; i++) {\n    const iStart = new Date(startTime.getTime() + i * intervalMs);\n    const iEnd = new Date(iStart.getTime() + intervalMs);\n    // neg (HBC+ v1.2): 'import' = paid to take power, 'export' = feeding in costs money.\n    const neg = prices[i] < 0 ? 'import' : (sells[i] < 0 ? 'export' : null);\n    intervals[i] = { start: iStart, end: iEnd, price: prices[i], sell: sells[i], market: markets ? (markets[i] ?? null) : null, neg, mark: null, is_now: false };\n}\n\n// Group interval indices by local calendar day (key = Y-M-D in local TZ).\nconst dayBuckets = new Map();\nfor (let i = 0; i < n; i++) {\n    const d = intervals[i].start;\n    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;\n    let bucket = dayBuckets.get(key);\n    if (!bucket) { bucket = []; dayBuckets.set(key, bucket); }\n    bucket.push(i);\n}\n\n// Convert per-day hour caps to per-day interval counts.\n// intervalsPerHour = datapoints / hours (e.g. 4 for 15-min intervals).\n// 0 hrs => Infinity (no cap). Negatives are treated as 0 (no cap).\nconst intervalsPerHour = dataAll.datapoints / dataAll.hours;\nconst maxLowPerDay = cheapestHrs > 0 ? Math.round(cheapestHrs * intervalsPerHour) : Infinity;\nconst maxHighPerDay = expensiveHrs > 0 ? Math.round(expensiveHrs * intervalsPerHour) : Infinity;\n\n// Per dag de markeringen zetten.\nlet fullPairCount = 0;   // pairs where BOTH sides were marked (a complete cycle)\nlet lowMarkCount = 0;    // total LOW marks across all days\nlet highMarkCount = 0;   // total HIGH marks across all days\nfor (const dayIndices of dayBuckets.values()) {\n    if (sellSplit) {\n        // HBC+ v1.2, Sell with a separate sell price: lows ranked by buy price, highs by sell\n        // price, each interval used once. Same extreme-pair idea and the same per-day caps;\n        // stops when the best remaining pair no longer clears the minimum spread.\n        const lows = [...dayIndices].sort((a, b) => prices[a] - prices[b]);\n        const highs = [...dayIndices].sort((a, b) => highVals[b] - highVals[a]);\n        const used = new Set();\n        let li = 0, hj = 0, lowMarkedToday = 0, highMarkedToday = 0;\n        while (true) {\n            while (li < lows.length && used.has(lows[li])) li++;\n            while (hj < highs.length && used.has(highs[hj])) hj++;\n            if (li >= lows.length || hj >= highs.length) break;\n            const loIdx = lows[li];\n            const hiIdx = highs[hj];\n            if (loIdx === hiIdx) { hj++; continue; }   // one interval cannot be both\n            if (pairValue(highVals[hiIdx], prices[loIdx]) < minDeltaCents) break;\n            const markLow = lowMarkedToday < maxLowPerDay;\n            const markHigh = highMarkedToday < maxHighPerDay;\n            if (!markLow && !markHigh) break;\n            if (markLow) { intervals[loIdx].mark = 'low'; lowMarkedToday++; lowMarkCount++; }\n            if (markHigh) { intervals[hiIdx].mark = 'high'; highMarkedToday++; highMarkCount++; }\n            if (markLow && markHigh) fullPairCount++;\n            used.add(loIdx); used.add(hiIdx);\n            li++; hj++;\n        }\n        continue;\n    }\n    // This day's indices sorted ascending by price (stable on ties).\n    const sortedIdx = [...dayIndices].sort((a, b) => prices[a] - prices[b]);\n    let lo = 0;\n    let hi = sortedIdx.length - 1;\n    let lowMarkedToday = 0;\n    let highMarkedToday = 0;\n    while (lo < hi) {\n        const loIdx = sortedIdx[lo];\n        const hiIdx = sortedIdx[hi];\n        if (pairValue(prices[hiIdx], prices[loIdx]) >= minDeltaCents) {\n            const markLow = lowMarkedToday < maxLowPerDay;\n            const markHigh = highMarkedToday < maxHighPerDay;\n            // Both caps reached on this day — no more useful work here.\n            if (!markLow && !markHigh) break;\n            if (markLow) {\n                intervals[loIdx].mark = 'low';\n                lowMarkedToday++;\n                lowMarkCount++;\n            }\n            if (markHigh) {\n                intervals[hiIdx].mark = 'high';\n                highMarkedToday++;\n                highMarkCount++;\n            }\n            if (markLow && markHigh) fullPairCount++;\n            lo++; hi--;\n        } else {\n            // sortedIdx[lo] is the cheapest unmatched within this day,\n            // sortedIdx[hi] the most-expensive. Their spread is the largest\n            // still possible today — if it falls below minDelta, no further\n            // pair on this day can satisfy the threshold.\n            break;\n        }\n    }\n}\n\n// 3b. HBC+ v1.3 (F9): optional - charge only what the expensive quarters need.\n// With input_boolean.house_battery_dynamic_use_load_forecast on, a learned load profile\n// (sensor.hbc_load_profile, hbc_load_forecast.yaml: at least 7 working days and 4 weekend days),\n// the cheap strategy Charge and an expensive strategy other than Sell, Dynamic keeps only as many\n// of the coming LOW marks as it takes to charge the expected house demand of the coming HIGH marks\n// (plus the margin, minus the energy already stored), each from the cheapest LOW marks before it.\n// The other LOW marks go back to the normal strategy. Charge power: Max. charge power\n// (input_number.house_battery_total_max_charge_power). Switch off, or any condition not met: lf stays\n// null or skipped and every mark is exactly as above (v1.3).\nconst lf = (() => {\n    const haAll = global.get('homeassistant');\n    const srv = (haAll && typeof haAll === 'object')\n        ? Object.values(haAll).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const ent = (id) => (srv && srv.states[id]) || null;\n    const st = (id) => { const e = ent(id); return e ? String(e.state) : ''; };\n    const num = (id, def) => { const v = parseFloat(st(id)); return Number.isFinite(v) ? v : def; };\n    if (st('input_boolean.house_battery_dynamic_use_load_forecast') !== 'on') return null;\n    if (STRATEGY.LOW !== 'Charge') return { skip: `cheap strategy is ${STRATEGY.LOW}, not Charge` };\n    if (STRATEGY.HIGH === 'Sell') return { skip: 'expensive strategy is Sell' };\n    const prof = ent('sensor.hbc_load_profile');\n    const a = (prof && prof.attributes) || {};\n    if (!Array.isArray(a.wd) || a.wd.length !== 96 || !Array.isArray(a.we) || a.we.length !== 96) return { skip: 'no load profile' };\n    if ((Number(a.n_wd) || 0) < 7 * 96 || (Number(a.n_we) || 0) < 4 * 96) return { skip: 'load profile still learning' };\n    const pmax = num('input_number.house_battery_total_max_charge_power', 0);\n    if (pmax <= 0) return { skip: 'Max. charge power unknown' };\n    return {\n        wd: a.wd, we: a.we, pmax,\n        margin: Math.min(50, Math.max(0, num('input_number.house_battery_load_forecast_margin', 15))) / 100,\n        stored: Math.max(0, num('input_number.house_battery_total_available_energy', 0)),\n        holidayToday: st('binary_sensor.workday_sensor') === 'off',\n    };\n})();\nlet lfCapped = 0;\nconst lfDays = [];\nif (lf && !lf.skip) {\n    const nowMs = Date.now();\n    const today = new Date();\n    const sameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();\n    const watt = (d) => {\n        const q = d.getHours() * 4 + Math.floor(d.getMinutes() / 15);\n        const weekend = d.getDay() === 0 || d.getDay() === 6 || (sameDay(d) && lf.holidayToday);\n        const v1 = (weekend ? lf.we : lf.wd)[q], v2 = (weekend ? lf.wd : lf.we)[q];\n        return Number.isFinite(v1) ? v1 : (Number.isFinite(v2) ? v2 : 0);\n    };\n    // expected demand (kWh) of the part of an interval that is still to come, quarter by quarter\n    const demand = (iv) => {\n        let e = 0;\n        for (let t = Math.max(iv.start.getTime(), nowMs); t < iv.end.getTime(); t += 900000) {\n            const step = Math.min(900000, iv.end.getTime() - t);\n            e += watt(new Date(t)) * step / 3_600_000_000;\n        }\n        return e;\n    };\n    const perLow = lf.pmax * (intervalMs / 3_600_000) / 1000;   // kWh one LOW interval can charge\n    // Walk the coming intervals in time order with an energy pool (what is stored now). At each HIGH\n    // interval the pool must cover its expected demand (+ margin); when it falls short, the cheapest\n    // LOW interval BEFORE it that is not used yet is kept and adds one interval of charging.\n    // LOW marks that no HIGH needs go back to the normal strategy.\n    const coming = intervals.map((iv, i) => i).filter(i => intervals[i].end.getTime() > nowMs);\n    const lowsComing = coming.filter(i => intervals[i].mark === 'low');\n    const cand = [];\n    const kept = new Set();\n    let pool = lf.stored, needTotal = 0;\n    for (const i of coming) {\n        const iv = intervals[i];\n        if (iv.mark === 'low') { cand.push(i); continue; }\n        if (iv.mark !== 'high') continue;\n        const e = demand(iv) * (1 + lf.margin);\n        needTotal += e;\n        while (pool < e && cand.length) {\n            cand.sort((x, y) => prices[x] - prices[y] || x - y);\n            kept.add(cand.shift());\n            pool += perLow;\n        }\n        pool = Math.max(0, pool - e);\n    }\n    for (const i of lowsComing) if (!kept.has(i)) { intervals[i].mark = null; lfCapped++; }\n    lowMarkCount -= lfCapped;\n    lfDays.push({ need_kwh: Math.round(needTotal * 100) / 100, stored_kwh: Math.round(lf.stored * 100) / 100,\n                  per_low_kwh: Math.round(perLow * 100) / 100, low_kept: kept.size, low_dropped: lfCapped });\n}\nRED.util.setMessageProperty(msg, \"dynamic.data_all.load_forecast\",\n    lf === null ? { used: false } : (lf.skip ? { used: false, reason: lf.skip } : Object.assign({ used: true }, lfDays[0] || {})), true);\n\nif (lfCapped > 0) fullPairCount = Math.min(fullPairCount, intervals.filter(iv => iv.mark === 'low').length);\nconst lfNote = lf === null ? '' : (lf.skip ? ' | load forecast: off' : ` | load: −${lfCapped} cheap`);\n\n// 4.  Determine current strategy\nconst now = new Date();\nconst currentInterval = intervals.find(iv => now >= iv.start && now < iv.end);\nif (currentInterval) currentInterval.is_now = true;\nconst currentMark = currentInterval ? currentInterval.mark : null;\n\nconst strategy =\n    currentMark === 'high' ? STRATEGY.HIGH :\n        currentMark === 'low' ? STRATEGY.LOW :\n            STRATEGY.NEUTRAL;\n\nconst strategyMark = \n    currentMark === 'high' ? 'Expensive' :\n        currentMark === 'low' ? 'Cheap' :\n            'Regular';\n\n\n// 5.  Store results\nRED.util.setMessageProperty(msg,\"dynamic.data_all.list_marked\",intervals,true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.mark_now\", strategyMark, true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.status\", priceStatus, true); // ok | stale (fetch failed, last valid prices in use)\nRED.util.setMessageProperty(msg,\"dynamic.strategy\",strategy);\nflow.set(\"dynamic_strategy\", strategy); // this is the strategy executed when dynamic strategy is active, see the 'Execute' section of this flow.\n\n// 6.  Explain\n// Extract and sort marked intervals to pair them correctly for profit analysis\nconst lowPrices = intervals\n    .filter(iv => iv.mark === 'low')\n    .map(iv => iv.price)\n    .sort((a, b) => a - b); // Cheapest first\nconst highPrices = intervals\n    .filter(iv => iv.mark === 'high')\n    .map(iv => (sellSplit ? iv.sell : iv.price))\n    .sort((a, b) => b - a); // Most expensive first\n\n// Only calculate spread over actual completed cycles (pairs)\nlet grossSpread = 0;\nfor (let i = 0; i < fullPairCount; i++) {\n    grossSpread += pairValue(highPrices[i], lowPrices[i]);   // after losses when eta is used\n}\nconst netSpread = grossSpread - (fullPairCount * minDeltaCents);\nconst markedCount = lowMarkCount + highMarkCount;\n\n// 6a. Average spread per full cycle (pair) today\nconst avgGrossSpread = fullPairCount > 0 ? Math.round(grossSpread / fullPairCount) : 0;\nconst avgNetSpread = fullPairCount > 0 ? Math.round(netSpread / fullPairCount) : 0;\nRED.util.setMessageProperty(msg, \"dynamic.data_all.gross_spread_avg\", avgGrossSpread, true);\nRED.util.setMessageProperty(msg, \"dynamic.data_all.net_spread_avg\", avgNetSpread, true);\n\n// 6b.\nnode.status({\n    fill: priceStatus === 'stale' ? \"yellow\" : \"blue\", shape: \"dot\",\n    text: `${priceStatus === 'stale' ? '(last prices) ' : ''}${strategy} | ${fullPairCount} cycle${fullPairCount === 1 ? '' : 's'} | net Σ${avgNetSpread}¢${eta === null ? '' : ` | η ${Math.round(eta * 100)}%`}${lfNote}`\n});\nlog(this, `Strategy: **${strategy}** | cycles=${fullPairCount} low=${lowMarkCount} high=${highMarkCount} unmarked=${n - markedCount} | gross=${grossSpread}¢ net=${avgNetSpread}¢ minDelta=${minDeltaCents}¢ caps=L${cheapestHrs}h/H${expensiveHrs}h${eta === null ? '' : ` eta=${eta}`}${lfNote}`);\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -334,7 +351,7 @@
         "finalize": "",
         "libs": [],
         "x": 880,
-        "y": 1174,
+        "y": 1232,
         "wires": [
             [
                 "ae239cbf9a6e63bf",
@@ -364,7 +381,7 @@
         "to": "",
         "reg": false,
         "x": 510,
-        "y": 260,
+        "y": 318,
         "wires": [
             [
                 "89951fb788a3d2f9"
@@ -381,7 +398,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 870,
-        "y": 220,
+        "y": 278,
         "wires": [
             [
                 "96e5346b78b78aa7"
@@ -411,7 +428,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 370,
-        "y": 560,
+        "y": 640,
         "wires": [
             [
                 "2805984b065ab6c4"
@@ -438,7 +455,7 @@
         "repair": false,
         "outputs": 2,
         "x": 330,
-        "y": 220,
+        "y": 278,
         "wires": [
             [
                 "0524a5bc9cb6539b"
@@ -469,7 +486,7 @@
         "to": "",
         "reg": false,
         "x": 510,
-        "y": 200,
+        "y": 258,
         "wires": [
             [
                 "89951fb788a3d2f9"
@@ -494,8 +511,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 580,
-        "y": 500,
+        "x": 560,
+        "y": 580,
         "wires": [
             [
                 "556998c362288af0"
@@ -546,7 +563,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1020,
-        "y": 457,
+        "y": 515,
         "wires": [
             [
                 "040ae7e8c4478ab3"
@@ -567,7 +584,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 814,
+        "y": 872,
         "wires": [
             [
                 "056ba88499372eb8"
@@ -600,7 +617,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 370,
-        "y": 440,
+        "y": 520,
         "wires": [
             [
                 "2e82e6f9a6c1f0d8"
@@ -621,7 +638,7 @@
         "finalize": "",
         "libs": [],
         "x": 890,
-        "y": 457,
+        "y": 515,
         "wires": [
             [
                 "7bf5e2314f93bf0f"
@@ -641,8 +658,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
-        "y": 814,
+        "x": 670,
+        "y": 865,
         "wires": [
             [
                 "27568dbfb8e9763a",
@@ -669,7 +686,7 @@
         "to": "",
         "reg": false,
         "x": 340,
-        "y": 954,
+        "y": 1012,
         "wires": [
             [
                 "hbcp12b000000005"
@@ -691,7 +708,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 1210,
-        "y": 1214,
+        "y": 1272,
         "wires": []
     },
     {
@@ -753,7 +770,7 @@
             }
         ],
         "x": 360,
-        "y": 380,
+        "y": 438,
         "wires": [
             [
                 "hbcp0dyn0debnc01"
@@ -780,10 +797,10 @@
         "topic": "topic",
         "outputs": 1,
         "x": 560,
-        "y": 380,
+        "y": 438,
         "wires": [
             [
-                "d5dffc4290abef2a"
+                "2e82e6f9a6c1f0d8"
             ]
         ]
     },
@@ -809,7 +826,7 @@
         "repair": false,
         "outputs": 2,
         "x": 1135,
-        "y": 457,
+        "y": 515,
         "wires": [
             [
                 "f8e310f9a94bf0e5"
@@ -835,7 +852,7 @@
         "statusVal": "",
         "statusType": "counter",
         "x": 1560,
-        "y": 437,
+        "y": 495,
         "wires": []
     },
     {
@@ -866,7 +883,7 @@
         "to": "",
         "reg": false,
         "x": 1320,
-        "y": 437,
+        "y": 495,
         "wires": [
             [
                 "da2a043be0f868d7",
@@ -888,7 +905,7 @@
         "finalize": "",
         "libs": [],
         "x": 90,
-        "y": 280,
+        "y": 338,
         "wires": [
             [
                 "46cbbd14af612e83"
@@ -909,7 +926,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 220,
+        "y": 278,
         "wires": [
             [
                 "386bc185ce7d25ad"
@@ -925,7 +942,7 @@
         "scope": null,
         "uncaught": true,
         "x": 65,
-        "y": 460,
+        "y": 518,
         "wires": [
             [
                 "17a94a162488e534"
@@ -947,7 +964,7 @@
         "finalize": "",
         "libs": [],
         "x": 115,
-        "y": 460,
+        "y": 518,
         "wires": [
             [
                 "b32a87305f7067ba"
@@ -964,7 +981,7 @@
         "mode": "return",
         "links": [],
         "x": 165,
-        "y": 460,
+        "y": 518,
         "wires": []
     },
     {
@@ -1011,7 +1028,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 360,
-        "y": 1094,
+        "y": 1152,
         "wires": [
             [
                 "6f563bdbfb57dc65"
@@ -1062,7 +1079,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 370,
-        "y": 1154,
+        "y": 1212,
         "wires": [
             [
                 "afa1a0ad923529bc"
@@ -1113,7 +1130,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 370,
-        "y": 1214,
+        "y": 1272,
         "wires": [
             [
                 "389d7237fbb0a57c"
@@ -1129,7 +1146,7 @@
         "scope": "group",
         "uncaught": false,
         "x": 720,
-        "y": 754,
+        "y": 812,
         "wires": [
             [
                 "5e3369b17fe33597"
@@ -1150,7 +1167,7 @@
         "finalize": "",
         "libs": [],
         "x": 920,
-        "y": 754,
+        "y": 812,
         "wires": [
             [
                 "4a48bdb847555497"
@@ -1174,7 +1191,7 @@
         "finalize": "",
         "libs": [],
         "x": 860,
-        "y": 954,
+        "y": 1012,
         "wires": [
             [
                 "8acfe30ccd513dec"
@@ -1190,7 +1207,7 @@
         "scope": "group",
         "uncaught": false,
         "x": 1210,
-        "y": 774,
+        "y": 832,
         "wires": [
             [
                 "133f621c505e560c"
@@ -1201,7 +1218,7 @@
         "id": "44170a2d13f781ab",
         "type": "debug",
         "z": "9006458c06964b58",
-        "g": "978c14f123dfcc7a",
+        "g": "8b2f0fb4b7e1d8f2",
         "name": "Strategy errors",
         "active": true,
         "tosidebar": true,
@@ -1211,8 +1228,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1440,
-        "y": 774,
+        "x": 1460,
+        "y": 832,
         "wires": []
     },
     {
@@ -1223,7 +1240,7 @@
         "name": "Cheapest Energy Hours - errors",
         "info": "\"No valid sensor found\" if price_data is none and not valid_sensor,\n\"No valid data in {}\".format(sensor) if price_data is none and data == [] and valid_sensor,\n\"No valid data in provided price_data\" if price_data is not none and not valid_price_data,\n\"Time key '{}' not found in data\".format(time_key) if data and time_key not in data[0],\n\"Value key '{}' not found in data\".format(value_key) if data and value_key not in data[0],\n\"Invalid mode '{}' selected\".format(mode) if mode not in modes,\n\"Boolean input expected for include_today, '{}' can not be processed as a boolean\".format(include_today) if include_today | bool(\"\") is not boolean,\n\"Boolean input expected for include_tomorrow, '{}' can not be processed as a boolean\".format(include_tomorrow) if include_tomorrow | bool(\"\") is not boolean,\n\"Boolean input expected for look_ahead, '{}' can not be processed as a boolean\".format(look_ahead) if look_ahead | bool(\"\") is not boolean,\n\"Boolean input expected for lowest, '{}' can not be processed as a boolean\".format(lowest) if lowest | bool(\"\") is not boolean,\n\"Boolean input expected for latest_possible, '{}' can not be processed as a boolean\".format(latest_possible) if latest_possible | bool(\"\") is not boolean,\n\"Numeric input or percentage expected for price_tolerance, '{}' can not be processed as a float or percentage\".format(price_tolerance) if not valid_pt,\n\"Numeric input expected for kwh, '{}' can not be processed as a float\".format(kwh) if kwh is not none and not kwh | is_number,\n\"Selected program '{}' is not available or has no data\".format(program) if program is not none and w is none,\n\"Selected start parameter is after the end parameter\" if start_end and data,\n\"{} hours between start and end, where {} hours are required\".format(end_start, h | round(3)) if not start_end and end_start < h | round(3) and data,\n\"Invalid combination of source data points per hour '{}' and number of weight points '{}'\".format(dp, dph) if all_keys and not wp_check",
         "x": 1270,
-        "y": 734,
+        "y": 792,
         "wires": []
     },
     {
@@ -1240,7 +1257,7 @@
         "finalize": "",
         "libs": [],
         "x": 1315,
-        "y": 774,
+        "y": 832,
         "wires": [
             [
                 "44170a2d13f781ab"
@@ -1262,7 +1279,7 @@
         "finalize": "",
         "libs": [],
         "x": 1270,
-        "y": 517,
+        "y": 575,
         "wires": [
             [
                 "58c597f42306bba1"
@@ -1287,7 +1304,7 @@
             "5a1ab71e948e0b9c"
         ],
         "x": 1625,
-        "y": 509,
+        "y": 567,
         "wires": []
     },
     {
@@ -1298,7 +1315,7 @@
         "name": "Dynamic Fetch from Data Source",
         "links": [],
         "x": 295,
-        "y": 754,
+        "y": 812,
         "wires": [
             [
                 "c8758087db241657"
@@ -1319,7 +1336,7 @@
         "finalize": "",
         "libs": [],
         "x": 480,
-        "y": 754,
+        "y": 812,
         "wires": [
             [
                 "a562bbd7dc3a7545"
@@ -1345,7 +1362,7 @@
         "linkType": "static",
         "timeout": "30",
         "x": 1470,
-        "y": 577,
+        "y": 635,
         "wires": [
             [
                 "58c597f42306bba1"
@@ -1362,7 +1379,7 @@
             "58c597f42306bba1"
         ],
         "x": 295,
-        "y": 1050,
+        "y": 1108,
         "wires": [
             [
                 "90505bac403fe299"
@@ -1383,7 +1400,7 @@
         "finalize": "",
         "libs": [],
         "x": 695,
-        "y": 520,
+        "y": 578,
         "wires": [
             [
                 "2e82e6f9a6c1f0d8"
@@ -1405,7 +1422,7 @@
         "templateLocation": "",
         "templateLocationType": "none",
         "x": 450,
-        "y": 874,
+        "y": 932,
         "wires": [
             [
                 "23428c5289683a28"
@@ -1422,7 +1439,7 @@
         "action": "obj",
         "pretty": false,
         "x": 535,
-        "y": 874,
+        "y": 932,
         "wires": [
             [
                 "a8523af9975f42fe"
@@ -1451,7 +1468,7 @@
         "to": "",
         "reg": false,
         "x": 330,
-        "y": 874,
+        "y": 932,
         "wires": [
             [
                 "9bb06844bd5ee706"
@@ -1470,7 +1487,7 @@
         "data": "msg.dynamic.data_all",
         "dataType": "jsonata",
         "x": 1180,
-        "y": 1094,
+        "y": 1152,
         "wires": [
             []
         ]
@@ -1489,8 +1506,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 810,
-        "y": 814,
+        "x": 919,
+        "y": 866,
         "wires": []
     },
     {
@@ -1507,7 +1524,7 @@
         "finalize": "",
         "libs": [],
         "x": 660,
-        "y": 874,
+        "y": 932,
         "wires": [
             [
                 "fe653333e76f6bdb"
@@ -1552,7 +1569,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 770,
-        "y": 457,
+        "y": 515,
         "wires": [
             [
                 "e336a823f332f856"
@@ -1603,7 +1620,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 620,
-        "y": 1094,
+        "y": 1152,
         "wires": [
             [
                 "2e2464e7d74efb2b"
@@ -1654,7 +1671,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 620,
-        "y": 1154,
+        "y": 1212,
         "wires": [
             [
                 "cf8684a92c0a1711"
@@ -1705,7 +1722,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 620,
-        "y": 1214,
+        "y": 1272,
         "wires": [
             [
                 "730def7acd7aed8c"
@@ -1735,7 +1752,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 370,
-        "y": 520,
+        "y": 600,
         "wires": [
             [
                 "2805984b065ab6c4"
@@ -1765,7 +1782,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 360,
-        "y": 480,
+        "y": 560,
         "wires": [
             [
                 "2805984b065ab6c4"
@@ -1799,7 +1816,7 @@
             }
         ],
         "x": 380,
-        "y": 600,
+        "y": 700,
         "wires": [
             [
                 "556998c362288af0"
@@ -1815,7 +1832,7 @@
         "name": "Dynamic",
         "links": [],
         "x": 100,
-        "y": 340,
+        "y": 398,
         "wires": [
             [
                 "e3a8a2bafd0af3c8"
@@ -1831,8 +1848,8 @@
         "name": "Return to caller",
         "mode": "return",
         "links": [],
-        "x": 955,
-        "y": 940,
+        "x": 1075,
+        "y": 1012,
         "wires": []
     },
     {
@@ -1848,8 +1865,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1150,
-        "y": 814,
+        "x": 950,
+        "y": 920,
         "wires": [
             [
                 "hbcp12b000000002"
@@ -1873,8 +1890,8 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 1150,
-        "y": 874,
+        "x": 1180,
+        "y": 920,
         "wires": [
             [
                 "hbcp12b000000003"
@@ -1887,15 +1904,15 @@
         "z": "9006458c06964b58",
         "g": "8b2f0fb4b7e1d8f2",
         "name": "Grid Clock feed parse",
-        "func": "// HBC+ v1.2: Grid Clock feed -> msg.dynamic.data_all in the same shape as the macro path\n// after 'Convert price' (ct/kWh), plus data_all.sell. Output 1 -> Cleanup -> Price split ->\n// Cache data source (a failed fetch keeps the last valid prices there). Output 2 -> the\n// HA event hbc_gridclock_status (sensor.hbc_grid_clock_feed).\n// BE: the chosen grid operator's ct/kWh (incl. VAT) is added to the buy price, and to the\n// sell price only where sell = buy (net metering), from the supplier index ('gc_index').\nconst log = (global.get('logger') || (() => {}));\nconst g = msg.gc || {};\nconst cache = flow.get('gc_feed_cache') || {};\nconst nowIso = new Date().toISOString();\n\nconst fail = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: why });\n    log(this, `Grid Clock feed ${g.zone}/${g.slug}: ${why}`, 'warn');\n    msg.dynamic = msg.dynamic || {};\n    msg.dynamic.no_data = true;\n    msg.dynamic.data_all = { list: [], list_marked: [], average: 0, mark_now: 'No data', start: 'Unknown', datapoints_per_hour: 0, net_spread_avg: 0, gross_spread_avg: 0 };\n    const status = { payload: { state: 'error', reason: why, zone: g.zone, slug: g.slug, checked_at: nowIso } };\n    delete msg.payload;\n    return [msg, status];\n};\n\nlet doc = null, how = '';\nif (msg.statusCode === 304 && cache.url === g.url && cache.doc) {\n    doc = cache.doc; how = 'not modified';\n} else if (msg.statusCode === 200 && msg.payload && typeof msg.payload === 'object'\n           && Array.isArray(msg.payload.slots)) {\n    doc = msg.payload; how = 'ok';\n    const h = msg.headers || {};\n    flow.set('gc_feed_cache', { url: g.url, etag: h.etag || h.ETag || null, doc });\n} else {\n    return fail(msg.statusCode ? `HTTP ${msg.statusCode}` : 'no answer from cdn.gridclock.eu');\n}\n\nconst minutes = Number(doc.resolution_minutes) || 15;\nconst step = minutes * 60000;\n// Contiguous run from the first slot; a gap ends the list (same rule as the publisher).\nconst slots = [];\nfor (const s of doc.slots) {\n    const t = Date.parse(s && s.start);\n    const buy = Number(s && s.buy);\n    if (!Number.isFinite(t) || !Number.isFinite(buy)) break;\n    if (slots.length && t !== slots[slots.length - 1].t + step) break;\n    const sell = (s.sell === null || s.sell === undefined || !Number.isFinite(Number(s.sell))) ? null : Number(s.sell);\n    slots.push({ t, buy, sell });\n}\nif (!slots.length) return fail('feed has no slots');\n\nconst idx = (flow.get('gc_index') || {})[g.zone];\nlet grid = 0;\nif (g.operator && idx && Array.isArray(idx.grid_operators)) {\n    const op = idx.grid_operators.find(o => o.grid_operator === g.operator);\n    grid = Number(op && op.ct_per_kwh) || 0;\n}\nconst r = (v) => Math.round(v * 10000) / 10000;\nconst list = [], sell = [];\nfor (const s of slots) {\n    const net = s.sell === null || Math.abs(s.sell - s.buy) < 1e-9;\n    list.push(r(s.buy + grid));\n    sell.push(r(s.sell === null ? s.buy + grid : s.sell + (net ? grid : 0)));\n}\nconst avg = list.reduce((a, b) => a + b, 0) / list.length;\nmsg.dynamic.data_all = {\n    list, sell,\n    start: new Date(slots[0].t).toISOString(),\n    hours: slots.length * minutes / 60,\n    datapoints: slots.length,\n    datapoints_per_hour: 60 / minutes,\n    average: Math.round(avg),\n    min: Math.min(...list), max: Math.max(...list),\n};\nmsg.dynamic.gc = { zone: g.zone, slug: doc.slug, provider: doc.provider, product: doc.product,\n                   net_metering_ends_on: doc.net_metering_ends_on || null, grid_ct_kwh: grid };\ndelete msg.payload;\n\nconst until = new Date(slots[slots.length - 1].t + step).toISOString();\nconst label = doc.provider ? [doc.provider, doc.product].filter(Boolean).join(' – ') : 'Market price (no supplier)';\nnode.status({ fill: 'green', shape: 'dot', text: `${how}: ${label}, ${slots.length} slots` });\nconst status = { payload: {\n    state: how, reason: '', zone: g.zone, slug: doc.slug, supplier: label,\n    grid_operator: g.operator || null, grid_ct_kwh: grid,\n    net_metering_ends_on: doc.net_metering_ends_on || null,\n    slots: slots.length, prices_until: until, checked_at: nowIso } };\nreturn [msg, status];",
+        "func": "// HBC+ v1.2: Grid Clock feed -> msg.dynamic.data_all in the same shape as the macro path\n// after 'Convert price' (ct/kWh), plus data_all.sell and (v1.3) data_all.market: the bare day-ahead\n// price per slot (the feed's 'spot'; no VAT, tax, supplier margin or grid costs), null when missing. Output 1 -> Cleanup -> Price split ->\n// Cache data source (a failed fetch keeps the last valid prices there). Output 2 -> the\n// HA event hbc_gridclock_status (sensor.hbc_grid_clock_feed).\n// BE: the chosen grid operator's ct/kWh (incl. VAT) is added to the buy price, and to the\n// sell price only where sell = buy (net metering), from the supplier index ('gc_index').\nconst log = (global.get('logger') || (() => {}));\nconst g = msg.gc || {};\nconst cache = flow.get('gc_feed_cache') || {};\nconst nowIso = new Date().toISOString();\n\nconst fail = (why) => {\n    node.status({ fill: 'red', shape: 'ring', text: why });\n    log(this, `Grid Clock feed ${g.zone}/${g.slug}: ${why}`, 'warn');\n    msg.dynamic = msg.dynamic || {};\n    msg.dynamic.no_data = true;\n    msg.dynamic.data_all = { list: [], list_marked: [], average: 0, mark_now: 'No data', start: 'Unknown', datapoints_per_hour: 0, net_spread_avg: 0, gross_spread_avg: 0 };\n    const status = { payload: { state: 'error', reason: why, zone: g.zone, slug: g.slug, checked_at: nowIso } };\n    delete msg.payload;\n    return [msg, status];\n};\n\nlet doc = null, how = '';\nif (msg.statusCode === 304 && cache.url === g.url && cache.doc) {\n    doc = cache.doc; how = 'not modified';\n} else if (msg.statusCode === 200 && msg.payload && typeof msg.payload === 'object'\n           && Array.isArray(msg.payload.slots)) {\n    doc = msg.payload; how = 'ok';\n    const h = msg.headers || {};\n    flow.set('gc_feed_cache', { url: g.url, etag: h.etag || h.ETag || null, doc });\n} else {\n    return fail(msg.statusCode ? `HTTP ${msg.statusCode}` : 'no answer from cdn.gridclock.eu');\n}\n\nconst minutes = Number(doc.resolution_minutes) || 15;\nconst step = minutes * 60000;\n// Contiguous run from the first slot; a gap ends the list (same rule as the publisher).\nconst slots = [];\nfor (const s of doc.slots) {\n    const t = Date.parse(s && s.start);\n    const buy = Number(s && s.buy);\n    if (!Number.isFinite(t) || !Number.isFinite(buy)) break;\n    if (slots.length && t !== slots[slots.length - 1].t + step) break;\n    const sell = (s.sell === null || s.sell === undefined || !Number.isFinite(Number(s.sell))) ? null : Number(s.sell);\n    const spot = (s.spot === null || s.spot === undefined || !Number.isFinite(Number(s.spot))) ? null : Number(s.spot);\n    slots.push({ t, buy, sell, spot });\n}\nif (!slots.length) return fail('feed has no slots');\n\nconst idx = (flow.get('gc_index') || {})[g.zone];\nlet grid = 0;\nif (g.operator && idx && Array.isArray(idx.grid_operators)) {\n    const op = idx.grid_operators.find(o => o.grid_operator === g.operator);\n    grid = Number(op && op.ct_per_kwh) || 0;\n}\nconst r = (v) => Math.round(v * 10000) / 10000;\nconst list = [], sell = [], market = [];\nfor (const s of slots) {\n    const net = s.sell === null || Math.abs(s.sell - s.buy) < 1e-9;\n    list.push(r(s.buy + grid));\n    sell.push(r(s.sell === null ? s.buy + grid : s.sell + (net ? grid : 0)));\n    market.push(s.spot === null ? null : r(s.spot));   // no grid costs: the bare market price\n}\nconst avg = list.reduce((a, b) => a + b, 0) / list.length;\nmsg.dynamic.data_all = {\n    list, sell, market,\n    start: new Date(slots[0].t).toISOString(),\n    hours: slots.length * minutes / 60,\n    datapoints: slots.length,\n    datapoints_per_hour: 60 / minutes,\n    average: Math.round(avg),\n    min: Math.min(...list), max: Math.max(...list),\n};\nmsg.dynamic.gc = { zone: g.zone, slug: doc.slug, provider: doc.provider, product: doc.product,\n                   net_metering_ends_on: doc.net_metering_ends_on || null, grid_ct_kwh: grid };\ndelete msg.payload;\n\nconst until = new Date(slots[slots.length - 1].t + step).toISOString();\nconst label = doc.provider ? [doc.provider, doc.product].filter(Boolean).join(' – ') : 'Market price (no supplier)';\nnode.status({ fill: 'green', shape: 'dot', text: `${how}: ${label}, ${slots.length} slots` });\nconst status = { payload: {\n    state: how, reason: '', zone: g.zone, slug: doc.slug, supplier: label,\n    grid_operator: g.operator || null, grid_ct_kwh: grid,\n    net_metering_ends_on: doc.net_metering_ends_on || null,\n    slots: slots.length, prices_until: until, checked_at: nowIso } };\nreturn [msg, status];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1380,
-        "y": 874,
+        "x": 1400,
+        "y": 920,
         "wires": [
             [
                 "fe653333e76f6bdb"
@@ -1916,8 +1933,8 @@
         "event": "hbc_gridclock_status",
         "data": "payload",
         "dataType": "jsonata",
-        "x": 1390,
-        "y": 934,
+        "x": 1650,
+        "y": 920,
         "wires": [
             []
         ]
@@ -1928,51 +1945,20 @@
         "z": "9006458c06964b58",
         "g": "8b2f0fb4b7e1d8f2",
         "name": "Price split",
-        "func": "// HBC+ v1.2: every source carries a sell list next to the buy list (data_all.list).\n// The Grid Clock feed brings its own; for every other source sell = buy, which is exactly\n// how v1.1 valued a kWh (net metering). Runs inside the fetch section, so the cache and\n// every link-call caller get the same lists.\nconst a = msg.dynamic && msg.dynamic.data_all;\nif (a && Array.isArray(a.list)) {\n    if (!Array.isArray(a.sell) || a.sell.length !== a.list.length) a.sell = a.list.slice();\n    const split = a.sell.some((v, i) => v !== a.list[i]);\n    node.status({ fill: split ? 'green' : 'grey', shape: 'dot', text: split ? 'buy + sell' : 'sell = buy' });\n}\nreturn msg;",
+        "func": "// HBC+ v1.2: every source carries a sell list next to the buy list (data_all.list).\n// The Grid Clock feed brings its own; for every other source sell = buy, which is exactly\n// how v1.1 valued a kWh (net metering). Runs inside the fetch section, so the cache and\n// every link-call caller get the same lists.\nconst a = msg.dynamic && msg.dynamic.data_all;\nif (a && Array.isArray(a.list)) {\n    if (!Array.isArray(a.sell) || a.sell.length !== a.list.length) a.sell = a.list.slice();\n    // HBC+ v1.3: the bare market price per interval; only the Grid Clock feed has one, every other\n    // source gets null (unknown, never 0), so the lists stay the same length.\n    if (!Array.isArray(a.market) || a.market.length !== a.list.length) a.market = a.list.map(() => null);\n    const split = a.sell.some((v, i) => v !== a.list[i]);\n    node.status({ fill: split ? 'green' : 'grey', shape: 'dot', text: split ? 'buy + sell' : 'sell = buy' });\n}\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 680,
-        "y": 954,
+        "x": 507,
+        "y": 1012,
         "wires": [
             [
                 "4a48bdb847555497"
             ]
         ]
-    },
-    {
-        "id": "hbcp12b000000006",
-        "type": "group",
-        "z": "9006458c06964b58",
-        "name": "Grid Clock suppliers (HBC+ v1.3)",
-        "style": {
-            "label": true
-        },
-        "nodes": [
-            "hbcp12b000000012",
-            "hbcp12b000000007",
-            "hbcp12b000000008",
-            "hbcp12b000000009",
-            "hbcp12b00000000a",
-            "hbcp12b00000000b",
-            "hbcp12b00000000c",
-            "hbcp12b00000000d",
-            "hbcp12b00000000e",
-            "hbcp12b00000000f",
-            "hbcp12b000000010",
-            "hbcp12b000000011",
-            "hbcp12b000000013",
-            "hbcp12b000000014",
-            "hbcp12b000000015",
-            "hbcp12b000000016"
-        ],
-        "x": 254,
-        "y": 1299,
-        "w": 1262,
-        "h": 342
     },
     {
         "id": "hbcp12b000000012",
@@ -1981,8 +1967,8 @@
         "g": "hbcp12b000000006",
         "name": "Grid Clock feed: suppliers and grid operators (HBC+ v1.3)",
         "info": "Fills `input_select.house_battery_gridclock_provider` and `..._grid_operator` from the public `v1/hbc/{zone}/index.json`, and keeps the choice in `input_text.house_battery_gridclock_provider_slug` / `..._grid_operator_name` (HA forgets runtime select options after a restart; this group rebuilds them at start). A new choice fires `hbc_refresh_energy_prices`, so Dynamic fetches the new supplier's prices straight away. Only used with *Tariff data source* = *Grid Clock*. Base URL: tab environment variable `GRIDCLOCK_FEED_URL` (default `https://cdn.gridclock.eu/v1/hbc`).",
-        "x": 520,
-        "y": 1320,
+        "x": 530,
+        "y": 1400,
         "wires": []
     },
     {
@@ -2002,8 +1988,8 @@
         "once": true,
         "onceDelay": "5",
         "topic": "start",
-        "x": 360,
-        "y": 1360,
+        "x": 370,
+        "y": 1440,
         "wires": [
             [
                 "hbcp12b00000000b"
@@ -2056,7 +2042,7 @@
             }
         ],
         "x": 360,
-        "y": 1420,
+        "y": 1502,
         "wires": [
             [
                 "hbcp12b00000000b"
@@ -2114,8 +2100,8 @@
                 "valueType": "eventData"
             }
         ],
-        "x": 360,
-        "y": 1480,
+        "x": 370,
+        "y": 1562,
         "wires": [
             [
                 "hbcp12b00000000e"
@@ -2173,8 +2159,8 @@
                 "valueType": "eventData"
             }
         ],
-        "x": 360,
-        "y": 1540,
+        "x": 390,
+        "y": 1622,
         "wires": [
             [
                 "hbcp12b00000000e"
@@ -2194,8 +2180,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
-        "y": 1390,
+        "x": 610,
+        "y": 1470,
         "wires": [
             [
                 "hbcp12b00000000c"
@@ -2222,8 +2208,8 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 800,
-        "y": 1390,
+        "x": 810,
+        "y": 1470,
         "wires": [
             [
                 "hbcp12b00000000d"
@@ -2243,8 +2229,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 990,
-        "y": 1390,
+        "x": 1000,
+        "y": 1470,
         "wires": [
             [
                 "hbcp12b00000000f"
@@ -2264,8 +2250,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
-        "y": 1510,
+        "x": 630,
+        "y": 1622,
         "wires": [
             [
                 "hbcp12b00000000f"
@@ -2285,8 +2271,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1180,
-        "y": 1450,
+        "x": 1230,
+        "y": 1469,
         "wires": [
             [
                 "hbcp12b000000010"
@@ -2320,8 +2306,8 @@
         "blockInputOverrides": false,
         "domain": "",
         "service": "",
-        "x": 1370,
-        "y": 1420,
+        "x": 1410,
+        "y": 1462,
         "wires": [
             [
                 "hbcp12b00000000f"
@@ -2340,7 +2326,7 @@
         "data": "{\"source\": \"Grid Clock\"}",
         "dataType": "json",
         "x": 1390,
-        "y": 1500,
+        "y": 1542,
         "wires": [
             []
         ]
@@ -2353,8 +2339,8 @@
         "name": "Catch supplier errors",
         "scope": "group",
         "uncaught": false,
-        "x": 1150,
-        "y": 1540,
+        "x": 1110,
+        "y": 1642,
         "wires": [
             [
                 "hbcp12b000000014"
@@ -2374,8 +2360,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1370,
-        "y": 1560,
+        "x": 1360,
+        "y": 1642,
         "wires": [
             []
         ]
@@ -2383,8 +2369,10 @@
     {
         "id": "hbcp12b000000015",
         "type": "server-events",
+        "z": "9006458c06964b58",
         "g": "hbcp12b000000006",
         "name": "HA (re)started",
+        "server": "176d29a.6f648d6",
         "version": 3,
         "exposeAsEntityConfig": "",
         "eventType": "home_assistant_client",
@@ -2405,18 +2393,17 @@
             }
         ],
         "x": 360,
-        "y": 1600,
+        "y": 1682,
         "wires": [
             [
                 "hbcp12b000000016"
             ]
-        ],
-        "z": "9006458c06964b58",
-        "server": "176d29a.6f648d6"
+        ]
     },
     {
         "id": "hbcp12b000000016",
         "type": "function",
+        "z": "9006458c06964b58",
         "g": "hbcp12b000000006",
         "name": "Once per (re)start",
         "func": "// HBC+ v1.2: HA (re)started or Node-RED (re)connected. HA loads the supplier and grid-operator\n// selects with only their YAML options (\"Market price (no supplier)\" / \"None\"), so the\n// dashboard would show those although the remembered choice (input_texts) is still in force.\n// Fetch the index again: that restores the options and shows the remembered choice.\n// Client events come in bursts (states_loaded, services_loaded, running, ...): once per 30 s.\nconst what = typeof msg.payload === 'string' ? msg.payload : JSON.stringify(msg.payload || msg.event_type || '');\nif (!/running|ready/i.test(what)) return null;\nconst now = Date.now();\nif (now - (context.get('last') || 0) < 30000) return null;\ncontext.set('last', now);\nreturn { topic: 'ha_restart' };\n",
@@ -2426,14 +2413,13 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
-        "y": 1600,
+        "x": 620,
+        "y": 1682,
         "wires": [
             [
                 "hbcp12b00000000b"
             ]
-        ],
-        "z": "9006458c06964b58"
+        ]
     },
     {
         "id": "176d29a.6f648d6",
@@ -2450,7 +2436,7 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "3c34e7604d2ee6e1",
+        "id": "1222661b35b16a07",
         "type": "global-config",
         "env": [],
         "modules": {

@@ -121,6 +121,38 @@ template:
             {%- endfor -%}
             {{ ns.s }}
 
+  - sensor:
+      # HBC+ v1.3: the bare market price (day-ahead, no VAT, tax, supplier margin or grid costs) of the
+      # interval we are in right now, from the `market` field Dynamic adds to every mark. Only the Grid
+      # Clock feed has it (its `spot`); with any other source the field is null and this sensor is
+      # unavailable. Same interval as sensor.hbc_energy_price_now (buy) and ..._export_price_now (sell).
+      - name: "HBC energy market price now"
+        unique_id: hbc_energy_market_price_now
+        unit_of_measurement: "cents/kWh"
+        icon: mdi:chart-line
+        availability: >-
+          {%- set now_ts = as_timestamp(now()) -%}
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {%- set ns = namespace(p=none) -%}
+          {%- for iv in marks -%}
+            {%- if as_timestamp(iv.start, 0) > 0 and as_timestamp(iv.start, 0) <= now_ts
+                   and now_ts < as_timestamp(iv.end, 0) -%}
+              {%- set ns.p = iv.market if iv.market is defined else none -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.p is number }}
+        state: >-
+          {%- set now_ts = as_timestamp(now()) -%}
+          {%- set marks = state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+          {%- set ns = namespace(p=none) -%}
+          {%- for iv in marks -%}
+            {%- if as_timestamp(iv.start, 0) > 0 and as_timestamp(iv.start, 0) <= now_ts
+                   and now_ts < as_timestamp(iv.end, 0) -%}
+              {%- set ns.p = iv.market if iv.market is defined else none -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ (ns.p | float(0)) | round(2) if ns.p is number else 'unknown' }}
+
   - binary_sensor:
       # Any interval in the current price list with a separate sell price. Drives the dashboard:
       # the "Sell now" tile, the sell line in the chart and the "selling rarely pays" card.

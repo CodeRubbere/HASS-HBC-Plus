@@ -1,0 +1,107 @@
+###########################################################################################################
+# HBC+ v1.3 - dashboard explanations (one open at a time)
+###########################################################################################################
+# The info and period headings on the dashboard open an explanation when tapped. Only one is open at a
+# time: input_select.hbc_help_open holds the open one ('none' = all closed).
+# - Tapping the open heading again closes it; tapping another heading switches to that one.
+# - All explanations close 5 minutes after the last tap, and after every HA restart.
+# - Shared by every device and user: opening one on the phone also opens it on the tablet.
+# Add an option below for every new explanation on the dashboard.
+###########################################################################################################
+
+input_select:
+  hbc_help_open:
+    name: HBC+ open explanation
+    icon: mdi:help-circle-outline
+    initial: none # always closed after a restart
+    options:
+      - none
+      - ov_strategy # Overview: About strategies
+      - pr_dynamic # Prices: Using the dynamic strategy
+      - pr_source # Prices: About tariff data sources
+      - pr_guard # Prices: Negative prices
+      - cs_charge_goal # Charge & Sell: Charge until
+      - cs_forecast # Charge & Sell: Configure your solar forecast
+      - cs_charge_then # Charge & Sell: When done charging, switch to strategy
+      - cs_dl_goal # Charge & Sell: Charge Deadline until
+      - cs_dl_window # Charge & Sell: Charge Deadline window
+      - cs_dl_then # Charge & Sell: When done, switch to strategy
+      - cs_sell_goal # Charge & Sell: Sell until
+      - cs_sell_then # Charge & Sell: When done, switch to strategy (2)
+      - td_dynamic # Timed & Dynamic: Using the dynamic strategy
+      - td_tips # Timed & Dynamic: Tips for strategy selection
+      - td_regular # Timed & Dynamic: Regular period
+      - td_cheap # Timed & Dynamic: Cheap periods
+      - td_expensive # Timed & Dynamic: Expensive periods
+      - td_timed # Timed & Dynamic: Using the timed strategy
+      - td_load # Timed & Dynamic: Charge only what the expensive hours need
+      - sv_savings # Savings: Savings
+      - sv_rte # Savings: Round-trip efficiency
+      - pg_settings # Phase guard: Phase guard settings
+      - pg_peak # Phase guard: Peak shaving
+      - pg_import # Phase guard: Grid power limit during import from grid (CAPTAR)
+      - pg_export # Phase guard: Grid power limit during export to grid
+      - pg_ev # Phase guard: Home Energy Control
+      - pid_tuning # PID Control: Help | setup and tuning PID control
+      - pid_history # PID Control: PID history
+      - bt_calib # Batteries: Battery calibration
+      - bt_priority # Batteries: Cycle which battery to charge first
+      - bt_idle # Batteries: Optimize stop and go behavior
+      - bt_selftest # Batteries: Check the setup and the phase map
+      - bt_m1 # Batteries: Marstek M1
+      - bt_m2 # Batteries: Marstek M2
+      - bt_m3 # Batteries: Marstek M3
+      - bt_m4 # Batteries: Marstek M4
+      - bt_m5 # Batteries: Marstek M5
+      - bt_m6 # Batteries: Marstek M6
+      - st_phase # Settings: Limits and battery selection per phase
+      - st_notify # Settings: Notifications
+      - st_ev # Settings: EV Stop Trigger
+
+script:
+  hbc_help_toggle:
+    alias: "HBC+: open or close an explanation"
+    icon: mdi:help-circle-outline
+    mode: queued
+    fields:
+      section:
+        description: Option of input_select.hbc_help_open to open (closes it when it is already open)
+        example: dyn_cheap
+    sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_help_open
+        data:
+          option: >-
+            {{ 'none' if is_state('input_select.hbc_help_open', section)
+               or section not in state_attr('input_select.hbc_help_open', 'options') else section }}
+
+automation:
+  - id: hbc_help_auto_close
+    alias: "HBC+: close the open explanation after 5 minutes"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_select.hbc_help_open
+        for: "00:05:00"
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.to_state.state != 'none' }}"
+    actions:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hbc_help_open
+        data:
+          option: none
+
+###########################################################################################################
+# VERSION
+###########################################################################################################
+template:
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_help"
+        unique_id: hbc_version_hbc_help
+        icon: mdi:tag-outline
+        state: "1.3.0"

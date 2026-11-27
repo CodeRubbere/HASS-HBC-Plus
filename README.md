@@ -14,9 +14,9 @@ This project is designed for hobbyists who want full control over their home bat
 
 **Current version: v1.2.2** (24 November 2026) · [Download](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) · [What's new in v1.2](docs/user-guide.en.md#whats-new-in-hbc-v12)
 
-**Next: v1.3**, planned for 22 December 2026 · [What's new in v1.3](docs/user-guide.en.md#whats-new-in-hbc-v13) · [Changelog](CHANGELOG.md)
+**Next: v1.3**, planned for 22 December 2026 · [What's new in v1.3](docs/user-guide.en.md#whats-new-in-hbc-v13) · [Release notes](docs/release-notes/v1.3.md) · [Changelog](CHANGELOG.md)
 
-> 🇳🇱 Nederlandse handleiding: [docs/gebruikershandleiding.nl.md](docs/gebruikershandleiding.nl.md)
+> 🇳🇱 Nederlands: [README.nl.md](README.nl.md) · [gebruikershandleiding](docs/gebruikershandleiding.nl.md) · [release notes v1.3](docs/release-notes/v1.3.nl.md)
 
 ## Credits
 
@@ -52,20 +52,22 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 - **One notification setting** — *Notify targets* on the Settings view, with a test button.
 - **Strategy requests from Home Assistant** — hold a strategy from an automation or over MQTT, with a time-out, without Node-RED.
 - **Power setpoint for Charge and Sell** — a flow such as HELIOS can run Charge or Sell at a planned power instead of the maximum.
-- **Batterijplan and HELIOS on the dashboard** — banners and the price chart show who steers and what they plan.
-- **Update and version check** — the Overview says when a newer release is out, and which part of your installation is of another version.
+- **New dashboard** — choose in two steps (*Control mode*: Manual, Schedule, Price or External; then the mode), with badges on every view for who decides (*Controller*), the control mode and what runs now (*Strategy*). A calm *Dashboard mode* after every restart, one-line alerts you tap for details, and seven views instead of nine.
+- **Market, buy and sell price for other flows** — with Grid Clock, every quarter in `sensor.hbc_energy_prices_data` carries the bare market price next to the buy and sell price, for flows such as HELIOS.
+- **Batterijplan and HELIOS on the dashboard** — the *Controller* badge, a *Managed by* line and the price chart show who decides and what they plan.
+- **Update and version check** — the Overview says when a newer release is out, and which part of your installation is of another version; the Settings view also checks the Marketplace items HBC+ needs, and whether MQTT and Node-RED work.
 - **Release zip** — `hbc-plus-vX.Y.Z.zip` under *Assets*, with only what you install.
 
 ## Works with Batterijplan
 
-[Batterijplan](https://github.com/satscan1/hbc-batterijplan) is a Home Assistant integration that can steer HBC+. With HBC+ on **Dynamic** and Batterijplan's **Live** switch on, Batterijplan sets the Dynamic modes every quarter. From v1.3 the dashboard shows this: a banner with Batterijplan's current action, the *Price intervals* chart coloured by its plan, and the Dynamic modes read-only while it steers (`packages/hbc_batterijplan.yaml`). Without Batterijplan nothing changes. Details: [Steered by Batterijplan](docs/user-guide.en.md#steered-by-batterijplan) · 🇳🇱 [Aangestuurd door Batterijplan](docs/gebruikershandleiding.nl.md#aangestuurd-door-batterijplan).
+[Batterijplan](https://github.com/satscan1/hbc-batterijplan) is a Home Assistant integration that can steer HBC+. With HBC+ on **Dynamic** and Batterijplan's **Live** switch on, Batterijplan sets the Dynamic modes every quarter. From v1.3 the dashboard shows this: the *Controller* badge says *Batterijplan*, the Overview shows *Managed by Batterijplan (Live)* with its current action, and the price chart is coloured by its plan (`packages/hbc_batterijplan.yaml`). Without Batterijplan nothing changes. Details: [Steered by Batterijplan](docs/user-guide.en.md#steered-by-batterijplan) · 🇳🇱 [Aangestuurd door Batterijplan](docs/gebruikershandleiding.nl.md#aangestuurd-door-batterijplan).
 
 ## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml`, the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml` and the Batterijplan indicator `hbc_batterijplan.yaml` (HBC+) |
-| `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Prices, Charge & Sell, Timed & Dynamic, Savings, **Phase guard**, PID Control, Batteries, Settings and Logging |
+| `packages/` | Home Assistant packages: core helpers, Charge Deadline, Strategy arbiter, the phase-aware heartbeat fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, the notification setting `hbc_notify.yaml`, the battery calibration `hbc_calibration.yaml`, savings `hbc_savings.yaml`, the setup self-test `hbc_selftest.yaml`, the load forecast `hbc_load_forecast.yaml`, the Batterijplan indicator `hbc_batterijplan.yaml` and the dashboard helpers `hbc_dashboard.yaml` (HBC+) |
+| `dashboards/hbc_plus.yaml` | The *Home Battery Control Plus* dashboard: Overview, Batteries, PID Control, **Phase guard**, Savings, Settings and Logging |
 | `www/hbc-plus/` | The dashboard logo; copy it into your HA `www/` folder |
 | `assets/logo/` | The HBC+ logo as SVG and PNG: on light, on dark, one colour, app icon, GitHub social preview |
 | `node-red/hbc-plus-all-flows.json` | All 16 HBC+ Node-RED tabs in one import file |
@@ -74,7 +76,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 | `node-red/examples/` | Example tab for the shared price fetch |
 | `tools/` | For maintainers: `set-version.py` sets the version of a release and writes `versions.json`; `check-versions.py` (versions, identical flow files, `versions.json`), `check-docs.py` (English and Dutch guide in step, CHANGELOG entry) and `release-files.py` (what changed since the last tag, and that every changed part has a new version). `hooks/pre-commit` runs the first two before each commit (`git config core.hooksPath tools/hooks`). The GitHub Action in `.github/workflows/` runs them on every push and makes a draft release with the zip on a tag |
 | `versions.json` | The release manifest: every part and its version. Home Assistant reads it at the release tag to say which parts are older than the release |
-| `docs/` | User guide in English and Dutch |
+| `docs/` | User guide in English and Dutch, and the release notes per version (English and Dutch) |
 
 ## Requirements
 
@@ -85,7 +87,7 @@ With the phase guard on *Off* or *Monitor*, HBC+ controls the batteries without 
 - **Batteries**: Marstek Venus E, up to 6, entities named `marstek_mN_*` (RS485 or Modbus TCP).
 - **Grid meter**: `sensor.p1_meter_power` and per-phase power `sensor.p1_meter_power_phase_1` … `_3`, positive on import.
 - **Dashboard URL**: `home-battery-control-plus`, so the buttons that open other views work. The name does not matter; the URL cannot be changed later.
-- **Dashboard**: `apexcharts-card` and `card-mod` (both Marketplace).
+- **Dashboard**: `apexcharts-card`, `card-mod` and `fold-entity-row` (all Marketplace).
 - **Prices**: the [Cheapest Energy Hours](https://github.com/TheFes/cheapest-energy-hours) macro (Marketplace) and a price integration, for Dynamic and Charge Deadline.
 - **Optional**: a solar forecast (for example Forecast.Solar or Solcast) for the Charge goal *solar forecast* and the sun check of the battery calibration; the Workday integration (`binary_sensor.workday_sensor`), so the load forecast counts a public holiday as a weekend day.
 
@@ -95,13 +97,14 @@ Details per requirement: [Requirements in the user guide](docs/user-guide.en.md#
 
 1. Download the [latest release](https://github.com/CodeRubbere/HASS-HBC-Plus/releases/latest) (*Assets* → **hbc-plus-vX.Y.Z.zip**; before v1.3: *Source code (zip)*) and unzip it.
 2. Make sure Home Assistant (with packages and MQTT) and Node-RED (see *Requirements*) are running.
-   From Marketplace, install **Cheapest Energy Hours**, **card-mod** and **apexcharts-card**, then restart HA and reload the browser.
+   From Marketplace, install **Cheapest Energy Hours**, **card-mod**, **apexcharts-card** and **fold-entity-row**, then restart HA and reload the browser.
 3. **Back up** Node-RED (*Export → All flows*) and Home Assistant.
 4. Copy `packages/*.yaml` to your HA `packages/` folder and `www/hbc-plus/` to your HA `www/` folder (the dashboard logo), restart HA, and run the script **HBC+ phase guard: apply defaults** once.
 5. Import `node-red/hbc-plus-all-flows.json` in Node-RED (updating? delete the old HBC+ tabs first: Node-RED cannot replace a flow on import), check that the *HA System* server node has **Expose to global context** on, and Deploy.
-6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml`, set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
+6. Add a dashboard named *Home Battery Control Plus* (**the URL must be `home-battery-control-plus`**) with the contents of `dashboards/hbc_plus.yaml`, make it *Admin only* (anyone who can open it can steer the batteries), set your phase map on the **Batteries** view, and grid fuse and battery circuit under *Phase guard settings* on the **Settings** view.
 7. Set *Notify targets* on the **Settings** view and press *Send a test notification*; run the self-test once on the **Batteries** view (*Battery phase test*).
-8. Run in **Monitor** for a few days, then switch to **Enforce**.
+8. Press **HBC+** under *Controller* on the Overview to let HBC+ steer, and pick a *Control mode*.
+9. Run the phase guard in **Monitor** for a few days, then switch to **Enforce**.
 
 Full instructions: **[docs/user-guide.en.md](docs/user-guide.en.md)**.
 
@@ -115,7 +118,7 @@ Already running House Battery Control (HBC) by CodeBob? You can switch to HBC+ w
 
 - **Packages:** `house_battery_control.yaml` is replaced by the `hbc_*.yaml` packages; rename your own `house_battery_control_config.yaml` to `hbc_config.yaml` (the `hbc_config.yaml` in this repository is for new installations).
 - **Grid meter:** HBC+ also needs per-phase power (`sensor.p1_meter_power_phase_1` … `_3`).
-- **New requirements:** MQTT and `card-mod`; `node-red-node-smooth` is no longer needed.
+- **New requirements:** MQTT, `card-mod` and `fold-entity-row`; `node-red-node-smooth` is no longer needed.
 - **Flows:** all HBC tabs are deleted and replaced by the HBC+ tabs; never run both.
 - **Dashboard:** a new dashboard with the URL `home-battery-control-plus`.
 
@@ -150,7 +153,7 @@ Every part of HBC+ carries its own version; `tools/` keeps them right. Once per 
 
 **Testing the update check before a release:** push the branch with its `versions.json`, then in Home Assistant
 set `sensor.hbc_latest_version` to the branch name (*Developer tools* → *States*, for example `feature/v1.3`).
-HBC+ fetches the manifest from that branch, and the Overview and the *Versions* table on the Settings view show
+HBC+ fetches the manifest from that branch, and the Overview and the *Versions* list on the Settings view show
 what differs. The next release check (at most 6 hours, or a restart) puts the sensor back.
 
 ## License

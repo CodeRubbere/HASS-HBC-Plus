@@ -12,7 +12,8 @@ Where HBC+ keeps its version, per part:
                                              and the numbers in two visibility conditions:
                                              sensor.hbc_release_number (major x 100 + minor) and
                                              sensor.hbc_release_dashboard_number (major x 10000 +
-                                             minor x 100 + patch)
+                                             minor x 100 + patch); a card shown for exactly this
+                                             release uses the range above: N-1 / below: N+1
   manifest   versions.json                   every part and its version; Home Assistant reads it from
                                              GitHub at the release tag (update check)
 Only the Python standard library is used, so the scripts also run in a GitHub Action.
@@ -66,7 +67,9 @@ def flow_files(root):
 CONST_RE = re.compile(r"(const VERSION = ')(" + VER + r")(';)")
 EXPECTED_RE = re.compile(r'(const EXPECTED_PACKAGES = )(\[[^\]]*\])(;)')
 DASH_RE = re.compile(r"(\{%-? set dash = ')(" + VER + r")(' -?%\})")
-CARD_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+(?:below|above): )(\d+)')
+CARD_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+(?:below|above): )(\d+)(?!\d|\n\s+below:)')
+# 'Exactly this release' (sensor.hbc_release_number = N): above: N-1 / below: N+1
+CARD_RANGE_RE = re.compile(r'(entity: sensor\.hbc_release_number\n\s+above: )(\d+)(\n\s+below: )(\d+)')
 HEADING_RE = re.compile(r'(heading: Status & control \(v)(' + VER + r')(\)\n)')
 DASH_NUM_RE = re.compile(r'(entity: sensor\.hbc_release_dashboard_number\n\s+above: )(\d+)')
 
@@ -122,6 +125,8 @@ def collect(root):
         out['dashboard'][f'dash constant #{i + 1}'] = m.group(2)
     for i, m in enumerate(CARD_NUM_RE.finditer(s)):
         out['dashboard'][f'version card number #{i + 1}'] = int(m.group(2))
+    for i, m in enumerate(CARD_RANGE_RE.finditer(s)):
+        out['dashboard'][f'release range #{i + 1}'] = (int(m.group(2)), int(m.group(4)))
     for i, m in enumerate(DASH_NUM_RE.finditer(s)):
         out['dashboard'][f'update card number #{i + 1}'] = int(m.group(2))
     for i, m in enumerate(HEADING_RE.finditer(s)):

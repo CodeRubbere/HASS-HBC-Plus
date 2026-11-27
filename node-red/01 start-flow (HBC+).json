@@ -8,22 +8,6 @@
         "env": []
     },
     {
-        "id": "a67d8a11fee598fe",
-        "type": "function",
-        "z": "61557a1c3e5f5404",
-        "name": "HBC+ version",
-        "func": "// No input: see On Start / On Stop.\nreturn null;",
-        "outputs": 0,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
-        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
-        "libs": [],
-        "x": 160,
-        "y": 2360,
-        "wires": []
-    },
-    {
         "id": "4fce0253d552319a",
         "type": "group",
         "z": "61557a1c3e5f5404",
@@ -38,7 +22,7 @@
             "3ae364fde27421ff"
         ],
         "x": 34,
-        "y": 86,
+        "y": 128,
         "w": 652,
         "h": 82
     },
@@ -64,9 +48,9 @@
             "hbcp12c000000002"
         ],
         "x": 34,
-        "y": 1386,
-        "w": 992,
-        "h": 302
+        "y": 1428,
+        "w": 1212,
+        "h": 322
     },
     {
         "id": "c30ed457376880f6",
@@ -87,7 +71,7 @@
             "fe76efac6d701344"
         ],
         "x": 24,
-        "y": 526,
+        "y": 568,
         "w": 1678,
         "h": 242
     },
@@ -107,10 +91,10 @@
             "hbcp13c000000001",
             "hbcp13c000000002"
         ],
-        "x": 1154,
-        "y": 39,
-        "w": 592,
-        "h": 122
+        "x": 1014,
+        "y": 79,
+        "w": 732,
+        "h": 142
     },
     {
         "id": "a0371c54d70c4c4f",
@@ -135,7 +119,7 @@
             "hbcp0planner0001"
         ],
         "x": 34,
-        "y": 1126,
+        "y": 1168,
         "w": 2012,
         "h": 155
     },
@@ -153,7 +137,7 @@
             "aaa9ea4d8822d8b0"
         ],
         "x": 34,
-        "y": 886,
+        "y": 928,
         "w": 512,
         "h": 142
     },
@@ -179,9 +163,9 @@
             "a27e88d1a24f5ac7"
         ],
         "x": 24,
-        "y": 286,
-        "w": 1442,
-        "h": 140
+        "y": 328,
+        "w": 1460,
+        "h": 158
     },
     {
         "id": "1ae6fc2faa204b99",
@@ -200,8 +184,8 @@
             "26335c0e9fc27f5a",
             "1046c2416dc50f97"
         ],
-        "x": 1074,
-        "y": 1666,
+        "x": 1094,
+        "y": 2259,
         "w": 632,
         "h": 202
     },
@@ -223,7 +207,7 @@
             "hbcp0totals0ha01"
         ],
         "x": 634,
-        "y": 779,
+        "y": 821,
         "w": 592,
         "h": 322
     },
@@ -241,8 +225,8 @@
             "c6fd059584f60a5b",
             "820333e886790eb3"
         ],
-        "x": 1074,
-        "y": 1486,
+        "x": 1274,
+        "y": 1479,
         "w": 632,
         "h": 82
     },
@@ -263,7 +247,7 @@
             "863295b9dc16e4ca"
         ],
         "x": 34,
-        "y": 186,
+        "y": 228,
         "w": 882,
         "h": 82
     },
@@ -281,7 +265,7 @@
             "5b39eca0d6b39f12"
         ],
         "x": 1494,
-        "y": 179,
+        "y": 239,
         "w": 252,
         "h": 142
     },
@@ -300,8 +284,8 @@
             "27ede1f74204fe8e",
             "2a85015fb74a1370"
         ],
-        "x": 1554,
-        "y": 359,
+        "x": 1564,
+        "y": 399,
         "w": 182,
         "h": 82
     },
@@ -320,7 +304,7 @@
             "c607f672cfa9280b"
         ],
         "x": 34,
-        "y": 1286,
+        "y": 1333,
         "w": 752,
         "h": 82
     },
@@ -347,7 +331,7 @@
             "hbcp0hb0lnkout01"
         ],
         "x": 34,
-        "y": 1660,
+        "y": 1780,
         "w": 992,
         "h": 687
     },
@@ -373,7 +357,7 @@
             "efb7964278bdc7c1"
         ],
         "x": 64,
-        "y": 606,
+        "y": 648,
         "w": 1612,
         "h": 82
     },
@@ -394,7 +378,7 @@
             "88b345f020ec52d5"
         ],
         "x": 314,
-        "y": 1811.5,
+        "y": 1931.5,
         "w": 432,
         "h": 251.5
     },
@@ -416,7 +400,7 @@
             "hbcp0hb0lnkout02"
         ],
         "x": 324,
-        "y": 2140,
+        "y": 2260,
         "w": 482,
         "h": 181
     },
@@ -436,17 +420,29 @@
             "4f2249b253f890d5"
         ],
         "x": 778,
-        "y": 1841,
+        "y": 1961,
         "w": 222,
         "h": 281
+    },
+    {
+        "id": "4dc8dd4870d4c346",
+        "type": "junction",
+        "z": "61557a1c3e5f5404",
+        "x": 500,
+        "y": 902,
+        "wires": [
+            [
+                "hbcp0totals0ha01"
+            ]
+        ]
     },
     {
         "id": "a27e88d1a24f5ac7",
         "type": "junction",
         "z": "61557a1c3e5f5404",
         "g": "831b5d83b5ca096b",
-        "x": 320,
-        "y": 400,
+        "x": 340,
+        "y": 460,
         "wires": [
             [
                 "90d35258740293ac"
@@ -454,16 +450,20 @@
         ]
     },
     {
-        "id": "4dc8dd4870d4c346",
-        "type": "junction",
+        "id": "a67d8a11fee598fe",
+        "type": "function",
         "z": "61557a1c3e5f5404",
-        "x": 500,
-        "y": 860,
-        "wires": [
-            [
-                "hbcp0totals0ha01"
-            ]
-        ]
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 120,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "hbcp0totals0ha01",
@@ -479,7 +479,7 @@
         "finalize": "",
         "libs": [],
         "x": 770,
-        "y": 920,
+        "y": 962,
         "wires": [
             [
                 "3920807805ddb059"
@@ -569,7 +569,7 @@
             }
         ],
         "x": 120,
-        "y": 127,
+        "y": 169,
         "wires": [
             [
                 "4b2d453a01f87635"
@@ -620,7 +620,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 300,
-        "y": 127,
+        "y": 169,
         "wires": [
             [
                 "3ae364fde27421ff"
@@ -646,7 +646,7 @@
         "repair": false,
         "outputs": 1,
         "x": 540,
-        "y": 127,
+        "y": 169,
         "wires": [
             [
                 "1134ce94707c0581"
@@ -667,7 +667,7 @@
         "finalize": "",
         "libs": [],
         "x": 570,
-        "y": 1487,
+        "y": 1529,
         "wires": [
             [
                 "9c1f6b4d8e1d9ab9",
@@ -685,7 +685,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 570,
-        "y": 1547,
+        "y": 1589,
         "wires": [
             [
                 "995cc4878056f096",
@@ -708,7 +708,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 860,
-        "y": 1447,
+        "y": 1489,
         "wires": []
     },
     {
@@ -726,7 +726,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 880,
-        "y": 1527,
+        "y": 1569,
         "wires": []
     },
     {
@@ -743,7 +743,7 @@
         "finalize": "",
         "libs": [],
         "x": 570,
-        "y": 1607,
+        "y": 1649,
         "wires": [
             [
                 "95081e6e54679035",
@@ -768,7 +768,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 890,
-        "y": 1607,
+        "y": 1649,
         "wires": []
     },
     {
@@ -815,7 +815,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 140,
-        "y": 1427,
+        "y": 1469,
         "wires": [
             [
                 "6132eec46bf92055"
@@ -866,7 +866,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 320,
-        "y": 1427,
+        "y": 1469,
         "wires": [
             [
                 "8fea28286644933e"
@@ -917,7 +917,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 550,
-        "y": 1427,
+        "y": 1469,
         "wires": [
             [
                 "3ea96c19e11aa3f6"
@@ -938,7 +938,7 @@
         "finalize": "",
         "libs": [],
         "x": 310,
-        "y": 567,
+        "y": 609,
         "wires": [
             [
                 "12ae51d47529dc7f"
@@ -967,7 +967,7 @@
         "repair": false,
         "outputs": 2,
         "x": 410,
-        "y": 727,
+        "y": 769,
         "wires": [
             [
                 "12ae51d47529dc7f"
@@ -992,7 +992,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 760,
-        "y": 727,
+        "y": 769,
         "wires": []
     },
     {
@@ -1039,7 +1039,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 140,
-        "y": 567,
+        "y": 609,
         "wires": [
             [
                 "89da5f41e5608fa9"
@@ -1090,7 +1090,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 170,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "1cfd66efbd534e01"
@@ -1141,7 +1141,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 860,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "395bc07ac1bc1447"
@@ -1192,7 +1192,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1280,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "0070359ac5c82bfc"
@@ -1243,7 +1243,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 690,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "5228c082f3271b42"
@@ -1294,7 +1294,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1430,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "394d39cfc94ad79f"
@@ -1345,7 +1345,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 480,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "7941cc1cfc0f968e"
@@ -1396,7 +1396,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 320,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "94b462665dbff3b2"
@@ -1447,7 +1447,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1580,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "8aff9439e92e9215"
@@ -1498,7 +1498,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 990,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "efb7964278bdc7c1"
@@ -1549,7 +1549,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1130,
-        "y": 647,
+        "y": 689,
         "wires": [
             [
                 "468525b3d9f87f2b"
@@ -1570,7 +1570,7 @@
         "finalize": "",
         "libs": [],
         "x": 130,
-        "y": 727,
+        "y": 769,
         "wires": [
             [
                 "c20e6589663c4929"
@@ -1591,7 +1591,7 @@
         "finalize": "",
         "libs": [],
         "x": 270,
-        "y": 727,
+        "y": 769,
         "wires": [
             [
                 "c6c3162b18b2daf1"
@@ -1612,7 +1612,7 @@
         "finalize": "",
         "libs": [],
         "x": 570,
-        "y": 727,
+        "y": 769,
         "wires": [
             [
                 "fca54d65a931e4cd",
@@ -1647,7 +1647,7 @@
         "domain": "input_boolean",
         "service": "turn_on",
         "x": 1620,
-        "y": 120,
+        "y": 180,
         "wires": [
             []
         ]
@@ -1674,8 +1674,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 1270,
-        "y": 120,
+        "x": 1130,
+        "y": 180,
         "wires": [
             [
                 "2ac016c72e7fcc64",
@@ -1701,8 +1701,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1440,
-        "y": 120,
+        "x": 1420,
+        "y": 180,
         "wires": [
             [
                 "ec52ad041f1a124c"
@@ -1723,7 +1723,7 @@
         "finalize": "",
         "libs": [],
         "x": 540,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "hbcp0planner0001"
@@ -1753,7 +1753,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 780,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "6771d50b016e6996"
@@ -1774,7 +1774,7 @@
         "finalize": "",
         "libs": [],
         "x": 1700,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "3135a784b2d235e8"
@@ -1825,7 +1825,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1510,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "d5149cbbf9a40205"
@@ -1876,7 +1876,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 150,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "0823a423c5d2343b"
@@ -1910,7 +1910,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1910,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             []
         ]
@@ -1953,7 +1953,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 960,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "48be399427ff1abf"
@@ -1974,7 +1974,7 @@
         "finalize": "",
         "libs": [],
         "x": 1140,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "18d85d316d2567cf"
@@ -2025,7 +2025,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1320,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "f1643b49c6950d76"
@@ -2076,7 +2076,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 340,
-        "y": 1167,
+        "y": 1209,
         "wires": [
             [
                 "26777e29dbdb64c9"
@@ -2103,7 +2103,7 @@
         "repair": false,
         "outputs": 2,
         "x": 260,
-        "y": 1240,
+        "y": 1282,
         "wires": [
             [
                 "3ea96c19e11aa3f6"
@@ -2127,7 +2127,7 @@
         "finalize": "",
         "libs": [],
         "x": 140,
-        "y": 927,
+        "y": 969,
         "wires": [
             [
                 "4dc8dd4870d4c346",
@@ -2159,7 +2159,7 @@
         "repair": false,
         "outputs": 2,
         "x": 260,
-        "y": 987,
+        "y": 1029,
         "wires": [
             [
                 "26777e29dbdb64c9"
@@ -2184,7 +2184,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 430,
-        "y": 927,
+        "y": 969,
         "wires": []
     },
     {
@@ -2207,7 +2207,7 @@
         "repair": false,
         "outputs": 2,
         "x": 660,
-        "y": 347,
+        "y": 389,
         "wires": [
             [
                 "f794537e7a200792"
@@ -2236,7 +2236,7 @@
         "allowrate": true,
         "outputs": 2,
         "x": 1000,
-        "y": 347,
+        "y": 389,
         "wires": [
             [
                 "43cd9cdb094e7db3"
@@ -2271,7 +2271,7 @@
         "to": "",
         "reg": false,
         "x": 840,
-        "y": 367,
+        "y": 409,
         "wires": [
             [
                 "8f6dea38e0c33876"
@@ -2299,7 +2299,7 @@
         "to": "",
         "reg": false,
         "x": 850,
-        "y": 327,
+        "y": 369,
         "wires": [
             [
                 "8f6dea38e0c33876"
@@ -2320,7 +2320,7 @@
         "finalize": "",
         "libs": [],
         "x": 460,
-        "y": 347,
+        "y": 389,
         "wires": [
             [
                 "14fc65200cfb6988"
@@ -2340,8 +2340,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1290,
-        "y": 347,
+        "x": 1320,
+        "y": 389,
         "wires": [
             [
                 "bf565e04ab1e74e3"
@@ -2368,8 +2368,8 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 1130,
-        "y": 367,
+        "x": 1144,
+        "y": 409,
         "wires": [
             [
                 "6e1405d92e8ef5be",
@@ -2397,8 +2397,8 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 1130,
-        "y": 327,
+        "x": 1144,
+        "y": 369,
         "wires": [
             [
                 "6e1405d92e8ef5be"
@@ -2415,8 +2415,8 @@
         "links": [
             "987cb2aaed9140b5"
         ],
-        "x": 1425,
-        "y": 347,
+        "x": 1443,
+        "y": 389,
         "wires": []
     },
     {
@@ -2439,7 +2439,7 @@
         "repair": false,
         "outputs": 2,
         "x": 180,
-        "y": 347,
+        "y": 389,
         "wires": [
             [
                 "2a0de0e3cabc9318"
@@ -2460,8 +2460,8 @@
         "event": "update_trace_sensor",
         "data": "{\t   \"trace\": $$.strategy.trace ? $$.strategy.trace : [],\t   \"start\": $$.strategy.execution_start ? $$.strategy.execution_start : 0,\t   \"end\": $$.strategy.execution_end ? $$.strategy.execution_end : 0,\t   \"log\": $$.log ? $$.log : []\t}",
         "dataType": "jsonata",
-        "x": 1580,
-        "y": 1767,
+        "x": 1600,
+        "y": 2360,
         "wires": [
             []
         ]
@@ -2482,8 +2482,8 @@
         "checkall": "true",
         "repair": false,
         "outputs": 1,
-        "x": 1380,
-        "y": 1767,
+        "x": 1400,
+        "y": 2360,
         "wires": [
             [
                 "386d8923c667b128"
@@ -2501,8 +2501,8 @@
             "d5665f1d863af62e",
             "2a85015fb74a1370"
         ],
-        "x": 1235,
-        "y": 1707,
+        "x": 1255,
+        "y": 2300,
         "wires": [
             [
                 "134a6c498c79a7f2",
@@ -2521,8 +2521,8 @@
             "5b39eca0d6b39f12"
         ],
         "uncaught": false,
-        "x": 1180,
-        "y": 1827,
+        "x": 1200,
+        "y": 2420,
         "wires": [
             [
                 "134a6c498c79a7f2",
@@ -2544,8 +2544,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "counter",
-        "x": 1360,
-        "y": 1827,
+        "x": 1380,
+        "y": 2420,
         "wires": []
     },
     {
@@ -2562,8 +2562,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "counter",
-        "x": 1360,
-        "y": 1707,
+        "x": 1380,
+        "y": 2300,
         "wires": []
     },
     {
@@ -2593,7 +2593,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1060,
-        "y": 820,
+        "y": 862,
         "wires": [
             []
         ]
@@ -2625,7 +2625,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1070,
-        "y": 880,
+        "y": 922,
         "wires": [
             []
         ]
@@ -2657,7 +2657,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1060,
-        "y": 940,
+        "y": 982,
         "wires": [
             []
         ]
@@ -2689,7 +2689,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1080,
-        "y": 1000,
+        "y": 1042,
         "wires": [
             []
         ]
@@ -2721,7 +2721,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1090,
-        "y": 1060,
+        "y": 1102,
         "wires": [
             []
         ]
@@ -2769,8 +2769,8 @@
         "override_payload": "msg",
         "entity_location": "data",
         "override_data": "msg",
-        "x": 1180,
-        "y": 1527,
+        "x": 1380,
+        "y": 1520,
         "wires": [
             [
                 "820333e886790eb3"
@@ -2803,8 +2803,8 @@
         "blockInputOverrides": true,
         "domain": "input_text",
         "service": "set_value",
-        "x": 1580,
-        "y": 1527,
+        "x": 1780,
+        "y": 1520,
         "wires": [
             []
         ]
@@ -2822,8 +2822,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1380,
-        "y": 1527,
+        "x": 1580,
+        "y": 1520,
         "wires": [
             [
                 "c6fd059584f60a5b"
@@ -2874,7 +2874,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 130,
-        "y": 227,
+        "y": 269,
         "wires": [
             [
                 "bf14ad449a7a819d"
@@ -2895,7 +2895,7 @@
         "finalize": "",
         "libs": [],
         "x": 235,
-        "y": 227,
+        "y": 269,
         "wires": [
             [
                 "863295b9dc16e4ca"
@@ -2955,7 +2955,7 @@
             }
         ],
         "x": 420,
-        "y": 227,
+        "y": 269,
         "wires": [
             [
                 "fb2ac6d049b50dc9"
@@ -2982,7 +2982,7 @@
         "topic": "topic",
         "outputs": 1,
         "x": 600,
-        "y": 227,
+        "y": 269,
         "wires": [
             [
                 "b3d3fb5f9b97dbd0"
@@ -3016,7 +3016,7 @@
         "domain": "input_boolean",
         "service": "turn_off",
         "x": 810,
-        "y": 227,
+        "y": 269,
         "wires": [
             []
         ]
@@ -3035,7 +3035,7 @@
         "finalize": "",
         "libs": [],
         "x": 285,
-        "y": 227,
+        "y": 269,
         "wires": [
             [
                 "7d3e6c0a3a04b947"
@@ -3057,7 +3057,7 @@
         "finalize": "",
         "libs": [],
         "x": 1600,
-        "y": 220,
+        "y": 280,
         "wires": [
             [
                 "5b39eca0d6b39f12"
@@ -3078,7 +3078,7 @@
         "finalize": "",
         "libs": [],
         "x": 1620,
-        "y": 280,
+        "y": 340,
         "wires": [
             []
         ]
@@ -3091,8 +3091,8 @@
         "name": "",
         "scope": null,
         "uncaught": true,
-        "x": 1595,
-        "y": 400,
+        "x": 1605,
+        "y": 440,
         "wires": [
             [
                 "27ede1f74204fe8e"
@@ -3113,8 +3113,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1645,
-        "y": 400,
+        "x": 1655,
+        "y": 440,
         "wires": [
             [
                 "2a85015fb74a1370"
@@ -3132,8 +3132,8 @@
         "links": [
             "987cb2aaed9140b5"
         ],
-        "x": 1695,
-        "y": 400,
+        "x": 1705,
+        "y": 440,
         "wires": []
     },
     {
@@ -3180,7 +3180,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 150,
-        "y": 1327,
+        "y": 1374,
         "wires": [
             [
                 "e5f4ab46ffd66bad"
@@ -3231,7 +3231,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 350,
-        "y": 1327,
+        "y": 1374,
         "wires": [
             [
                 "03b0709e783643a4"
@@ -3282,7 +3282,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 530,
-        "y": 1327,
+        "y": 1374,
         "wires": [
             [
                 "c607f672cfa9280b"
@@ -3333,7 +3333,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 690,
-        "y": 1327,
+        "y": 1374,
         "wires": [
             [
                 "74b91c4f15dd4314"
@@ -3354,7 +3354,7 @@
         "finalize": "",
         "libs": [],
         "x": 190,
-        "y": 1860,
+        "y": 1980,
         "wires": [
             [
                 "3ba453563b805798"
@@ -3385,7 +3385,7 @@
         "repair": false,
         "outputs": 2,
         "x": 170,
-        "y": 1720,
+        "y": 1840,
         "wires": [
             [
                 "d5665f1d863af62e",
@@ -3410,7 +3410,7 @@
         "finalize": "",
         "libs": [],
         "x": 410,
-        "y": 1860,
+        "y": 1980,
         "wires": [
             [
                 "b7e1c4a9d2f30561"
@@ -3453,7 +3453,7 @@
         "repair": false,
         "outputs": 2,
         "x": 420,
-        "y": 1960,
+        "y": 2080,
         "wires": [
             [
                 "3ba453563b805798"
@@ -3477,7 +3477,7 @@
         "finalize": "",
         "libs": [],
         "x": 620,
-        "y": 1880,
+        "y": 2000,
         "wires": [
             [
                 "b68a07899d5bfe74",
@@ -3500,7 +3500,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 420,
-        "y": 2022,
+        "y": 2142,
         "wires": []
     },
     {
@@ -3518,7 +3518,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 630,
-        "y": 1980,
+        "y": 2100,
         "wires": []
     },
     {
@@ -3532,7 +3532,7 @@
             "987cb2aaed9140b5"
         ],
         "x": 305,
-        "y": 1701,
+        "y": 1821,
         "wires": []
     },
     {
@@ -3546,7 +3546,7 @@
             "hbcp0hb0linkin01"
         ],
         "x": 305,
-        "y": 1745,
+        "y": 1865,
         "wires": []
     },
     {
@@ -3563,7 +3563,7 @@
         "finalize": "",
         "libs": [],
         "x": 190,
-        "y": 1780,
+        "y": 1900,
         "wires": [
             [
                 "7f664323b1c2c254"
@@ -3592,7 +3592,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 470,
-        "y": 1780,
+        "y": 1900,
         "wires": []
     },
     {
@@ -3605,7 +3605,7 @@
             "76616331e5d961e3"
         ],
         "x": 75,
-        "y": 1780,
+        "y": 1900,
         "wires": [
             [
                 "e1aa835c0e26bb18"
@@ -3625,8 +3625,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 440,
-        "y": 2241,
+        "x": 450,
+        "y": 2378,
         "wires": [
             [
                 "134a6c498c79a7f2",
@@ -3656,7 +3656,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 710,
-        "y": 2220,
+        "y": 2318,
         "wires": []
     },
     {
@@ -3670,7 +3670,7 @@
             "37a7888de9a86721"
         ],
         "x": 675,
-        "y": 2280,
+        "y": 2400,
         "wires": []
     },
     {
@@ -3687,7 +3687,7 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 2181,
+        "y": 2301,
         "wires": [
             [
                 "323e5523ce860a2d",
@@ -3706,7 +3706,7 @@
             "hbcp0hb0linkin01"
         ],
         "x": 560,
-        "y": 2181,
+        "y": 2301,
         "wires": []
     },
     {
@@ -3734,7 +3734,7 @@
         "domain": "input_text",
         "service": "set_value",
         "x": 894,
-        "y": 1882,
+        "y": 2002,
         "wires": [
             [
                 "b7e1c4a9d2f30561"
@@ -3755,7 +3755,7 @@
         "finalize": "",
         "libs": [],
         "x": 874,
-        "y": 1961,
+        "y": 2081,
         "wires": [
             [
                 "ac6e7ef8f344ec96"
@@ -3780,7 +3780,7 @@
         ],
         "uncaught": false,
         "x": 874,
-        "y": 2081,
+        "y": 2201,
         "wires": [
             [
                 "4f2249b253f890d5"
@@ -3801,7 +3801,7 @@
         "finalize": "",
         "libs": [],
         "x": 874,
-        "y": 2022,
+        "y": 2142,
         "wires": [
             [
                 "4d1cea4b184a81f6"
@@ -3822,7 +3822,7 @@
         "finalize": "",
         "libs": [],
         "x": 200,
-        "y": 2180,
+        "y": 2300,
         "wires": [
             [
                 "a730440804a7d30b"
@@ -3842,7 +3842,7 @@
         "finalize": "",
         "libs": [],
         "x": 160,
-        "y": 460,
+        "y": 520,
         "wires": [
             [
                 "38cbb5a922343503"
@@ -3869,7 +3869,7 @@
         "finalize": "",
         "libs": [],
         "x": 560,
-        "y": 480,
+        "y": 522,
         "wires": [
             [
                 "f13ef019cf82d21f"
@@ -3886,7 +3886,7 @@
             "hbcp0hb0lnkout02"
         ],
         "x": 365,
-        "y": 480,
+        "y": 522,
         "wires": [
             [
                 "7f1cab805933febc"
@@ -3916,7 +3916,7 @@
         "domain": "mqtt",
         "service": "publish",
         "x": 870,
-        "y": 480,
+        "y": 522,
         "wires": [
             []
         ]
@@ -3933,7 +3933,7 @@
         "onceDelay": "20",
         "topic": "",
         "x": 1130,
-        "y": 480,
+        "y": 522,
         "wires": [
             [
                 "hbcp0health0fn01"
@@ -3945,7 +3945,7 @@
         "type": "function",
         "z": "61557a1c3e5f5404",
         "name": "HBC+ health (hbc/health)",
-        "func": "// HBC+ health (2026-11-15) - publishes hbc/health (retained JSON) -> sensor.hbc_health\n// (packages/hbc_heartbeat.yaml). Checked every 30 s; sent when something changed, and every\n// 5 minutes as a refresh (an unchanged payload adds nothing to the HA database).\n//   status          ok | warning | error   (error = 3 or more errors in the last 10 minutes,\n//                   warning = any warning, or 1-2 errors, in the last 10 minutes)\n//   errors_10m, warnings_10m        counts in the last 10 minutes\n//   errors_total, warnings_total    since the last deploy / Node-RED start\n//   last_error(_at), last_warning(_at)   the latest message, as written to the Node-RED log\n//   hint            what to do about the latest problem, for known messages (v1.3; '' otherwise)\n// The counts come from the HBC+ logger ('Custom logger' on this tab), which handles warnings\n// and errors from every HBC+ flow, also when Insight mode is off.\nconst WINDOW_MS = 10 * 60 * 1000;\nconst REPUBLISH_MS = 5 * 60 * 1000;\nconst ERROR_LEVEL = 3;\nconst h = global.get('hbc_health') || {};\nconst now = Date.now();\nconst recent = (a) => (Array.isArray(a) ? a.filter(t => now - t <= WINDOW_MS).length : 0);\nconst iso = (t) => (Number(t) > 0 ? new Date(Number(t)).toISOString() : null);\nconst errors = recent(h.errors);\nconst warnings = recent(h.warnings);\nconst status = errors >= ERROR_LEVEL ? 'error' : (errors > 0 || warnings > 0) ? 'warning' : 'ok';\nconst payload = {\n    status,\n    errors_10m: errors,\n    warnings_10m: warnings,\n    errors_total: h.errors_total || 0,\n    warnings_total: h.warnings_total || 0,\n    last_error: h.last_error || '',\n    last_error_at: iso(h.last_error_at),\n    last_warning: h.last_warning || '',\n    last_warning_at: iso(h.last_warning_at)\n};\n// --- HBC+ version check (v1.3) ----------------------------------------------------------\n// Every HBC+ tab registers its version ('HBC+ version' node, On Start), and every package file has\n// its own sensor.hbc_version_<file>. Warn when a tab or a package file is of another HBC+ version,\n// when a tab or package file is missing (deleted, or older than this check), or when hbc_config.yaml\n// lacks a setting this release needs. Major.minor must match; a patch may differ: a patch release\n// only replaces the parts it changed. The dashboard checks itself (version card on the Overview).\n// A mixed install looks fine but fails in odd ways, e.g. an old Dynamic tab that reads\n// 'Grid Clock' as the old Grid Clock integration and finds no prices.\n{\n    const VERSION = '1.3.0';\n    const EXPECTED = [\"HBC+ Home Battery Master Switch\", \"HBC+ Home Battery PID presets\", \"HBC+ Home Battery Start\", \"HBC+ Strategy Charge\", \"HBC+ Strategy Charge Deadline\", \"HBC+ Strategy Dynamic\", \"HBC+ Strategy Full stop\", \"HBC+ Strategy Partials\", \"HBC+ Strategy Self-consumption\", \"HBC+ Strategy Sell\", \"HBC+ Strategy Timed\", \"HBC+ Battery Oscillation Guard\", \"HBC+ Phase monitor\", \"HBC+ Self-test\", \"HBC+ Strategy arbiter\"];\n    const mm = (v) => String(v || '').split('.').slice(0, 2).join('.');\n    const tabBase = (n) => String(n || '').replace(/\\s+v\\d+(\\.\\d+)*.*$/, '').trim();\n    const ha = global.get('homeassistant');\n    const srv = (ha && typeof ha === 'object') ? Object.values(ha).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const reg = Object.values(global.get('hbc_flow_versions') || {});\n    const issues = [];\n    const items = [];\n    // Package files of this release (without hbc_config.yaml, which is yours), and entities your\n    // hbc_config.yaml must provide from this release on (none yet). tools/set-version.py keeps the\n    // package list in step with packages/.\n    const EXPECTED_PACKAGES = [\"hbc_batterijplan\", \"hbc_calibration\", \"hbc_control\", \"hbc_deadline_charge\", \"hbc_gridclock\", \"hbc_heartbeat\", \"hbc_load_forecast\", \"hbc_notify\", \"hbc_phase_guard\", \"hbc_price_guard\", \"hbc_savings\", \"hbc_selftest\", \"hbc_strategy_arbiter\"];\n    const EXPECTED_CONFIG = [];\n    const pkgs = {};\n    let pkg = null;\n    if (srv) {\n        const val = (id) => {\n            const e = srv.states[id];\n            return e && !['', 'unknown', 'unavailable'].includes(String(e.state)) ? String(e.state) : null;\n        };\n        pkg = val('sensor.hbc_package_version');\n        for (const p of EXPECTED_PACKAGES) {\n            const v = val(`sensor.hbc_version_${p}`);\n            pkgs[p] = v;\n            if (!v) items.push({ part: 'package', name: `${p}.yaml`, version: null });\n            else if (mm(v) !== mm(VERSION)) items.push({ part: 'package', name: `${p}.yaml`, version: v });\n        }\n        for (const c of EXPECTED_CONFIG) {\n            if (!srv.states[c]) items.push({ part: 'config', name: c, version: null });\n        }\n    }\n    for (const t of reg) if (mm(t.version) !== mm(VERSION)) items.push({ part: 'flow', name: tabBase(t.tab), version: t.version });\n    const present = new Set(reg.map(t => tabBase(t.tab)));\n    for (const name of EXPECTED) if (!present.has(name)) items.push({ part: 'flow', name, version: null });\n    // Readable lines, one per item: '<name> v<version>', or what is missing. 'version_items' keeps them\n    // structured for the dashboard (the Versions table groups them per part).\n    const PART = { flow: 'Node-RED flow', package: 'Package file', config: 'hbc_config.yaml setting' };\n    const line = (i) => i.part === 'config' ? `${i.name} missing (add it from hbc_config.yaml of v${mm(VERSION)})`\n        : i.version ? `${i.name} v${i.version}` : `${i.name} missing (or older than this check)`;\n    for (const i of items) issues.push(line(i));\n    const kinds = [...new Set(items.map(i => i.part))];\n    const title = `HBC+ ${kinds.length === 1 ? PART[kinds[0]] + ' ' : ''}version mismatch`;\n    payload.flows_version = VERSION;\n    payload.packages_version = pkg;\n    payload.package_versions = pkgs;\n    payload.version_ok = issues.length === 0;\n    payload.version_issues = issues.slice(0, 10);\n    payload.version_items = items.slice(0, 20);\n    payload.version_expected = mm(VERSION);\n    // one warning every 5 minutes keeps sensor.hbc_health on 'warning' (10-minute window)\n    if (issues.length && now - (context.get('version_warned') || 0) >= 5 * 60 * 1000) {\n        context.set('version_warned', now);\n        const log = (global.get('logger') || (() => {}));\n        const named = items.slice(0, 3).map(i => (kinds.length > 1 ? PART[i.part] + ' ' : '') + line(i));\n        log(this, `${title} (expected v${mm(VERSION)}.x): ${named.join('; ')}${items.length > 3 ? ` (+${items.length - 3} more)` : ''}`, 'warn');\n    }\n}\n\n// --- Fix hint (v1.3) ---------------------------------------------------------------------\n// For known messages, 'hint' says what to do about the latest problem; the Overview alert and the\n// notification show it. Unknown messages give an empty hint. Checked again every 30 s, so a hint\n// can change once the cause is gone (for example an entity that exists now).\n{\n    const latest = errors > 0 ? String(h.last_error || '') : warnings > 0 ? String(h.last_warning || '') : '';\n    const haAll = global.get('homeassistant');\n    const servers = (haAll && typeof haAll === 'object') ? Object.values(haAll).filter(s => s && s.states && typeof s.states === 'object') : [];\n    const exists = (id) => servers.some(s => s.states[id]);\n    let hint = '';\n    let m;\n    if ((m = latest.match(/Entity could not be found in cache for entityId:\\s*([a-z_]+\\.[a-z0-9_]+)/i))) {\n        const id = m[1].toLowerCase();\n        hint = exists(id)\n            ? `${id} exists now, Node-RED had not picked it up yet. Nothing to do if no new errors follow.`\n            : `Home Assistant has no ${id}. Copy all packages of this HBC+ release to your packages folder, check the configuration and restart Home Assistant. If HA does have it, restart Node-RED so it reloads its entity list.`;\n    } else if (/HBC\\+ (.+ )?version mismatch/.test(latest)) {\n        const fixes = [];\n        if (/Package file/.test(latest)) fixes.push('Copy the package files named above from the HBC+ release your flows are on, check the configuration and restart Home Assistant.');\n        if (/Node-RED flow/.test(latest)) fixes.push('Delete every tab whose name starts with HBC+, import hbc-plus-all-flows.json of the same release as your packages and deploy.');\n        if (/hbc_config\\.yaml setting/.test(latest)) fixes.push('Add the settings named above to your hbc_config.yaml, as in hbc_config.yaml of this release.');\n        if (fixes.length > 1) fixes.splice(0, 2, 'Use one HBC+ release for every part: copy the package files named above from it, delete every tab whose name starts with HBC+, import its hbc-plus-all-flows.json and deploy, then restart Home Assistant.');\n        hint = fixes.join(' ') || 'Copy all packages of one HBC+ release, delete every tab whose name starts with HBC+, import hbc-plus-all-flows.json of the same release and deploy.';\n    } else if (/Modbus write failed/i.test(latest)) {\n        hint = 'Check the Modbus connection of that battery: power, network or RS485 adapter, and its Modbus integration in Home Assistant.';\n    } else if (/keeps ignoring commands/i.test(latest)) {\n        hint = 'Check that RS485 control is on in the Marstek app, and the work mode of that battery.';\n    } else if (/No connection to Home Assistant|NoConnectionError|not connected|ECONNREFUSED|ECONNRESET|socket hang up|websocket/i.test(latest)) {\n        hint = 'Node-RED lost its connection to Home Assistant (HA restarted, was too busy to answer, or was unreachable). Check the Home Assistant log and the Node-RED log (disconnected / connected) around that time. HBC+ picks up again by itself once the connection is back; if it does not, check the HA System server node.';\n    } else if (/timed out|timeout/i.test(latest)) {\n        hint = 'A flow did not answer in time: check that every HBC+ tab is deployed and enabled, and whether Node-RED is overloaded.';\n    }\n    payload.hint = hint;\n}\n\nnode.status({\n    fill: status === 'ok' ? 'green' : status === 'warning' ? 'yellow' : 'red', shape: 'dot',\n    text: `${status}: ${errors} errors, ${warnings} warnings in 10 min`\n});\nconst key = JSON.stringify(payload);\nconst last = context.get('last') || {};\nif (key === last.key && now - (last.t || 0) < REPUBLISH_MS) return null;\ncontext.set('last', { key, t: now });\nreturn { payload: { topic: 'hbc/health', payload: key, retain: true, qos: 1 } };\n",
+        "func": "// HBC+ health (2026-11-15) - publishes hbc/health (retained JSON) -> sensor.hbc_health\n// (packages/hbc_heartbeat.yaml). Checked every 30 s; sent when something changed, and every\n// 5 minutes as a refresh (an unchanged payload adds nothing to the HA database).\n//   status          ok | warning | error   (error = 3 or more errors in the last 10 minutes,\n//                   warning = any warning, or 1-2 errors, in the last 10 minutes)\n//   errors_10m, warnings_10m        counts in the last 10 minutes\n//   errors_total, warnings_total    since the last deploy / Node-RED start\n//   last_error(_at), last_warning(_at)   the latest message, as written to the Node-RED log\n//   hint            what to do about the latest problem, for known messages (v1.3; '' otherwise)\n// The counts come from the HBC+ logger ('Custom logger' on this tab), which handles warnings\n// and errors from every HBC+ flow, also when Insight mode is off.\nconst WINDOW_MS = 10 * 60 * 1000;\nconst REPUBLISH_MS = 5 * 60 * 1000;\nconst ERROR_LEVEL = 3;\nconst h = global.get('hbc_health') || {};\nconst now = Date.now();\nconst recent = (a) => (Array.isArray(a) ? a.filter(t => now - t <= WINDOW_MS).length : 0);\nconst iso = (t) => (Number(t) > 0 ? new Date(Number(t)).toISOString() : null);\nconst errors = recent(h.errors);\nconst warnings = recent(h.warnings);\nconst status = errors >= ERROR_LEVEL ? 'error' : (errors > 0 || warnings > 0) ? 'warning' : 'ok';\nconst payload = {\n    status,\n    errors_10m: errors,\n    warnings_10m: warnings,\n    errors_total: h.errors_total || 0,\n    warnings_total: h.warnings_total || 0,\n    last_error: h.last_error || '',\n    last_error_at: iso(h.last_error_at),\n    last_warning: h.last_warning || '',\n    last_warning_at: iso(h.last_warning_at)\n};\n// --- HBC+ version check (v1.3) ----------------------------------------------------------\n// Every HBC+ tab registers its version ('HBC+ version' node, On Start), and every package file has\n// its own sensor.hbc_version_<file>. Warn when a tab or a package file is of another HBC+ version,\n// when a tab or package file is missing (deleted, or older than this check), or when hbc_config.yaml\n// lacks a setting this release needs. Major.minor must match; a patch may differ: a patch release\n// only replaces the parts it changed. The dashboard checks itself (version card on the Overview).\n// A mixed install looks fine but fails in odd ways, e.g. an old Dynamic tab that reads\n// 'Grid Clock' as the old Grid Clock integration and finds no prices.\n{\n    const VERSION = '1.3.0';\n    const EXPECTED = [\"HBC+ Home Battery Master Switch\", \"HBC+ Home Battery PID presets\", \"HBC+ Home Battery Start\", \"HBC+ Strategy Charge\", \"HBC+ Strategy Charge Deadline\", \"HBC+ Strategy Dynamic\", \"HBC+ Strategy Full stop\", \"HBC+ Strategy Partials\", \"HBC+ Strategy Self-consumption\", \"HBC+ Strategy Sell\", \"HBC+ Strategy Timed\", \"HBC+ Battery Oscillation Guard\", \"HBC+ Phase monitor\", \"HBC+ Self-test\", \"HBC+ Strategy arbiter\"];\n    const mm = (v) => String(v || '').split('.').slice(0, 2).join('.');\n    const tabBase = (n) => String(n || '').replace(/\\s+v\\d+(\\.\\d+)*.*$/, '').trim();\n    const ha = global.get('homeassistant');\n    const srv = (ha && typeof ha === 'object') ? Object.values(ha).find(s => s && s.states && typeof s.states === 'object') : undefined;\n    const reg = Object.values(global.get('hbc_flow_versions') || {});\n    const issues = [];\n    const items = [];\n    // Package files of this release (without hbc_config.yaml, which is yours), and entities your\n    // hbc_config.yaml must provide from this release on (none yet). tools/set-version.py keeps the\n    // package list in step with packages/.\n    const EXPECTED_PACKAGES = [\"hbc_batterijplan\", \"hbc_calibration\", \"hbc_control\", \"hbc_dashboard\", \"hbc_deadline_charge\", \"hbc_gridclock\", \"hbc_heartbeat\", \"hbc_help\", \"hbc_load_forecast\", \"hbc_notify\", \"hbc_phase_guard\", \"hbc_price_guard\", \"hbc_savings\", \"hbc_selftest\", \"hbc_strategy_arbiter\"];\n    const EXPECTED_CONFIG = [];\n    const pkgs = {};\n    let pkg = null;\n    if (srv) {\n        const val = (id) => {\n            const e = srv.states[id];\n            return e && !['', 'unknown', 'unavailable'].includes(String(e.state)) ? String(e.state) : null;\n        };\n        pkg = val('sensor.hbc_package_version');\n        for (const p of EXPECTED_PACKAGES) {\n            const v = val(`sensor.hbc_version_${p}`);\n            pkgs[p] = v;\n            if (!v) items.push({ part: 'package', name: `${p}.yaml`, version: null });\n            else if (mm(v) !== mm(VERSION)) items.push({ part: 'package', name: `${p}.yaml`, version: v });\n        }\n        for (const c of EXPECTED_CONFIG) {\n            if (!srv.states[c]) items.push({ part: 'config', name: c, version: null });\n        }\n    }\n    for (const t of reg) if (mm(t.version) !== mm(VERSION)) items.push({ part: 'flow', name: tabBase(t.tab), version: t.version });\n    const present = new Set(reg.map(t => tabBase(t.tab)));\n    for (const name of EXPECTED) if (!present.has(name)) items.push({ part: 'flow', name, version: null });\n    // Readable lines, one per item: '<name> v<version>', or what is missing. 'version_items' keeps them\n    // structured for the dashboard (the Versions table groups them per part).\n    const PART = { flow: 'Node-RED flow', package: 'Package file', config: 'hbc_config.yaml setting' };\n    const line = (i) => i.part === 'config' ? `${i.name} missing (add it from hbc_config.yaml of v${mm(VERSION)})`\n        : i.version ? `${i.name} v${i.version}` : `${i.name} missing (or older than this check)`;\n    for (const i of items) issues.push(line(i));\n    const kinds = [...new Set(items.map(i => i.part))];\n    const title = `HBC+ ${kinds.length === 1 ? PART[kinds[0]] + ' ' : ''}version mismatch`;\n    payload.flows_version = VERSION;\n    payload.packages_version = pkg;\n    payload.package_versions = pkgs;\n    // Every tab and its version (v1.3), for the Versions list on the dashboard: the tabs that registered,\n    // then the expected tabs that did not (version null).\n    const fv = {};\n    for (const t of reg) fv[tabBase(t.tab)] = t.version || null;\n    for (const name of EXPECTED) if (!(name in fv)) fv[name] = null;\n    payload.flow_versions = fv;\n    payload.version_ok = issues.length === 0;\n    payload.version_issues = issues.slice(0, 10);\n    payload.version_items = items.slice(0, 20);\n    payload.version_expected = mm(VERSION);\n    // one warning every 5 minutes keeps sensor.hbc_health on 'warning' (10-minute window)\n    if (issues.length && now - (context.get('version_warned') || 0) >= 5 * 60 * 1000) {\n        context.set('version_warned', now);\n        const log = (global.get('logger') || (() => {}));\n        const named = items.slice(0, 3).map(i => (kinds.length > 1 ? PART[i.part] + ' ' : '') + line(i));\n        log(this, `${title} (expected v${mm(VERSION)}.x): ${named.join('; ')}${items.length > 3 ? ` (+${items.length - 3} more)` : ''}`, 'warn');\n    }\n}\n\n// --- Fix hint (v1.3) ---------------------------------------------------------------------\n// For known messages, 'hint' says what to do about the latest problem; the Overview alert and the\n// notification show it. Unknown messages give an empty hint. Checked again every 30 s, so a hint\n// can change once the cause is gone (for example an entity that exists now).\n{\n    const latest = errors > 0 ? String(h.last_error || '') : warnings > 0 ? String(h.last_warning || '') : '';\n    const haAll = global.get('homeassistant');\n    const servers = (haAll && typeof haAll === 'object') ? Object.values(haAll).filter(s => s && s.states && typeof s.states === 'object') : [];\n    const exists = (id) => servers.some(s => s.states[id]);\n    let hint = '';\n    let m;\n    if ((m = latest.match(/Entity could not be found in cache for entityId:\\s*([a-z_]+\\.[a-z0-9_]+)/i))) {\n        const id = m[1].toLowerCase();\n        hint = exists(id)\n            ? `${id} exists now, Node-RED had not picked it up yet. Nothing to do if no new errors follow.`\n            : `Home Assistant has no ${id}. Copy all packages of this HBC+ release to your packages folder, check the configuration and restart Home Assistant. If HA does have it, restart Node-RED so it reloads its entity list.`;\n    } else if (/HBC\\+ (.+ )?version mismatch/.test(latest)) {\n        const fixes = [];\n        if (/Package file/.test(latest)) fixes.push('Copy the package files named above from the HBC+ release your flows are on, check the configuration and restart Home Assistant.');\n        if (/Node-RED flow/.test(latest)) fixes.push('Delete every tab whose name starts with HBC+, import hbc-plus-all-flows.json of the same release as your packages and deploy.');\n        if (/hbc_config\\.yaml setting/.test(latest)) fixes.push('Add the settings named above to your hbc_config.yaml, as in hbc_config.yaml of this release.');\n        if (fixes.length > 1) fixes.splice(0, 2, 'Use one HBC+ release for every part: copy the package files named above from it, delete every tab whose name starts with HBC+, import its hbc-plus-all-flows.json and deploy, then restart Home Assistant.');\n        hint = fixes.join(' ') || 'Copy all packages of one HBC+ release, delete every tab whose name starts with HBC+, import hbc-plus-all-flows.json of the same release and deploy.';\n    } else if (/Modbus write failed/i.test(latest)) {\n        hint = 'Check the Modbus connection of that battery: power, network or RS485 adapter, and its Modbus integration in Home Assistant.';\n    } else if (/keeps ignoring commands/i.test(latest)) {\n        hint = 'Check that RS485 control is on in the Marstek app, and the work mode of that battery.';\n    } else if (/No connection to Home Assistant|NoConnectionError|not connected|ECONNREFUSED|ECONNRESET|socket hang up|websocket/i.test(latest)) {\n        hint = 'Node-RED lost its connection to Home Assistant (HA restarted, was too busy to answer, or was unreachable). Check the Home Assistant log and the Node-RED log (disconnected / connected) around that time. HBC+ picks up again by itself once the connection is back; if it does not, check the HA System server node.';\n    } else if (/timed out|timeout/i.test(latest)) {\n        hint = 'A flow did not answer in time: check that every HBC+ tab is deployed and enabled, and whether Node-RED is overloaded.';\n    }\n    payload.hint = hint;\n}\n\nnode.status({\n    fill: status === 'ok' ? 'green' : status === 'warning' ? 'yellow' : 'red', shape: 'dot',\n    text: `${status}: ${errors} errors, ${warnings} warnings in 10 min`\n});\nconst key = JSON.stringify(payload);\nconst last = context.get('last') || {};\nif (key === last.key && now - (last.t || 0) < REPUBLISH_MS) return null;\ncontext.set('last', { key, t: now });\nreturn { payload: { topic: 'hbc/health', payload: key, retain: true, qos: 1 } };\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -3953,7 +3953,7 @@
         "finalize": "",
         "libs": [],
         "x": 1330,
-        "y": 480,
+        "y": 522,
         "wires": [
             [
                 "hbcp0health0pub1"
@@ -3983,7 +3983,7 @@
         "domain": "mqtt",
         "service": "publish",
         "x": 1580,
-        "y": 480,
+        "y": 522,
         "wires": [
             []
         ]
@@ -4002,7 +4002,7 @@
         "finalize": "",
         "libs": [],
         "x": 780,
-        "y": 1240,
+        "y": 1282,
         "wires": [
             [
                 "46db74320df74313"
@@ -4023,7 +4023,7 @@
         "finalize": "",
         "libs": [],
         "x": 470,
-        "y": 1720,
+        "y": 1840,
         "wires": [
             [
                 "e1aa835c0e26bb18"
@@ -4054,7 +4054,7 @@
         "finalize": "",
         "libs": [],
         "x": 890,
-        "y": 1667,
+        "y": 1709,
         "wires": [
             [
                 "hbcp12c000000002"
@@ -4073,7 +4073,7 @@
         "data": "payload",
         "dataType": "jsonata",
         "x": 1130,
-        "y": 1667,
+        "y": 1709,
         "wires": [
             []
         ]
@@ -4104,8 +4104,8 @@
                 "valueType": "jsonata"
             }
         ],
-        "x": 1270,
-        "y": 80,
+        "x": 1110,
+        "y": 122,
         "wires": [
             [
                 "hbcp13c000000002"
@@ -4125,8 +4125,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1460,
-        "y": 80,
+        "x": 1380,
+        "y": 120,
         "wires": [
             [
                 "ec52ad041f1a124c"
@@ -4148,7 +4148,7 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "60f1875ec34440a1",
+        "id": "01f6199d82db4ce5",
         "type": "global-config",
         "env": [],
         "modules": {

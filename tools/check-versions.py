@@ -63,6 +63,9 @@ def check(root, tag=None):
         for k, x in d.items():
             if k.startswith('version card') and x != num(dash):
                 errors.append(f'dashboard: {k} = {x}, should be {num(dash)}')
+            if k.startswith('release range') and x != (num(dash) - 1, num(dash) + 1):
+                errors.append(f'dashboard: {k} = above {x[0]} / below {x[1]}, should be '
+                              f'above {num(dash) - 1} / below {num(dash) + 1}')
             if k.startswith('update card') and x != full_num(dash):
                 errors.append(f'dashboard: {k} = {x}, should be {full_num(dash)}')
     # across parts

@@ -7,6 +7,28 @@
         "info": "# Strategy arbiter\n\nThe only flow that writes `input_select.house_battery_strategy`.\n\nOther flows **request** a strategy with a *link call* to **Strategy request**:\n`msg.arbiter = {requester, action: 'hold' | 'release', strategy, reason}`; `requester` is any name, e.g. `'guard'` or the name of your own flow\n\n- Priority: oscillation guard (100) > self-test (90) > any other requester (50) > battery calibration (40) > your own choice (base). Equal priority: the hold that came first wins.\n- Effective strategy = highest active hold, otherwise the base.\n- A manual change wins: it becomes the base and marks running holds as overridden; they are not re-applied until released.\n- Release puts back the next hold or the base.\n- The reply carries `msg.arbiter_result` / `msg.strategy_action` for the caller's log.\n- State is mirrored to `input_text.hbc_strategy_arbiter` (package `hbc_strategy_arbiter.yaml`) and restored on start.\n- Every change is written to the HA logbook.\n\nAny requester name works and gets priority 50. To give one another priority, add it to `PRIO` in *Arbitrate*."
     },
     {
+        "id": "hbcp13a000000001",
+        "type": "group",
+        "z": "230212c14defbe4a",
+        "name": "Requests from Home Assistant (HBC+ v1.3)",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "hbcp13a000000002",
+            "hbcp13a000000003",
+            "hbcp13a000000004",
+            "hbcp13a000000005",
+            "hbcp13a000000006",
+            "hbcp13a000000007",
+            "hbcp13a000000008"
+        ],
+        "x": 44,
+        "y": 579,
+        "w": 1042,
+        "h": 162
+    },
+    {
         "id": "b5d5b7fc1f38fd4f",
         "type": "function",
         "z": "230212c14defbe4a",
@@ -18,8 +40,8 @@
         "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
         "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
         "libs": [],
-        "x": 160,
-        "y": 780,
+        "x": 120,
+        "y": 80,
         "wires": []
     },
     {
@@ -382,28 +404,6 @@
         "wires": []
     },
     {
-        "id": "hbcp13a000000001",
-        "type": "group",
-        "z": "230212c14defbe4a",
-        "name": "Requests from Home Assistant (HBC+ v1.3)",
-        "style": {
-            "label": true
-        },
-        "nodes": [
-            "hbcp13a000000002",
-            "hbcp13a000000003",
-            "hbcp13a000000004",
-            "hbcp13a000000005",
-            "hbcp13a000000006",
-            "hbcp13a000000007",
-            "hbcp13a000000008"
-        ],
-        "x": 64,
-        "y": 579,
-        "w": 1012,
-        "h": 162
-    },
-    {
         "id": "hbcp13a000000002",
         "type": "server-events",
         "z": "230212c14defbe4a",
@@ -588,7 +588,7 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "df054697b66e36cc",
+        "id": "fe51d61733288ba6",
         "type": "global-config",
         "env": [],
         "modules": {

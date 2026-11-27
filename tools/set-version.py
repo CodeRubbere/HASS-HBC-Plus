@@ -17,7 +17,8 @@ What it changes:
              '<tab> vX.Y', references to it, and 'Part of **HBC+ vX.Y**' / 'HBC+ vX.Y (open the'
   dashboard  the dash constants (header, version card, update card, Versions table), the version in the
              Overview heading 'Status & control (vX.Y.Z)', and the numbers in
-             the visibility conditions of the version card and the update card
+             the visibility conditions of the version card and the update card (incl. the
+             'exactly this release' range above: N-1 / below: N+1)
   manifest   versions.json, written from all of the above
 """
 import json
@@ -26,7 +27,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hbc_versions import (CARD_NUM_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, collect,  # noqa: E402
+from hbc_versions import (CARD_NUM_RE, CARD_RANGE_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, collect,  # noqa: E402
                           dump_flows, flow_files, full_num, load_flows, manifest_text, mm, num, package_names,
                           package_re, read, strings, tab_labels, write)
 
@@ -64,6 +65,9 @@ def main():
     # flows (one part)
     if 'flows' in parts:
         old_mm = mm([x for k, x in cur['flows'].items() if 'VERSION' in k][0])
+        # Tab names of ALL flow files: a node can refer to a tab that lives in another file, and every file
+        # must get the same renames as hbc-plus-all-flows.json (tools/check-versions.py compares them).
+        all_labels = sorted({lab for f in flow_files(root) for lab in tab_labels(load_flows(f)[0])})
         for p in flow_files(root):
             data, exact = load_flows(p)
             if not exact:
@@ -72,7 +76,7 @@ def main():
                     (EXPECTED_RE, lambda m: m.group(1) + json.dumps(pk) + m.group(3))]
             pairs = []
             if minor:
-                for lab in tab_labels(data):
+                for lab in all_labels:
                     base = re.sub(r' v\d+\.\d+$', '', lab)
                     pairs.append((f'{base} v{old_mm}', f'{base} v{mm(new)}'))
                 pairs += [(f'Part of **HBC+ v{old_mm}**', f'Part of **HBC+ v{mm(new)}**'),
@@ -93,6 +97,7 @@ def main():
         s = read(p)
         s = DASH_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
         s = CARD_NUM_RE.sub(lambda m: m.group(1) + str(num(new)), s)
+        s = CARD_RANGE_RE.sub(lambda m: m.group(1) + str(num(new) - 1) + m.group(3) + str(num(new) + 1), s)
         s = DASH_NUM_RE.sub(lambda m: m.group(1) + str(full_num(new)), s)
         s = HEADING_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
         write(p, s)

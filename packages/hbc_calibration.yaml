@@ -654,8 +654,5 @@ automation:
         data:
           value: '{"p":"idle","t":0}'
 
-# Display-only: keep the minute-by-minute status out of the database.
-recorder:
-  exclude:
-    entities:
-      - sensor.hbc_calibration_status
+# Recorder exclusions for this package are in hbc_control.yaml: Home Assistant allows `recorder: exclude:` in one
+# package only (a second one makes that package fail to load).

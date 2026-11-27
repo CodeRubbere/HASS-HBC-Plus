@@ -1,0 +1,409 @@
+###########################################################################################################
+# HBC+ control mode and mode (preview, 2026-11-25)
+#
+# Splits "Choose strategy" into two questions for the dashboard:
+#   input_select.hbc_control_mode       who decides?            Manual, Schedule, Price, External
+#   input_select.hbc_manual_mode   what does the battery do (with control mode Manual)?
+#
+# Nothing in Node-RED changes. The control loop keeps routing on input_select.house_battery_strategy:
+#   Manual   -> the chosen mode (Self-consumption, Charge PV, ...)
+#   Schedule -> Timed
+#   Price    -> Dynamic
+#   External -> Helios
+#
+# Sync, both ways, without loops:
+#   - "apply": a change of control mode or manual mode writes house_battery_strategy, as an ordinary user choice,
+#     so the Strategy arbiter makes it the new base. It only writes when the result differs from that base.
+#   - "follow": when the arbiter's base changes (an older dashboard, the app, your own automation, the phase
+#     overload Full stop), control mode and mode follow. Holds (calibration, self-test, Oscillation Guard, your own
+#     scripts) do NOT change control mode or mode: they show as an override in sensor.hbc_control_state.
+#
+# Mode names on the dashboard are friendly names; the internal strategy names stay unchanged, so no flow or
+# automation breaks. The sub-strategy lists of Timed and Dynamic still show the internal names.
+###########################################################################################################
+
+input_boolean:
+  hbc_show_alert_info:
+    name: "HBC+ show problem details"
+    icon: mdi:alert-outline
+    # on: the dashboard shows the full text of warnings and errors under their one-line heading
+  hbc_show_steering_info:
+    name: "HBC+ show steering info"
+    icon: mdi:information-outline
+    # on: the dashboard shows the full Batterijplan / HELIOS explanation under its one-line heading
+  hbc_dashboard_mode:
+    name: "HBC+ dashboard mode"
+    icon: mdi:view-dashboard-outline
+    initial: true   # default: on after every HA restart
+    # on: the dashboard shows only Status & control, Strategy and Batteries
+  hbc_show_selftest_details:
+    name: "HBC+ show self-test details"
+    icon: mdi:clipboard-text-outline
+    # on: the Batteries (new) view shows every check and the phase table, not only the summary
+  hbc_show_phase_details:
+    name: "HBC+ show phase details"
+    icon: mdi:sine-wave
+    # on: the Phase guard (new) view shows why this battery, since when, setpoint and guard per phase
+  hbc_show_batteries:
+    name: "HBC+ show batteries"
+    icon: mdi:home-battery
+    # off by default: the dashboard's "Show Batteries" badge toggles the Batteries column
+  hbc_show_strategy:
+    name: "HBC+ show strategy"
+    icon: mdi:strategy
+    # the dashboard's "Show Strategy" badge toggles the Charge / Charge Deadline / Sell column
+
+input_select:
+  hbc_control_mode:
+    name: "HBC+ control mode"
+    icon: mdi:account-question
+    options:
+      - Manual     # you pick one mode
+      - Schedule   # Timed: a mode per period
+      - Price      # Dynamic: a mode per price class
+      - External   # Helios: an external optimizer decides
+
+  hbc_manual_mode:
+    name: "HBC+ mode (manual)"
+    icon: mdi:home-battery
+    options:
+      - Self-consumption     # Self-consumption
+      - Solar only           # Charge PV
+      - Zero import          # Zero import
+      - Standby              # Standby / peak shave
+      - Charge               # Charge
+      - Charge by deadline   # Charge Deadline
+      - Sell                 # Sell
+      - Stop                 # Full stop
+
+template:
+  - sensor:
+      # What actually runs now, and why. State = the mode in friendly words.
+      - name: "HBC control state"
+        unique_id: hbc_control_state
+        icon: mdi:play-circle-outline
+        state: >-
+          {%- set names = {'Self-consumption': 'Self-consumption', 'Charge PV': 'Solar only',
+                           'Zero import': 'Zero import', 'Standby / peak shave': 'Standby', 'Charge': 'Charge',
+                           'Charge Deadline': 'Charge by deadline', 'Sell': 'Sell', 'Full stop': 'Stop',
+                           'Timed': 'Schedule', 'Dynamic': 'Price', 'Helios': 'HELIOS', 'Self-test': 'Self-test'} -%}
+          {%- set eff = states('input_select.house_battery_strategy') -%}
+          {%- set sub = states('input_text.house_battery_strategy_active_sub_strategy') -%}
+          {%- set run = sub if sub not in ['', 'unknown', 'unavailable'] else eff -%}
+          {{ names.get(run, run) }}
+        attributes:
+          control_mode: "{{ states('input_select.hbc_control_mode') }}"
+          mode: >-
+            {%- set p = states('input_select.hbc_control_mode') -%}
+            {{ states('input_select.hbc_manual_mode') if p == 'Manual'
+               else ('per period' if p == 'Schedule' else ('per price class' if p == 'Price' else 'from HELIOS')) }}
+          reason: >-
+            {%- set p = states('input_select.hbc_control_mode') -%}
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {%- set eff = states('input_select.house_battery_strategy') -%}
+            {%- set held = (j.get('h') or {}).items() | selectattr('1.a') | selectattr('1.s', 'eq', eff) | list -%}
+            {%- if is_state('binary_sensor.hbc_heartbeat_stale', 'on') -%}
+              HBC+ is not steering the batteries (no heartbeat)
+            {%- elif not is_state('input_select.marstek_master_battery_mode', 'Full control') -%}
+              The Marstek firmware is in control ({{ states('input_select.marstek_master_battery_mode') }})
+            {%- elif held | count > 0 -%}
+              {%- set h = held[0][1] -%}
+              Held by {{ held[0][0] }}{{ (' until ' ~ (h.x / 1000) | timestamp_custom('%H:%M')) if h.x is defined and h.x }}
+            {%- elif p == 'Manual' -%}
+              Your choice
+            {%- elif p == 'Schedule' -%}
+              {%- set per = states('input_text.house_battery_strategy_timed_period_selected') -%}
+              {{ 'Period ' ~ per if per not in ['', 'unknown', 'unavailable'] else 'Schedule' }}
+            {%- elif p == 'Price' -%}
+              {%- set ts = as_timestamp(now()) -%}
+              {%- set ns = namespace(m=none) -%}
+              {%- for iv in state_attr('sensor.hbc_energy_prices_data', 'marks') or [] -%}
+                {%- if iv.start is defined and iv.end is defined
+                       and as_timestamp(iv.start, 0) <= ts < as_timestamp(iv.end, 0) -%}
+                  {%- set ns.m = iv.get('mark') -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- if is_state('binary_sensor.hbc_managed_by_batterijplan', 'on') -%}Managed by Batterijplan · {% endif -%}
+              {{ {'low': 'Cheap quarter', 'high': 'Expensive quarter'}.get(ns.m, 'Normal quarter' if (state_attr('sensor.hbc_energy_prices_data', 'marks') or []) | count > 0 else 'No prices yet') }}
+            {%- else -%}
+              Planned by HELIOS
+            {%- endif -%}
+          override: >-
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {%- set holds = (j.get('h') or {}).items() | selectattr('1.a') | list -%}
+            {%- set ev = states('input_text.house_battery_strategy_ev_sensor_entity_id') -%}
+            {%- if is_state('binary_sensor.hbc_phase_limit_exceeded', 'on') or is_state('binary_sensor.hbc_phase_circuit_limit_exceeded', 'on') -%}
+              Safety: phase overload
+            {%- elif holds | selectattr('0', 'eq', 'guard') | list | count > 0 -%}
+              Safety: Oscillation Guard holds Full stop
+            {%- elif ev not in ['', 'unknown', 'unavailable'] and is_state(ev, 'on') -%}
+              EV charging: {{ states('input_select.house_battery_strategy_ev_stop_trigger_strategy') }}
+            {%- elif is_state('sensor.hbc_price_guard', 'override') -%}
+              Negative price: {{ state_attr('sensor.hbc_price_guard', 'action') or state_attr('sensor.hbc_price_guard', 'reason') }}
+            {%- elif holds | count > 0 -%}
+              {%- set ns = namespace(l=[]) -%}
+              {%- for k, v in holds -%}
+                {%- set ns.l = ns.l + [k ~ ' (' ~ v.s ~ ((' until ' ~ (v.x / 1000) | timestamp_custom('%H:%M')) if v.x is defined and v.x else '') ~ ')'] -%}
+              {%- endfor -%}
+              Hold: {{ ns.l | join(', ') }}
+            {%- endif -%}
+
+      # Clock for the dashboard's time badge (updates every minute).
+      - name: "HBC time"
+        unique_id: hbc_time
+        icon: mdi:clock-outline
+        state: "{{ now().strftime('%H:%M') }}"
+
+      # Who decides what the batteries do: HBC+, Batterijplan (Price + Live), HELIOS (External) or the Marstek firmware.
+      - name: "HBC steered by"
+        unique_id: hbc_steered_by
+        icon: mdi:steering
+        state: >-
+          {%- if not is_state('input_select.marstek_master_battery_mode', 'Full control') -%} Marstek
+          {%- elif is_state('input_select.hbc_control_mode', 'External') -%}
+            {{ 'HELIOS offline' if states('input_number.helios_optimizer_energy_plan') in ['unknown', 'unavailable'] else 'HELIOS' }}
+          {%- elif is_state('binary_sensor.hbc_managed_by_batterijplan', 'on') -%} Batterijplan
+          {%- else -%} HBC+
+          {%- endif -%}
+
+  - binary_sensor:
+      - name: "HBC override active"
+        unique_id: hbc_override_active
+        icon: mdi:alert-circle-outline
+        state: "{{ (state_attr('sensor.hbc_control_state', 'override') or '') | trim != '' }}"
+
+      # On only when HBC+ health reports a real version problem (Node-RED flow, package file or config setting).
+      # Off while sensor.hbc_health is unavailable, so the dashboard shows no false warning after a restart.
+      - name: "HBC version mismatch"
+        unique_id: hbc_version_mismatch
+        icon: mdi:tag-off-outline
+        state: "{{ state_attr('sensor.hbc_health', 'version_ok') == false }}"
+
+  # Version of this package file (HBC+ version check: 'HBC+ health' in Node-RED compares every
+  # package with the flows; tools/set-version.py sets it on a release).
+  - sensor:
+      - name: "HBC version hbc_dashboard"
+        unique_id: hbc_version_hbc_dashboard
+        icon: mdi:tag-outline
+        state: "1.3.0"
+
+automation:
+  # Control mode or manual mode changed on the dashboard -> write the internal strategy.
+  - id: hbc_control_mode_apply
+    alias: "HBC+ control mode: apply control mode and mode"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_select.hbc_control_mode
+          - input_select.hbc_manual_mode
+        not_from: [unknown, unavailable]
+        not_to: [unknown, unavailable]
+    conditions:
+      - "{{ trigger.from_state is not none }}"
+      - "{{ trigger.entity_id == 'input_select.hbc_control_mode' or is_state('input_select.hbc_control_mode', 'Manual') }}"
+    actions:
+      - variables:
+          modes:
+            Self-consumption: Self-consumption
+            Solar only: Charge PV
+            Zero import: Zero import
+            Standby: Standby / peak shave
+            Charge: Charge
+            Charge by deadline: Charge Deadline
+            Sell: Sell
+            Stop: Full stop
+          control_modes:
+            Schedule: Timed
+            Price: Dynamic
+            External: Helios
+          control_mode: "{{ states('input_select.hbc_control_mode') }}"
+          target: >-
+            {{ modes.get(states('input_select.hbc_manual_mode'), '') if control_mode == 'Manual'
+               else control_modes.get(control_mode, '') }}
+          base: >-
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {{ j.get('b') or states('input_select.house_battery_strategy') }}
+      - condition: template
+        value_template: >-
+          {{ target != '' and target != base
+             and target in (state_attr('input_select.house_battery_strategy', 'options') or []) }}
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_battery_strategy
+        data:
+          option: "{{ target }}"
+
+  # The arbiter's base changed elsewhere (or HA started) -> control mode and mode follow.
+  - id: hbc_control_mode_follow
+    alias: "HBC+ control mode: follow the chosen strategy"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_text.hbc_strategy_arbiter
+      - trigger: homeassistant
+        event: start
+    actions:
+      - if: "{{ trigger.platform == 'homeassistant' }}"
+        then:
+          - delay: "00:01:00"   # give Node-RED time to restore the arbiter state
+      - variables:
+          modes:
+            Self-consumption: Self-consumption
+            Charge PV: Solar only
+            Zero import: Zero import
+            Standby / peak shave: Standby
+            Charge: Charge
+            Charge Deadline: Charge by deadline
+            Sell: Sell
+            Full stop: Stop
+          control_modes:
+            Timed: Schedule
+            Dynamic: Price
+            Helios: External
+          base: >-
+            {%- set s = states('input_text.hbc_strategy_arbiter') -%}
+            {%- set j = s | from_json if s.startswith('{') else {} -%}
+            {{ j.get('b') or states('input_select.house_battery_strategy') }}
+          control_mode: "{{ control_modes.get(base, 'Manual' if base in modes else '') }}"
+          mode: "{{ modes.get(base, '') }}"
+      - condition: template
+        value_template: "{{ control_mode != '' }}"
+      # Mode first, then control mode: so "apply" never sees the new control mode with the old mode.
+      - if: "{{ mode != '' and not is_state('input_select.hbc_manual_mode', mode) }}"
+        then:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_manual_mode
+            data:
+              option: "{{ mode }}"
+      - if: "{{ not is_state('input_select.hbc_control_mode', control_mode) }}"
+        then:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.hbc_control_mode
+            data:
+              option: "{{ control_mode }}"
+
+  # Any field changed by a person on the dashboard (buttons and settings, not the Batteries column itself)
+  # -> the 4th column shows Strategy (Charge / Charge Deadline / Sell) again; Batteries and Prices go off via
+  # the exclusive rule below. Changes made by automations or HBC+ itself are ignored.
+  - id: hbc_hide_batteries_on_choice
+    alias: "HBC+ dashboard: show Strategy on a field change"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_boolean.house_battery_control_has_node_red
+          - input_boolean.house_battery_control_onboarding_finished
+          - input_boolean.house_battery_deadline_hold_after_target
+          - input_boolean.house_battery_deadline_reserve_pv
+          - input_boolean.house_battery_strategy_timed_has_period_b
+          - input_boolean.house_battery_strategy_timed_has_period_c
+          - input_boolean.house_battery_strategy_timed_has_period_d
+          - input_boolean.house_battery_strategy_timed_has_period_e
+          - input_datetime.house_battery_deadline_end
+          - input_datetime.house_battery_deadline_start
+          - input_datetime.house_battery_strategy_timed_period_a1
+          - input_datetime.house_battery_strategy_timed_period_a2
+          - input_datetime.house_battery_strategy_timed_period_b1
+          - input_datetime.house_battery_strategy_timed_period_b2
+          - input_datetime.house_battery_strategy_timed_period_c1
+          - input_datetime.house_battery_strategy_timed_period_c2
+          - input_datetime.house_battery_strategy_timed_period_d1
+          - input_datetime.house_battery_strategy_timed_period_d2
+          - input_datetime.house_battery_strategy_timed_period_e1
+          - input_datetime.house_battery_strategy_timed_period_e2
+          - input_number.helios_optimizer_energy_plan
+          - input_number.house_battery_count
+          - input_number.house_battery_deadline_price_ratio
+          - input_number.house_battery_deadline_target_energy
+          - input_number.house_battery_deadline_target_soc
+          - input_number.house_battery_phase_circuit_limit_w
+          - input_number.house_battery_phase_limit_w
+          - input_number.house_battery_solar_reserved_for_house
+          - input_number.house_battery_strategy_charge_target_energy
+          - input_number.house_battery_strategy_charge_target_soc
+          - input_number.house_battery_strategy_dynamic_cheapest_hrs
+          - input_number.house_battery_strategy_dynamic_expensive_hrs
+          - input_number.house_battery_strategy_dynamic_threshold_delta
+          - input_number.house_battery_strategy_sell_target_energy
+          - input_number.house_battery_strategy_sell_target_soc
+          - input_select.hbc_control_mode
+          - input_select.hbc_manual_mode
+          - input_select.helios_optimizer_hbc_sub_strategy
+          - input_select.house_battery_deadline_goal
+          - input_select.house_battery_deadline_reached
+          - input_select.house_battery_gridclock_grid_operator
+          - input_select.house_battery_gridclock_provider
+          - input_select.house_battery_gridclock_zone
+          - input_select.house_battery_strategy_charge_goal
+          - input_select.house_battery_strategy_charge_goal_reached
+          - input_select.house_battery_strategy_dynamic_cheapest
+          - input_select.house_battery_strategy_dynamic_data_source
+          - input_select.house_battery_strategy_dynamic_default
+          - input_select.house_battery_strategy_dynamic_expensive
+          - input_select.house_battery_strategy_ev_stop_trigger_strategy
+          - input_select.house_battery_strategy_sell_goal
+          - input_select.house_battery_strategy_sell_goal_reached
+          - input_select.house_battery_strategy_timed_strat_0
+          - input_select.house_battery_strategy_timed_strat_a
+          - input_select.house_battery_strategy_timed_strat_b
+          - input_select.house_battery_strategy_timed_strat_c
+          - input_select.house_battery_strategy_timed_strat_d
+          - input_select.house_battery_strategy_timed_strat_e
+          - input_select.marstek_master_battery_mode
+          - input_text.house_battery_strategy_solar_forecast_entity_id
+          - input_text.house_battery_strategy_solar_forecast_tomorrow_entity_id
+          - input_text.house_battery_strategy_timed_period_selected
+        not_from: [unknown, unavailable]
+        not_to: [unknown, unavailable]
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hbc_show_strategy
+        state: "off"
+      - "{{ trigger.to_state.context.user_id is not none }}"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hbc_show_strategy
+
+  # Batteries, Prices and Strategy share the 4th column: turning one on turns the others off.
+  - id: hbc_batteries_prices_exclusive
+    alias: "HBC+ dashboard: Batteries, Prices or Strategy, one at a time"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_boolean.hbc_show_batteries
+          - input_boolean.house_battery_control_show_price_list
+          - input_boolean.hbc_show_strategy
+        to: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: >-
+            {{ ['input_boolean.hbc_show_batteries', 'input_boolean.house_battery_control_show_price_list',
+                'input_boolean.hbc_show_strategy'] | reject('eq', trigger.entity_id) | list }}
+
+  # Leaving Dashboard mode -> the 4th column shows Batteries (Prices and Strategy go off).
+  - id: hbc_dashboard_mode_off_shows_batteries
+    alias: "HBC+ dashboard: Batteries after Dashboard mode"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hbc_dashboard_mode
+        from: "on"
+        to: "off"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hbc_show_batteries
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.house_battery_control_show_price_list
+            - input_boolean.hbc_show_strategy

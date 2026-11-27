@@ -50,8 +50,8 @@
         "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
         "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
         "libs": [],
-        "x": 160,
-        "y": 540,
+        "x": 100,
+        "y": 80,
         "wires": []
     },
     {
@@ -61,7 +61,7 @@
         "name": "Battery Oscillation Guard (readme)",
         "info": "# Battery Oscillation Guard\n\nWatches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger) and detects when the batteries swing\nbetween **charging and discharging at high power** repeatedly (a wave).\n\nWhen detected:\n1. Asks 'Strategy arbiter' to **hold Full stop** (*Request: hold Full stop*, link call\n   'Strategy request'). The guard has the highest priority there.\n2. After `STOP_S` seconds (default 300 = 5 min) it sends a **release** (*Request: release*).\n   The arbiter restores the strategy that was active before - or keeps a manual change made\n   during the pause, or a hold of another flow that is still running.\n3. Ignores new detections for `GRACE_S` seconds so the batteries can settle\n\nThe release is always sent at the end of a pause, also when local state was lost.\n\n## Tuning (tab Environment variables - double-click the tab)\n- `THRESHOLD_W` - a battery counts as charging above +T W, discharging below -T W (hysteresis between)\n- `WINDOW_S` / `MIN_FLIPS` - trigger when one battery flips charge<->discharge >= MIN_FLIPS times within WINDOW_S\n- `STOP_S` - how long to stay in Full stop\n- `GRACE_S` - quiet period after restoring\n- `DRY_RUN` - true = only detect + log, don't change strategy\n\n## Notes\n- Every trigger is written to the HA Logbook.\n- A phone notification (with date/time) is sent on Full stop and on restore\n  via `script.hbc_notify` (hbc_notify.yaml); set where it goes on the Settings view of the dashboard.\n- The strategy is no longer written here: 'Full stop' and the restore are requests to\n  'Strategy arbiter' (hold / release). The arbiter keeps its state in HA, so a\n  Node-RED restart during the pause no longer leaves the strategy on Full stop\n  (the 'On deploy' inject sends a release).\n",
         "x": 170,
-        "y": 100,
+        "y": 141,
         "wires": []
     },
     {
@@ -114,7 +114,7 @@
             }
         ],
         "x": 160,
-        "y": 140,
+        "y": 181,
         "wires": [
             [
                 "f568e0eea484babf"
@@ -134,7 +134,7 @@
         "finalize": "",
         "libs": [],
         "x": 390,
-        "y": 140,
+        "y": 181,
         "wires": [
             [
                 "b0892e536610fdb9"
@@ -172,7 +172,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 600,
-        "y": 140,
+        "y": 181,
         "wires": [
             [
                 "176a499332908dc9"
@@ -192,7 +192,7 @@
         "finalize": "",
         "libs": [],
         "x": 810,
-        "y": 140,
+        "y": 181,
         "wires": [
             [
                 "59ead24c8f847b18",
@@ -225,7 +225,7 @@
         "finalize": "",
         "libs": [],
         "x": 1150,
-        "y": 127,
+        "y": 168,
         "wires": [
             [
                 "6a31ba59abf71425"
@@ -250,7 +250,7 @@
         "allowrate": false,
         "outputs": 1,
         "x": 1150,
-        "y": 200,
+        "y": 241,
         "wires": [
             [
                 "3ae71693c33d9192"
@@ -288,7 +288,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 590,
-        "y": 320,
+        "y": 361,
         "wires": [
             [
                 "ef0bbabb43d47831"
@@ -308,7 +308,7 @@
         "finalize": "",
         "libs": [],
         "x": 800,
-        "y": 320,
+        "y": 361,
         "wires": [
             [
                 "cd92e93d187048c9"
@@ -340,7 +340,7 @@
         "finalize": "",
         "libs": [],
         "x": 1140,
-        "y": 280,
+        "y": 321,
         "wires": [
             [
                 "0c3491f9c45b3952"
@@ -371,7 +371,7 @@
         "domain": "logbook",
         "service": "log",
         "x": 1140,
-        "y": 340,
+        "y": 381,
         "wires": [
             []
         ]
@@ -400,7 +400,7 @@
         "domain": "script",
         "service": "hbc_notify",
         "x": 1130,
-        "y": 460,
+        "y": 501,
         "wires": [
             []
         ]
@@ -419,7 +419,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 1120,
-        "y": 400,
+        "y": 441,
         "wires": []
     },
     {
@@ -440,7 +440,7 @@
         "onceDelay": 0.1,
         "topic": "",
         "x": 770,
-        "y": 220,
+        "y": 261,
         "wires": [
             [
                 "01e303af091632fc"
@@ -465,7 +465,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 340,
-        "y": 320,
+        "y": 361,
         "wires": [
             [
                 "3ae71693c33d9192"
@@ -480,7 +480,7 @@
         "scope": null,
         "uncaught": false,
         "x": 120,
-        "y": 400,
+        "y": 441,
         "wires": [
             [
                 "hbcp0osc0logerr1"
@@ -500,7 +500,7 @@
         "finalize": "",
         "libs": [],
         "x": 330,
-        "y": 400,
+        "y": 441,
         "wires": [
             [
                 "4839218f48faeca0"
@@ -521,7 +521,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 570,
-        "y": 400,
+        "y": 441,
         "wires": []
     },
     {
@@ -533,7 +533,7 @@
         "linkType": "dynamic",
         "timeout": "30",
         "x": 1380,
-        "y": 127,
+        "y": 168,
         "wires": [
             []
         ]
@@ -547,7 +547,7 @@
         "linkType": "dynamic",
         "timeout": "30",
         "x": 1380,
-        "y": 280,
+        "y": 321,
         "wires": [
             []
         ]
@@ -558,8 +558,8 @@
         "z": "c925cef84d5e8a37",
         "name": "📖 How this flow works - HBC+ v1.3 (open the Info sidebar)",
         "info": "# HBC+ Battery Oscillation Guard v1.3 - how this flow works\n\nPart of **HBC+ v1.3** (Home Battery Control Plus), with the phase guard for two batteries per phase. HBC+ settings live in `packages/hbc_phase_guard.yaml` and on the HBC+ dashboard (**Settings** view; status on the **Phase guard** view).\n\nDetects batteries that **swing between charging and discharging at high power** (a wave) and pauses them.\n\n1. Watches the power of every battery (`sensor.marstek_m1_battery_power` … `m6`; batteries you don't have never trigger). A battery counts as charging above +`THRESHOLD_W`, discharging below -`THRESHOLD_W`.\n2. When one battery flips charge <-> discharge at least `MIN_FLIPS` times within `WINDOW_S`, it asks the **Strategy arbiter** to *hold Full stop* (highest priority).\n3. After `STOP_S` seconds (default 300) it sends a *release*; the arbiter puts back the previous strategy (or a manual change made during the pause, or a hold of another flow).\n4. Ignores new detections for `GRACE_S` seconds. `DRY_RUN` = only detect and log.\n\nTuning: the tab's environment variables. Every trigger goes to the HA logbook and to the phone.\n\n## HBC+ v1.0\n\nNo change. A handover between two batteries on one phase is not a flip: one battery goes idle and the other starts, neither swings between charging and discharging. *Full stop* is always within the phase fuse limits.\n",
-        "x": 242,
-        "y": 60,
+        "x": 230,
+        "y": 40,
         "wires": []
     },
     {
@@ -577,7 +577,7 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "198de8a55a66bd91",
+        "id": "ddb38f40587ed217",
         "type": "global-config",
         "env": [],
         "modules": {

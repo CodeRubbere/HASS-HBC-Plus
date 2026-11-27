@@ -56,7 +56,7 @@ jobs:
           mkdir -p "dist/${NAME}/node-red"
           cp -r packages www dashboards "dist/${NAME}/"
           cp node-red/hbc-plus-all-flows.json "dist/${NAME}/node-red/"
-          cp README.md LICENSE CHANGELOG.md versions.json "dist/${NAME}/"
+          cp README.md README.nl.md LICENSE CHANGELOG.md versions.json "dist/${NAME}/"
           (cd dist && zip -qr "${NAME}.zip" "${NAME}")
           python3 - "${TAG#v}" > dist/notes.md <<'PY'
           import re, sys

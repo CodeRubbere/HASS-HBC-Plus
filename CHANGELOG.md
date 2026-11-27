@@ -37,10 +37,20 @@ Includes everything in 1.2.1 and 1.2.2.
   also checks those against the flows, so one old or missing package file now gives *HBC+ version mismatch* too.
   The dashboard checks itself: a card on the Overview says when it is of another release than the packages and
   flows. `sensor.hbc_package_version` is now the newest version installed (packages and flows), with the
-  attributes `files`, `flows` and `mixed`; new `sensor.hbc_release_number`. A *Versions* table on the Settings
-  view lists every part. A minor release replaces every part; a patch release only the parts it changed, and its
+  attributes `files`, `flows` and `mixed`; new `sensor.hbc_release_number`. A *Versions* list on the Settings
+  view shows every part, grouped: the dashboard, *Node-RED flows* with each tab (new attribute `flow_versions` on
+  `sensor.hbc_health`), *Package files* with each file, and *Marketplace* with each item. A minor release replaces every part; a patch release only the parts it changed, and its
   notes say which. For maintainers: `tools/set-version.py`, `tools/check-versions.py` and a GitHub Action that
   checks a release tag.
+- **Marketplace items in the version check** — `sensor.hbc_marketplace` finds the four Marketplace items HBC+ needs
+  (Cheapest Energy Hours, card-mod, apexcharts-card, fold-entity-row) through their Marketplace update entities, by
+  repository, so a renamed entity still counts. The *Versions* details on the Settings view list each with the
+  installed and the latest version (a newer one in orange, a missing one in red), and *Marketplace item not found*
+  warns when one is missing.
+- **Apps in the version check** — `sensor.hbc_apps` checks the apps and services HBC+ needs: MQTT set up and
+  connected, Node-RED running (a report from *HBC+ health* within 11 minutes), and with the Supervisor the version of
+  the Mosquitto broker and Node-RED apps. They show under *Apps* in the *Versions* list; *Required app not working*
+  warns when MQTT or Node-RED does not work. An external broker or a standalone Node-RED is not a problem.
 - **Update notice per part** — a release carries `versions.json` (every part and its version); Home Assistant reads
   it at the release tag (`sensor.hbc_release_manifest`), and the Overview lists each part older than the latest release
   of your version line, the dashboard included (*Not every part of HBC+ vX.Y.Z is installed*;
@@ -60,41 +70,80 @@ Includes everything in 1.2.1 and 1.2.2.
 - **Load forecast** (F9) — HBC+ learns the house use per quarter (working days and weekend days apart) and
   forecasts the next 24 hours (`sensor.hbc_load_forecast`). Optionally (*Dynamic uses load forecast*, off by
   default) Dynamic keeps only the cheap quarters the expensive quarters need, from the cheapest before each.
-  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Timed & Dynamic view.
+  New package `hbc_load_forecast.yaml` (needs `hbc_savings.yaml`); chart and settings on the Savings view.
 - **Steered by Batterijplan** (F10) — when [Batterijplan](https://github.com/satscan1/hbc-batterijplan) (Live) steers
-  Dynamic, the dashboard shows it: *Dynamic · managed by Batterijplan (Live)* on the Overview, a banner with
-  Batterijplan's action on the Prices and Timed & Dynamic views, the *Price intervals* chart coloured by its plan
-  (with a legend), and the three Dynamic modes read-only. New package `hbc_batterijplan.yaml`
-  (`binary_sensor.hbc_managed_by_batterijplan`); display only, without Batterijplan nothing changes.
-- **Managed by HELIOS banner** — when the *Helios* strategy is selected, the Overview, Prices and Timed & Dynamic
-  views show a *Managed by HELIOS* banner, like the Batterijplan one. Display only.
-- **HELIOS plan in the price chart** — with *Helios* selected, the *Price intervals* chart on the Prices and Timed &
-  Dynamic views is titled *Price intervals: HELIOS plan* and colours the future bars by the HBC+ sub-strategy HELIOS
-  planned (`input_number.helios_optimizer_energy_plan`, attribute `plan`), with a legend and the planned strategy in
-  the tooltip; past bars are grey. Without a HELIOS plan the chart shows the normal price marks. Display only.
+  Dynamic, the dashboard shows it: the *Controller* badge says *Batterijplan* (tap it to open Batterijplan), the Overview
+  shows *Managed by Batterijplan (Live)* with Batterijplan's action this quarter, and the price chart under *Pricing* is
+  coloured by its plan (with a legend). The Dynamic modes stay editable; Batterijplan sets them every quarter. New
+  package `hbc_batterijplan.yaml` (`binary_sensor.hbc_managed_by_batterijplan`); display only, without Batterijplan
+  nothing changes.
+- **Market price** — every entry of `marks` on `sensor.hbc_energy_prices_data` has `market` next to `price` (buy) and
+  `sell`: the bare day-ahead price from the Grid Clock feed (its `spot`; no VAT, tax, supplier margin or grid costs),
+  `null` with any other source. New `sensor.hbc_energy_market_price_now`; the shared price fetch returns
+  `data_all.market`. For flows such as HELIOS; Dynamic itself does not use it.
+- **Managed by HELIOS** — with control mode *External* (strategy *Helios*) the *Controller* badge says *HELIOS*, or
+  *HELIOS offline* in red when no HELIOS plan is found, and the Overview shows *Managed by HELIOS Optimizer (Live)*,
+  like the Batterijplan line. Display only.
+- **HELIOS plan in the price chart** — with *External* chosen, the price chart under *Pricing* on the Overview is
+  labelled *HELIOS Optimizer strategy* and colours the future bars by the HBC+ sub-strategy HELIOS planned
+  (`input_number.helios_optimizer_energy_plan`, attribute `plan`), with a legend and the planned strategy in the
+  tooltip; past bars are grey. Without a HELIOS plan the chart shows the normal price marks. Display only.
 
 ### Changed
 - **Problem alert** — the Overview alert *HBC+ keeps logging errors* shows how long ago the latest message
   was and a *Fix* line for known problems (new attribute `hint` on `sensor.hbc_health`, also in the
   notification). About 90 s after the last message it turns blue with the time it clears, instead of staying
   red for the full 10-minute window after the cause is fixed.
-- Dashboard (v1.2 tab layout): *Battery calibration* on the Batteries view, *Notifications* on the Settings view, and
-  *Held by* on the Overview while a strategy hold is active.
+- **Dashboard layout** — seven views (v1.2 had nine): Overview, Batteries, PID Control, Phase guard, Savings, Settings
+  and Logging. The Overview takes over the *Prices*, *Charge & Sell* and *Timed & Dynamic* views. New package
+  `hbc_dashboard.yaml`, required for the dashboard:
+  - **Control mode and mode** — you choose in two steps: *Control mode* (`input_select.hbc_control_mode`: Manual,
+    Schedule = Timed, Price = Dynamic, External = Helios) and, with Manual, the mode (`input_select.hbc_manual_mode`:
+    Self-consumption, Solar only, Zero import, Standby, Charge, Charge by deadline, Sell, Stop). Both write
+    `input_select.house_battery_strategy` as your choice through the Strategy arbiter, and follow it when the strategy
+    changes elsewhere; Node-RED and the strategy names are unchanged. Holds, the EV stop trigger, the price guard and a
+    phase overload do not change your choice: the Overview shows them as *Override*
+    (`binary_sensor.hbc_override_active`).
+  - **Controller** — the master mode is the *Controller* row on the Overview: *HBC+* (Full control), *Marstek*
+    (Marstek control), *Marstek M.* (Manual control).
+  - **Badges on every view** — *Health*, *Controller* (`sensor.hbc_steered_by`: HBC+, Marstek, Batterijplan, HELIOS
+    or HELIOS offline), *Control mode*, *Strategy* (`sensor.hbc_control_state`: what runs now, in friendly words)
+    and *Time*.
+  - **Dashboard mode** — on after every restart: the Overview shows only Status & control, Now and Batteries. With
+    it off, *Now* is hidden and the badges *Show Batteries*, *Show Prices* and *Show Strategies* choose the fourth
+    column, one at a time;
+    changing a setting yourself brings back *Strategies* (Charge, Charge Deadline and Sell, as far as the control
+    mode uses them).
+  - **One-line alerts** — every alert, and the Batterijplan and HELIOS lines, is one line; tap it for the details.
+  - **New requirement: fold-entity-row** (Marketplace, *Dashboard*) — folds the *Details* under *Tariff data source*
+    (Grid Clock zone, supplier and grid operator). Listed in *Requirements* and *Before you start*.
+  - **Moved** — the load forecast to the Savings view; the price guard settings to the Settings view; *Battery
+    calibration* on the Batteries view, *Notifications* on the Settings view, and *Held by* on the Overview while a
+    strategy hold is active.
+  - **Batteries view** — the self-test result is one line (*13 of 13 checks passed · all batteries on the expected
+    phase*, with the time of the last run) that lists only what needs attention; *Show details* opens every check and
+    the phase table. Compact *Run full test* and *Check setup only* buttons. *Battery calibration* shows the plan and a
+    bar of the days since full per battery, with its settings folded. *Charges first (battery)* and *Rotation* can be
+    changed in place; *Idle and switching* explains what 0 and higher values do.
+  - **Phase guard view** — per phase one status line (*L1 · charging 1450 W · active M1*) with the room left in W, an
+    orange line only when HBC+ would change something, and the batteries on the phase with what they do; *Show
+    details* adds why this battery, since when and the setpoint.
+  - **Security** — *Marstek* and *Marstek M.* (handing the batteries to their firmware) ask for confirmation, and the
+    installation steps tell you to make the dashboard *Admin only*. The GitHub stars badge is a plain link: no image
+    is loaded from a third party.
 - Strategy option *Self-test* in `input_select.house_battery_strategy` (used only by the self-test; chosen by hand it
   stops every battery). Strategy arbiter: requester `selftest` has priority 90.
-- Dashboard: the *Choose strategy* tile no longer offers *Self-test*.
+- Dashboard: *Self-test* is not offered as a choice.
 - Dashboard, *HBC+ is not steering the batteries*: when `sensor.p1_meter_power` is unavailable or has had no new value
   for more than 5 minutes, the message says so and points to the P1 meter and its integration (HBC+ only runs a control
   cycle on a P1 update) instead of *Check that Node-RED runs*.
-- Dashboard: the Batterijplan and HELIOS banners, and *Dynamic · managed by Batterijplan (Live)*, are hidden while the
+- Dashboard: *Managed by Batterijplan (Live)* and *Managed by HELIOS Optimizer (Live)* are hidden while the
   heartbeat is stale: HBC+ is not steering then, so neither is Batterijplan or HELIOS.
-- Dashboard: the chart title *Price intervals: Batterijplan plan* is now *Price intervals: Batterijplan*; on the Prices
-  view the *Buy now* and *Sell now* tiles are *Buy price* and *Sell price*. New full-width *Executing now* card below
-  the price chart (Prices and Timed & Dynamic views) with the sub-strategy HBC+ runs now
-  (`input_text.house_battery_strategy_active_sub_strategy`).
-- Dashboard: *Price intervals: HBC+* (Prices and Timed & Dynamic views) has a legend like the Batterijplan and HELIOS
-  charts: Cheap, Regular, Expensive (the current mark in bold), the negative-price colours when they occur, the current
-  quarter and, with separate sell prices, the sell-price line.
+- Dashboard: the price chart under *Pricing* is labelled *HBC+*, *Batterijplan strategy* or *HELIOS Optimizer
+  strategy*, after whose plan it shows. The HBC+ chart has a legend like the Batterijplan and HELIOS charts: Cheap,
+  Regular, Expensive (the current mark in bold), the negative-price colours when they occur, the current quarter and,
+  with separate sell prices, the sell-price line. A history graph on the Overview shows control mode and strategy
+  over 12 hours.
 - Self-test: with the phase guard on *Enforce*, the *HBC+ phase planner* makes the battery under test the charger on its
   phase, also when the phase map puts another battery there (before, that battery could stay idle: *did not charge*).
   *Did not charge* now names the likely cause; the *Phase detection* card shows the phase guard mode.
@@ -102,6 +151,14 @@ Includes everything in 1.2.1 and 1.2.2.
   to before. `sensor.hbc_energy_prices_data` has a new attribute `load_forecast`.
 
 ### Fixed
+- Dashboard: the history graph under *Now* asked for 3 minutes of history and failed (*Invalid start_time*) when the
+  browser clock ran more than 3 minutes ahead; it now shows 6 minutes. The *Batteries view* notes linked to a page
+  that does not exist, and three headings used an icon that only exists with Batterijplan installed.
+- **Package failed to load: duplicate key 'exclude'** — `hbc_calibration.yaml`, `hbc_load_forecast.yaml`,
+  `hbc_phase_guard.yaml` and `hbc_savings.yaml` each had their own `recorder: exclude:` next to `hbc_control.yaml`.
+  Home Assistant allows that key in one package only, so it refused `hbc_control.yaml` (*Setup of package
+  'hbc_control' failed: integration 'recorder' has duplicate key 'exclude'*). All HBC+ recorder exclusions are now in
+  `hbc_control.yaml`, together with `sensor.hbc_marketplace` and `sensor.hbc_apps`. Copy all five files again.
 - Dynamic: a tariff source named *Grid Clock feed*, *Grid Clock BE* or any other name that starts with *Grid Clock*
   gave no prices; it now reads the Grid Clock feed.
 - Lost connection to Home Assistant: every node that calls HA failed with `NoConnectionError` and was logged as an
@@ -116,14 +173,17 @@ Includes everything in 1.2.1 and 1.2.2.
   (`hours_to_show: 0.1`).
 
 ### Documentation
-- README, user guide (English and Dutch) and `node-red/README.md` describe v1.3: new dashboard parts and alerts, the
+- README, user guide (English and Dutch) and `node-red/README.md` describe v1.3: the new dashboard layout, parts and alerts, the
   update and version-check entities in the configuration reference, troubleshooting for the update notice and test
-  notifications, optional requirements (solar forecast, Workday). New release notes `docs/release-notes/v1.3.md`.
+  notifications, optional requirements (solar forecast, Workday). New release notes `docs/release-notes/v1.3.md`, also in Dutch
+  (`v1.3.nl.md`), and a Dutch README (`README.nl.md`, also in the release zip).
 
 ### Updating from 1.2
 Copy all packages except your own `hbc_config.yaml` (new: `hbc_notify.yaml`, required, `hbc_calibration.yaml`, `hbc_savings.yaml`, `hbc_selftest.yaml`,
-`hbc_load_forecast.yaml` and `hbc_batterijplan.yaml`), delete the old
-HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, paste the dashboard again. Had you set your own notify
+`hbc_load_forecast.yaml`, `hbc_batterijplan.yaml` and `hbc_dashboard.yaml`), delete the old
+HBC+ tabs and import `node-red/hbc-plus-all-flows.json`, install **fold-entity-row** from Marketplace and paste the
+dashboard again (new layout; *Dashboard mode* is
+on after a restart, switch it off to see every setting). Had you set your own notify
 action? Put it in *Notify targets* and press *Send a test notification*. Full steps: *Updating from v1.2* in the user
 guide. Then run the self-test once (*Batteries* → *Battery phase test*).
 

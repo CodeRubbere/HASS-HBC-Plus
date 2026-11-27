@@ -1034,6 +1034,107 @@ template:
           latest: "{{ states('sensor.hbc_latest_version') | regex_replace('^[vV]', '') }}"
           release_url: "{{ state_attr('sensor.hbc_latest_version', 'html_url') or 'https://github.com/CodeRubbere/HASS-HBC-Plus/releases' }}"
 
+  # HBC+ v1.3: the Marketplace items HBC+ needs, found through the update entity the Marketplace (HACS) makes for
+  # each downloaded item: matched by its GitHub repository (attribute release_url) or by its default entity id.
+  # State: how many are not found. Attribute items: per item name, type, installed and latest version, and status
+  # ok, update (a newer version is out) or not found (not downloaded through the Marketplace, or its update entity
+  # is disabled; HBC+ cannot check it then). Shown in the Versions details on the Settings view.
+  - sensor:
+      - name: "HBC Marketplace"
+        unique_id: hbc_marketplace
+        icon: mdi:store-outline
+        state: >
+          {%- set req = [
+                ('Cheapest Energy Hours', 'thefes/cheapest-energy-hours', 'update.cheapest_energy_hours_update'),
+                ('card-mod', 'thomasloven/lovelace-card-mod', 'update.card_mod_update'),
+                ('apexcharts-card', 'romrider/apexcharts-card', 'update.apexcharts_card_update'),
+                ('fold-entity-row', 'thomasloven/lovelace-fold-entity-row', 'update.fold_entity_row_update')] -%}
+          {%- set ns = namespace(n=0) -%}
+          {%- for name, repo, eid in req -%}
+            {%- set m = namespace(found=false) -%}
+            {%- for s in states.update if s.state not in ['unavailable', 'unknown'] -%}
+              {%- if s.entity_id == eid or repo in (s.attributes.get('release_url') or '') | lower -%}
+                {%- set m.found = true -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- if not m.found -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}
+          {%- endfor -%}
+          {{ ns.n }}
+        attributes:
+          items: >
+            {%- set req = [
+                  ('Cheapest Energy Hours', 'Template', 'thefes/cheapest-energy-hours', 'update.cheapest_energy_hours_update'),
+                  ('card-mod', 'Dashboard', 'thomasloven/lovelace-card-mod', 'update.card_mod_update'),
+                  ('apexcharts-card', 'Dashboard', 'romrider/apexcharts-card', 'update.apexcharts_card_update'),
+                  ('fold-entity-row', 'Dashboard', 'thomasloven/lovelace-fold-entity-row', 'update.fold_entity_row_update')] -%}
+            {%- set ns = namespace(out=[]) -%}
+            {%- for name, kind, repo, eid in req -%}
+              {%- set m = namespace(e=none) -%}
+              {%- for s in states.update if s.state not in ['unavailable', 'unknown'] -%}
+                {%- if m.e is none and (s.entity_id == eid or repo in (s.attributes.get('release_url') or '') | lower) -%}
+                  {%- set m.e = s -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- if m.e is none -%}
+                {%- set ns.out = ns.out + [{'name': name, 'type': kind, 'entity': none, 'installed': none,
+                                            'latest': none, 'status': 'not found'}] -%}
+              {%- else -%}
+                {%- set ns.out = ns.out + [{'name': name, 'type': kind, 'entity': m.e.entity_id,
+                                            'installed': m.e.attributes.get('installed_version'),
+                                            'latest': m.e.attributes.get('latest_version'),
+                                            'status': 'update' if m.e.state == 'on' else 'ok'}] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.out }}
+
+  # HBC+ v1.3: the apps and services HBC+ needs. MQTT: set up (it owns entities) and connected (HBC+'s own MQTT
+  # sensors turn unavailable when the broker connection drops). Node-RED: running ('HBC+ health' republishes at
+  # least every 5 minutes, so no report for 11 minutes means it stopped). With the Supervisor, the Mosquitto broker
+  # and Node-RED apps also show their version, from their update entity; without one (an external broker or a
+  # standalone Node-RED) that is information, not a problem. State: how many required ones do not work.
+  - sensor:
+      - name: "HBC apps"
+        unique_id: hbc_apps
+        icon: mdi:application-cog-outline
+        state: >
+          {%- set mq = integration_entities('mqtt') | count > 0 -%}
+          {%- set h = states.sensor.hbc_health -%}
+          {%- set mq_up = mq and h is not none and h.state != 'unavailable' -%}
+          {%- set nr = h is not none and h.state not in ['unknown', 'unavailable']
+                       and (now() - h.last_reported).total_seconds() < 660 -%}
+          {{ (0 if mq_up else 1) + (0 if nr or not mq_up else 1) }}
+        attributes:
+          items: >
+            {%- set mq = integration_entities('mqtt') | count > 0 -%}
+            {%- set h = states.sensor.hbc_health -%}
+            {%- set mq_up = mq and h is not none and h.state != 'unavailable' -%}
+            {%- set age = ((now() - h.last_reported).total_seconds() / 60) | round(0) | int
+                          if h is not none and h.state not in ['unknown', 'unavailable'] else none -%}
+            {%- set nr = age is not none and age < 11 -%}
+            {%- set a = namespace(mo=none, no=none) -%}
+            {%- for s in states.update if s.state not in ['unavailable', 'unknown'] -%}
+              {%- set t = (s.attributes.get('title') or '') | lower -%}
+              {%- if a.mo is none and (s.entity_id == 'update.mosquitto_broker_update' or t == 'mosquitto broker') -%}
+                {%- set a.mo = s -%}
+              {%- endif -%}
+              {%- if a.no is none and (s.entity_id == 'update.node_red_update' or t == 'node-red') -%}
+                {%- set a.no = s -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ [
+                 {'name': 'MQTT', 'type': 'Integration', 'installed': none, 'latest': none,
+                  'status': 'ok' if mq_up else ('not connected' if mq else 'not set up')},
+                 {'name': 'Mosquitto broker', 'type': 'App',
+                  'installed': a.mo.attributes.get('installed_version') if a.mo is not none else none,
+                  'latest': a.mo.attributes.get('latest_version') if a.mo is not none else none,
+                  'status': 'not an app' if a.mo is none else ('update' if a.mo.state == 'on' else 'ok')},
+                 {'name': 'Node-RED', 'type': 'App', 'minutes': age,
+                  'installed': a.no.attributes.get('installed_version') if a.no is not none else none,
+                  'latest': a.no.attributes.get('latest_version') if a.no is not none else none,
+                  'status': 'unknown' if not mq_up else ('not running' if not nr else
+                            ('standalone' if a.no is none else ('update' if a.no.state == 'on' else 'ok')))}
+               ] }}
+
   # HBC+ v1.0: local time for the dashboard badges (re-rendered every minute through now()),
   # so the dashboard needs no extra integration.
   - sensor:
@@ -1474,6 +1575,9 @@ automation:
 # RECORDER - LOGBOOK FILTERING
 ###########################################################################################################
 # Exclude high-frequency technical entities from the logbook to reduce noise.
+# The ONLY `recorder:` section of HBC+: Home Assistant allows `recorder: exclude:` in one package only, so every
+# HBC+ package keeps its exclusions here. Have your own `recorder: exclude:` in configuration.yaml? Then move
+# this list there (see the user guide, Troubleshooting).
 recorder:
   exclude:
     entities:
@@ -1502,6 +1606,48 @@ recorder:
       - sensor.hbc_release_manifest
       - sensor.hbc_release_dashboard_number
       - sensor.hbc_outdated_parts
+      # --- Phase guard (hbc_phase_guard.yaml) ---
+      # The planner status is display-only (current attributes on the Phase guard view); keep it out of the database.
+      # HBC+ 2026-11-15: the per-phase battery power and headroom sensors too. They follow the P1 phase sensors,
+      # so with a meter that reports every second they wrote up to ~500,000 rows a day, while the Phase guard view
+      # only shows their current value. Excluding them also drops their long-term statistics (nothing uses them).
+      - sensor.hbc_phase_l1_active
+      - sensor.hbc_phase_l2_active
+      - sensor.hbc_phase_l3_active
+      - sensor.hbc_phase_findings
+      - sensor.hbc_phase_l1_battery_power
+      - sensor.hbc_phase_l2_battery_power
+      - sensor.hbc_phase_l3_battery_power
+      - sensor.hbc_phase_l1_charge_headroom
+      - sensor.hbc_phase_l2_charge_headroom
+      - sensor.hbc_phase_l3_charge_headroom
+      - sensor.hbc_phase_l1_discharge_headroom
+      - sensor.hbc_phase_l2_discharge_headroom
+      - sensor.hbc_phase_l3_discharge_headroom
+      - sensor.hbc_phase_l1_grid_load
+      - sensor.hbc_phase_l2_grid_load
+      - sensor.hbc_phase_l3_grid_load
+      - sensor.hbc_phase_l1_circuit_load
+      - sensor.hbc_phase_l2_circuit_load
+      - sensor.hbc_phase_l3_circuit_load
+      # --- Battery calibration (hbc_calibration.yaml) ---
+      # Display-only: keep the minute-by-minute status out of the database.
+      - sensor.hbc_calibration_status
+      # --- Savings (hbc_savings.yaml) ---
+      # The split power sensors change every few seconds: keep them out of the database (the energy counters
+      # built from them are recorded).
+      - sensor.hbc_grid_import_power
+      - sensor.hbc_grid_export_power
+      - sensor.hbc_battery_charge_power
+      - sensor.hbc_battery_discharge_power
+      # --- Load forecast (hbc_load_forecast.yaml) ---
+      # Large attributes (2 x 96 values), and the forecast re-renders every minute (now()).
+      - sensor.hbc_load_profile
+      - sensor.hbc_load_forecast
+      - sensor.hbc_load_forecast_expensive
+      # --- Version check (hbc_control.yaml): display-only; sensor.hbc_apps changes every minute (report age) ---
+      - sensor.hbc_marketplace
+      - sensor.hbc_apps
     entity_globs:
       # HBC+ version sensors: fixed per release, history adds nothing
       - sensor.hbc_version_*

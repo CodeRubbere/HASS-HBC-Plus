@@ -8,22 +8,6 @@
         "env": []
     },
     {
-        "id": "929f37aa1c6067c6",
-        "type": "function",
-        "z": "17d7519059560984",
-        "name": "HBC+ version",
-        "func": "// No input: see On Start / On Stop.\nreturn null;",
-        "outputs": 0,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
-        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
-        "libs": [],
-        "x": 160,
-        "y": 700,
-        "wires": []
-    },
-    {
         "id": "2107815757999873",
         "type": "group",
         "z": "17d7519059560984",
@@ -37,7 +21,7 @@
             "0712571b7dcc2a15"
         ],
         "x": 34,
-        "y": 139,
+        "y": 173,
         "w": 192,
         "h": 182
     },
@@ -55,7 +39,7 @@
             "3e6cccb8afd6a245"
         ],
         "x": 34,
-        "y": 519,
+        "y": 553,
         "w": 192,
         "h": 142
     },
@@ -79,9 +63,9 @@
             "dfb5b921e72ab3c3",
             "34758c3503310661"
         ],
-        "x": 254,
-        "y": 419,
-        "w": 832,
+        "x": 264,
+        "y": 459,
+        "w": 862,
         "h": 202
     },
     {
@@ -114,7 +98,7 @@
             "3fdd30412a5814c4"
         ],
         "x": 254,
-        "y": 139,
+        "y": 173,
         "w": 1898,
         "h": 262
     },
@@ -134,7 +118,7 @@
             "5841f791f503ecc3"
         ],
         "x": 34,
-        "y": 419,
+        "y": 453,
         "w": 182,
         "h": 82
     },
@@ -154,9 +138,25 @@
             "173342f0b639bbc4"
         ],
         "x": 1454,
-        "y": 259,
+        "y": 293,
         "w": 672,
         "h": 82
+    },
+    {
+        "id": "929f37aa1c6067c6",
+        "type": "function",
+        "z": "17d7519059560984",
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 120,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "14674e102a96675f",
@@ -165,7 +165,7 @@
         "name": "Home Battery Strategy",
         "info": "The `Home Battery Start` flow will call this strategy flow\nby matching the strategy name with the Link In name.\n\nConfigure the Link In node in the Start group.\n\nDon't modify other parts of the Start and End groups.\nThey handle the calling and returning for you.",
         "x": 140,
-        "y": 100,
+        "y": 134,
         "wires": []
     },
     {
@@ -176,7 +176,7 @@
         "name": "Sell",
         "links": [],
         "x": 110,
-        "y": 280,
+        "y": 314,
         "wires": [
             [
                 "0712571b7dcc2a15"
@@ -192,7 +192,7 @@
         "name": "Start (readme)",
         "info": "# Setting up your battery strategy flow\n\n## Setup\nName the `Link In node` in this start group exactly after the <select> option configured in your\nselect_input.house_battery_strategy\n\nconfigure select options in:\nhbc_control.yaml\n\n### example\n`house_battery_strategy:\n  name: House Battery Strategy\n  options:\n    - AcmE example`\n\nThe above creates a select option, allowing user to select 'AcmE example'\n\nWhen selected, battery control will search for a flow containing a Link In node\ncalled 'AcmE example' (case sensitive).",
         "x": 130,
-        "y": 180,
+        "y": 214,
         "wires": []
     },
     {
@@ -209,7 +209,7 @@
         "finalize": "",
         "libs": [],
         "x": 110,
-        "y": 220,
+        "y": 254,
         "wires": [
             [
                 "d31b8e8647339c0e"
@@ -225,7 +225,7 @@
         "mode": "return",
         "links": [],
         "x": 185,
-        "y": 620,
+        "y": 654,
         "wires": []
     },
     {
@@ -236,7 +236,7 @@
         "name": "End (readme)",
         "info": "Should return a solution_array of battery objects\n\n## battery object format\n`{{id: string|number, mode: string, power: number}} battery solution`\n- id is an arbitrary battery ID\n- mode is \"stop\", \"charge\", \"discharge\" for Marstek\n- power in Watts\n\n### example array\nreturn this type of solution_array via msg.solutions\n` \nlet solution_array = [];\nsolution_array.push({id:\"M1\", mode: \"charge\", power: 100}); // per battery\nreturn {solutions: solution_array};\n` ",
         "x": 130,
-        "y": 560,
+        "y": 594,
         "wires": []
     },
     {
@@ -252,8 +252,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 610,
-        "y": 460,
+        "x": 650,
+        "y": 500,
         "wires": [
             [
                 "dfb5b921e72ab3c3"
@@ -269,8 +269,8 @@
         "links": [],
         "linkType": "dynamic",
         "timeout": "1",
-        "x": 780,
-        "y": 520,
+        "x": 820,
+        "y": 560,
         "wires": [
             [
                 "8c4a3f2942fdf1ec",
@@ -291,8 +291,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 500,
+        "x": 420,
+        "y": 540,
         "wires": [
             [
                 "36bfa78c14881971"
@@ -316,8 +316,8 @@
         "targetType": "msg",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 970,
-        "y": 580,
+        "x": 1010,
+        "y": 620,
         "wires": []
     },
     {
@@ -334,8 +334,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "counter",
-        "x": 960,
-        "y": 460,
+        "x": 1000,
+        "y": 500,
         "wires": []
     },
     {
@@ -351,8 +351,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 610,
-        "y": 520,
+        "x": 650,
+        "y": 560,
         "wires": [
             [
                 "58da5c4857bfa784"
@@ -379,8 +379,8 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 780,
-        "y": 460,
+        "x": 820,
+        "y": 500,
         "wires": [
             [
                 "b3607a14e999befc",
@@ -402,7 +402,7 @@
         "finalize": "",
         "libs": [],
         "x": 1780,
-        "y": 300,
+        "y": 334,
         "wires": [
             [
                 "4caa5e4d4f6443e2"
@@ -436,7 +436,7 @@
         "domain": "input_number",
         "service": "set_value",
         "x": 1980,
-        "y": 300,
+        "y": 334,
         "wires": [
             []
         ]
@@ -455,7 +455,7 @@
         "property": "payload",
         "topi": "topic",
         "x": 1590,
-        "y": 300,
+        "y": 334,
         "wires": [
             [
                 "77150d88a618fbb1"
@@ -506,7 +506,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 450,
-        "y": 260,
+        "y": 294,
         "wires": [
             [
                 "3c1e4e9c981226b1"
@@ -545,7 +545,7 @@
         "repair": false,
         "outputs": 4,
         "x": 580,
-        "y": 260,
+        "y": 294,
         "wires": [
             [
                 "2c9f0f5409745084"
@@ -575,7 +575,7 @@
         "finalize": "",
         "libs": [],
         "x": 800,
-        "y": 360,
+        "y": 394,
         "wires": [
             [
                 "6b379468347f8fd0"
@@ -596,7 +596,7 @@
         "finalize": "",
         "libs": [],
         "x": 330,
-        "y": 260,
+        "y": 294,
         "wires": [
             [
                 "a93330e2b0b689f0"
@@ -613,7 +613,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1000,
-        "y": 360,
+        "y": 394,
         "wires": [
             [
                 "90aa1bcb958d781a"
@@ -664,7 +664,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 790,
-        "y": 300,
+        "y": 334,
         "wires": [
             [
                 "83d53f19d5e1d256"
@@ -683,7 +683,7 @@
             "34758c3503310661"
         ],
         "x": 75,
-        "y": 620,
+        "y": 654,
         "wires": [
             [
                 "47c0d76e5f88890f"
@@ -701,7 +701,7 @@
             "3e6cccb8afd6a245"
         ],
         "x": 1160,
-        "y": 360,
+        "y": 394,
         "wires": [],
         "l": true
     },
@@ -749,7 +749,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 760,
-        "y": 240,
+        "y": 274,
         "wires": [
             [
                 "fca40e2067ebd87a"
@@ -770,7 +770,7 @@
         "finalize": "",
         "libs": [],
         "x": 990,
-        "y": 300,
+        "y": 334,
         "wires": [
             [
                 "58a445a9a1e62f9d",
@@ -792,7 +792,7 @@
         "finalize": "",
         "libs": [],
         "x": 990,
-        "y": 240,
+        "y": 274,
         "wires": [
             [
                 "58a445a9a1e62f9d"
@@ -820,7 +820,7 @@
         "to": "",
         "reg": false,
         "x": 790,
-        "y": 180,
+        "y": 214,
         "wires": [
             [
                 "2d48d2d302e8f8d4"
@@ -841,7 +841,7 @@
         "finalize": "",
         "libs": [],
         "x": 1000,
-        "y": 180,
+        "y": 214,
         "wires": [
             [
                 "58a445a9a1e62f9d"
@@ -868,7 +868,7 @@
         "repair": false,
         "outputs": 2,
         "x": 1330,
-        "y": 240,
+        "y": 274,
         "wires": [
             [
                 "3fdd30412a5814c4"
@@ -892,7 +892,7 @@
         "finalize": "",
         "libs": [],
         "x": 1740,
-        "y": 200,
+        "y": 234,
         "wires": [
             [
                 "5ec2c90306d3e00d"
@@ -909,7 +909,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1920,
-        "y": 200,
+        "y": 234,
         "wires": [
             [
                 "050e8677fc93c6ff"
@@ -927,7 +927,7 @@
             "3e6cccb8afd6a245"
         ],
         "x": 2060,
-        "y": 200,
+        "y": 234,
         "wires": [],
         "l": true
     },
@@ -945,7 +945,7 @@
         "finalize": "",
         "libs": [],
         "x": 1180,
-        "y": 240,
+        "y": 274,
         "wires": [
             [
                 "9bfff2319c826817"
@@ -962,8 +962,8 @@
         "links": [
             "3e6cccb8afd6a245"
         ],
-        "x": 960,
-        "y": 520,
+        "x": 1000,
+        "y": 560,
         "wires": [],
         "l": true
     },
@@ -976,7 +976,7 @@
         "scope": null,
         "uncaught": false,
         "x": 75,
-        "y": 460,
+        "y": 494,
         "wires": [
             [
                 "cf6ea77b512a2b54"
@@ -998,7 +998,7 @@
         "finalize": "",
         "libs": [],
         "x": 125,
-        "y": 460,
+        "y": 494,
         "wires": [
             [
                 "5841f791f503ecc3"
@@ -1015,7 +1015,7 @@
         "mode": "return",
         "links": [],
         "x": 175,
-        "y": 460,
+        "y": 494,
         "wires": []
     },
     {
@@ -1062,7 +1062,7 @@
         "entity_location": "data",
         "override_data": "msg",
         "x": 1540,
-        "y": 200,
+        "y": 234,
         "wires": [
             [
                 "d28229fe4fd3bafc"
@@ -1094,7 +1094,7 @@
         "enableGlobalContextStore": true
     },
     {
-        "id": "788945c4dfd9f431",
+        "id": "0f43097290f4aa36",
         "type": "global-config",
         "env": [],
         "modules": {

@@ -379,12 +379,5 @@ script:
         data:
           value: "{{ states('sensor.hbc_suggested_minimum_spread') | int(0) }}"
 
-# The split power sensors change every few seconds: keep them out of the database (the energy counters
-# built from them are recorded).
-recorder:
-  exclude:
-    entities:
-      - sensor.hbc_grid_import_power
-      - sensor.hbc_grid_export_power
-      - sensor.hbc_battery_charge_power
-      - sensor.hbc_battery_discharge_power
+# Recorder exclusions for this package are in hbc_control.yaml: Home Assistant allows `recorder: exclude:` in one
+# package only (a second one makes that package fail to load).

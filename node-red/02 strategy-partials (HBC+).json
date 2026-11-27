@@ -8,22 +8,6 @@
         "env": []
     },
     {
-        "id": "3a6b2e0de48667ae",
-        "type": "function",
-        "z": "1ae53b821b8673a2",
-        "name": "HBC+ version",
-        "func": "// No input: see On Start / On Stop.\nreturn null;",
-        "outputs": 0,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
-        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
-        "libs": [],
-        "x": 160,
-        "y": 600,
-        "wires": []
-    },
-    {
         "id": "c6383283baa3eca9",
         "type": "group",
         "z": "1ae53b821b8673a2",
@@ -36,7 +20,7 @@
             "7ecd167b8a0ef282"
         ],
         "x": 1324,
-        "y": 119,
+        "y": 157,
         "w": 192,
         "h": 142
     },
@@ -56,7 +40,7 @@
             "7a8a7d0b62d4862a"
         ],
         "x": 14,
-        "y": 139,
+        "y": 177,
         "w": 252,
         "h": 302
     },
@@ -76,7 +60,7 @@
             "11fd97a5bb225f2c"
         ],
         "x": 14,
-        "y": 479,
+        "y": 517,
         "w": 182,
         "h": 82
     },
@@ -99,7 +83,7 @@
             "a71fdc10c42378e2"
         ],
         "x": 804,
-        "y": 79,
+        "y": 117,
         "w": 482,
         "h": 82
     },
@@ -123,7 +107,7 @@
             "9f3287c6fb694258"
         ],
         "x": 734,
-        "y": 379,
+        "y": 417,
         "w": 702,
         "h": 82
     },
@@ -146,7 +130,7 @@
             "2d9983acd4663cdf"
         ],
         "x": 814,
-        "y": 179,
+        "y": 217,
         "w": 472,
         "h": 82
     },
@@ -169,9 +153,25 @@
             "c9f4155d20d6535a"
         ],
         "x": 804,
-        "y": 279,
+        "y": 317,
         "w": 482,
         "h": 82
+    },
+    {
+        "id": "3a6b2e0de48667ae",
+        "type": "function",
+        "z": "1ae53b821b8673a2",
+        "name": "HBC+ version",
+        "func": "// No input: see On Start / On Stop.\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// HBC+ version marker: registers this tab's HBC+ version when the flow starts, so the\n// version check in 'HBC+ health (hbc/health)' (Start tab) sees tabs of different HBC+ versions,\n// tabs that are missing, and flows that do not match the packages (sensor.hbc_package_version).\n// The entry is removed again when the flow stops (deploy, delete). Bump VERSION on a release.\nconst VERSION = '1.3.0';\nconst key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\nreg[key] = { tab: env.get('NR_FLOW_NAME') || '?', version: VERSION, since: Date.now() };\nglobal.set('hbc_flow_versions', reg);\nnode.status({ fill: 'grey', shape: 'dot', text: `HBC+ ${VERSION}` });\n",
+        "finalize": "const key = env.get('NR_FLOW_ID') || node.id;\nconst reg = global.get('hbc_flow_versions') || {};\ndelete reg[key];\nglobal.set('hbc_flow_versions', reg);\n",
+        "libs": [],
+        "x": 100,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "9af40f0f2774e4f5",
@@ -181,7 +181,7 @@
         "name": "Charge PV",
         "links": [],
         "x": 100,
-        "y": 220,
+        "y": 258,
         "wires": [
             [
                 "1da12a6e80d6b69f"
@@ -196,7 +196,7 @@
         "name": "Home Battery Strategy",
         "info": "The `Home Battery Start` flow will call this strategy flow\nby matching the strategy name with the Link In name.\n\nConfigure the Link In node in the Start group.\n\nDon't modify other parts of the Start and End groups.\nThey handle the calling and returning for you.",
         "x": 120,
-        "y": 100,
+        "y": 138,
         "wires": []
     },
     {
@@ -207,7 +207,7 @@
         "name": "Start (readme)",
         "info": "# Setting up your battery strategy flow\n\n## Setup\nName the `Link In node` in this start group exactly after the <select> option configured in your\nselect_input.house_battery_strategy\n\nconfigure select options in:\nhbc_control.yaml\n\n### example\n`house_battery_strategy:\n  name: House Battery Strategy\n  options:\n    - AcmE example`\n\nThe above creates a select option, allowing user to select 'AcmE example'\n\nWhen selected, battery control will search for a flow containing a Link In node\ncalled 'AcmE example' (case sensitive).",
         "x": 110,
-        "y": 180,
+        "y": 218,
         "wires": []
     },
     {
@@ -219,7 +219,7 @@
         "mode": "return",
         "links": [],
         "x": 1365,
-        "y": 220,
+        "y": 258,
         "wires": []
     },
     {
@@ -230,7 +230,7 @@
         "name": "End (readme)",
         "info": "Should return a solution_array of battery objects\n\n## battery object format\n`{{id: string|number, mode: string, power: number}} battery solution`\n- id is an arbitrary battery ID\n- mode is \"stop\", \"charge\", \"discharge\" for Marstek\n- power in Watts\n\n### example array\nreturn this type of solution_array via msg.solutions\n` \nlet solution_array = [];\nsolution_array.push({id:\"M1\", mode: \"charge\", power: 100}); // per battery\nreturn {solutions: solution_array};\n` ",
         "x": 1420,
-        "y": 160,
+        "y": 198,
         "wires": []
     },
     {
@@ -247,7 +247,7 @@
         "finalize": "",
         "libs": [],
         "x": 900,
-        "y": 120,
+        "y": 158,
         "wires": [
             [
                 "1f2951775f90f952",
@@ -265,7 +265,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1170,
-        "y": 120,
+        "y": 158,
         "wires": [
             [
                 "089f1be10dd5119e"
@@ -286,7 +286,7 @@
         "finalize": "",
         "libs": [],
         "x": 90,
-        "y": 340,
+        "y": 378,
         "wires": [
             [
                 "06e56c44976f669c"
@@ -302,7 +302,7 @@
         "scope": null,
         "uncaught": false,
         "x": 55,
-        "y": 520,
+        "y": 558,
         "wires": [
             [
                 "7f66b964b186cec7"
@@ -324,7 +324,7 @@
         "finalize": "",
         "libs": [],
         "x": 105,
-        "y": 520,
+        "y": 558,
         "wires": [
             [
                 "11fd97a5bb225f2c"
@@ -341,7 +341,7 @@
         "mode": "return",
         "links": [],
         "x": 155,
-        "y": 520,
+        "y": 558,
         "wires": []
     },
     {
@@ -357,7 +357,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 340,
+        "y": 378,
         "wires": [
             [
                 "2d969cd093869f3f"
@@ -383,7 +383,7 @@
         "repair": false,
         "outputs": 2,
         "x": 560,
-        "y": 340,
+        "y": 378,
         "wires": [
             [
                 "790e790e05eb8859"
@@ -407,7 +407,7 @@
         "finalize": "",
         "libs": [],
         "x": 840,
-        "y": 420,
+        "y": 458,
         "wires": [
             [
                 "611c1e75bb981159"
@@ -424,7 +424,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1030,
-        "y": 420,
+        "y": 458,
         "wires": [
             [
                 "a72fdf5a352dfbf5"
@@ -445,7 +445,7 @@
         "finalize": "",
         "libs": [],
         "x": 1210,
-        "y": 420,
+        "y": 458,
         "wires": [
             [
                 "089f1be10dd5119e",
@@ -461,7 +461,7 @@
         "name": "Zero import",
         "links": [],
         "x": 110,
-        "y": 280,
+        "y": 318,
         "wires": [
             [
                 "1da12a6e80d6b69f"
@@ -483,7 +483,7 @@
         "finalize": "",
         "libs": [],
         "x": 910,
-        "y": 220,
+        "y": 258,
         "wires": [
             [
                 "6bc4be797addbe45",
@@ -501,7 +501,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1170,
-        "y": 220,
+        "y": 258,
         "wires": [
             [
                 "089f1be10dd5119e"
@@ -536,7 +536,7 @@
         "repair": false,
         "outputs": 3,
         "x": 720,
-        "y": 220,
+        "y": 258,
         "wires": [
             [
                 "b899358dd1b2a8d6"
@@ -557,7 +557,7 @@
         "name": "Standby / peak shave",
         "links": [],
         "x": 140,
-        "y": 400,
+        "y": 438,
         "wires": [
             [
                 "1da12a6e80d6b69f"
@@ -579,7 +579,7 @@
         "finalize": "",
         "libs": [],
         "x": 890,
-        "y": 320,
+        "y": 358,
         "wires": [
             [
                 "2175d488277aa571",
@@ -597,7 +597,7 @@
         "linkType": "dynamic",
         "timeout": "1",
         "x": 1170,
-        "y": 320,
+        "y": 358,
         "wires": [
             [
                 "089f1be10dd5119e"
@@ -619,7 +619,7 @@
         "statusVal": "",
         "statusType": "counter",
         "x": 1035,
-        "y": 120,
+        "y": 158,
         "wires": [],
         "l": false
     },
@@ -638,7 +638,7 @@
         "statusVal": "",
         "statusType": "counter",
         "x": 1035,
-        "y": 220,
+        "y": 258,
         "wires": [],
         "l": false
     },
@@ -657,7 +657,7 @@
         "statusVal": "",
         "statusType": "counter",
         "x": 1035,
-        "y": 320,
+        "y": 358,
         "wires": [],
         "l": false
     },
@@ -676,7 +676,7 @@
         "statusVal": "",
         "statusType": "counter",
         "x": 1375,
-        "y": 420,
+        "y": 458,
         "wires": [],
         "l": false
     },
