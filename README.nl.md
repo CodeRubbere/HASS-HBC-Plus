@@ -68,6 +68,7 @@ Met de fasebewaking op *Off* of *Monitor* stuurt HBC+ de batterijen zonder faser
 | --- | --- |
 | `packages/` | Home Assistant-packages: basis-helpers, Charge Deadline, Strategy arbiter, de fasebewuste heartbeat-fallback `hbc_heartbeat.yaml`, `hbc_phase_guard.yaml`, de meldingsinstelling `hbc_notify.yaml`, de batterijkalibratie `hbc_calibration.yaml`, besparing `hbc_savings.yaml`, de zelftest `hbc_selftest.yaml`, de voorspelling van het huisverbruik `hbc_load_forecast.yaml`, de Batterijplan-indicator `hbc_batterijplan.yaml` en de dashboardhelpers `hbc_dashboard.yaml` (HBC+) |
 | `dashboards/hbc_plus.yaml` | Het dashboard *Home Battery Control Plus* (Engels): Overview, Batteries, PID Control, **Phase guard**, Savings, Settings en Logging |
+| `dashboards/hbc_plus.nl.yaml` | Hetzelfde dashboard in het Nederlands (gebruik een van de twee) |
 | `www/hbc-plus/` | Het dashboardlogo; kopieer het naar de map `www/` van HA |
 | `assets/logo/` | Het HBC+-logo als SVG en PNG: op licht, op donker, in één kleur, app-icoon, GitHub-socialpreview |
 | `node-red/hbc-plus-all-flows.json` | Alle 16 HBC+-tabbladen voor Node-RED in één importbestand |
@@ -101,7 +102,7 @@ Details per vereiste: [Vereisten in de handleiding](docs/gebruikershandleiding.n
 3. **Maak een back-up** van Node-RED (*Export → All flows*) en Home Assistant.
 4. Kopieer `packages/*.yaml` naar de map `packages/` van HA en `www/hbc-plus/` naar de map `www/` van HA (het dashboardlogo), herstart HA en draai één keer het script **HBC+ phase guard: apply defaults**.
 5. Importeer `node-red/hbc-plus-all-flows.json` in Node-RED (bijwerken? verwijder eerst de oude HBC+-tabbladen: Node-RED kan een flow bij import niet vervangen), controleer dat de servernode *HA System* **Expose to global context** aan heeft, en deploy.
-6. Voeg een dashboard toe met de naam *Home Battery Control Plus* (**de URL moet `home-battery-control-plus` zijn**) met de inhoud van `dashboards/hbc_plus.yaml`, maak het *Alleen beheerder* (iedereen die het kan openen, kan de batterijen aansturen), stel je fasekaart in op de view **Batteries**, en de netzekering en batterijgroep onder *Phase guard settings* op de view **Settings**.
+6. Voeg een dashboard toe met de naam *Home Battery Control Plus* (**de URL moet `home-battery-control-plus` zijn**) met de inhoud van `dashboards/hbc_plus.nl.yaml` (Nederlands) of `dashboards/hbc_plus.yaml` (Engels), maak het *Alleen beheerder* (iedereen die het kan openen, kan de batterijen aansturen), stel je fasekaart in op de view **Batteries**, en de netzekering en batterijgroep onder *Phase guard settings* op de view **Settings**.
 7. Stel *Notify targets* in op de view **Settings** en druk op *Send a test notification*; draai één keer de zelftest op de view **Batteries** (*Battery phase test*).
 8. Druk op **HBC+** onder *Controller* op de Overview om HBC+ te laten sturen, en kies een *Control mode*.
 9. Laat de fasebewaking een paar dagen op **Monitor** draaien en zet hem daarna op **Enforce**.

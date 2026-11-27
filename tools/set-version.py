@@ -27,7 +27,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hbc_versions import (CARD_NUM_RE, CARD_RANGE_RE, CONST_RE, DASH_NUM_RE, DASH_RE, EXPECTED_RE, HEADING_RE, PKG_LIST_RE, collect,  # noqa: E402
+from hbc_versions import (CARD_NUM_RE, CARD_RANGE_RE, CONST_RE, DASH_NUM_RE, DASH_RE, DASHBOARDS, EXPECTED_RE, HEADING_RE, PKG_LIST_RE, collect,  # noqa: E402
                           dump_flows, flow_files, full_num, load_flows, manifest_text, mm, num, package_names,
                           package_re, read, strings, tab_labels, write)
 
@@ -100,15 +100,18 @@ def main():
         changed.append('node-red/*.json')
     # dashboard
     if 'dashboard' in parts:
-        p = os.path.join(root, 'dashboards', 'hbc_plus.yaml')
-        s = read(p)
-        s = DASH_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
-        s = CARD_NUM_RE.sub(lambda m: m.group(1) + str(num(new)), s)
-        s = CARD_RANGE_RE.sub(lambda m: m.group(1) + str(num(new) - 1) + m.group(3) + str(num(new) + 1), s)
-        s = DASH_NUM_RE.sub(lambda m: m.group(1) + str(full_num(new)), s)
-        s = HEADING_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
-        write(p, s)
-        changed.append('dashboards/hbc_plus.yaml')
+        for d in DASHBOARDS:
+            p = os.path.join(root, 'dashboards', d)
+            if not os.path.exists(p):
+                continue
+            s = read(p)
+            s = DASH_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
+            s = CARD_NUM_RE.sub(lambda m: m.group(1) + str(num(new)), s)
+            s = CARD_RANGE_RE.sub(lambda m: m.group(1) + str(num(new) - 1) + m.group(3) + str(num(new) + 1), s)
+            s = DASH_NUM_RE.sub(lambda m: m.group(1) + str(full_num(new)), s)
+            s = HEADING_RE.sub(lambda m: m.group(1) + new + m.group(3), s)
+            write(p, s)
+            changed.append('dashboards/' + d)
     write(os.path.join(root, 'versions.json'), manifest_text(root))
     changed.append('versions.json')
     print(f'Set {new} in:\n  ' + '\n  '.join(changed))
